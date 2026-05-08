@@ -2565,7 +2565,199 @@
       }
     }
 
-  </style>
+  
+
+    /* V34：Supabase 輸入框縮短，框內只放符號文字 */
+    .syncProjectRow{
+      grid-template-columns:220px 260px auto auto auto!important;
+      justify-content:start!important;
+      align-items:center!important;
+      width:auto!important;
+    }
+    .syncProjectRow input{
+      height:32px!important;
+      font-size:13px!important;
+      padding:5px 9px!important;
+    }
+    .syncProjectRow input::placeholder{
+      color:#64748b!important;
+      font-weight:900!important;
+    }
+    @media (max-width:900px){
+      .syncProjectRow{
+        grid-template-columns:1fr 1fr auto auto auto!important;
+        width:100%!important;
+      }
+    }
+    @media (max-width:760px){
+      .syncProjectRow{
+        grid-template-columns:1fr!important;
+        width:100%!important;
+      }
+      .syncProjectRow .btn{width:100%!important;}
+    }
+
+
+    /* V35：Supabase 區塊左右留白，不貼頁面邊緣 */
+    .syncTopBlock.syncLikeProject{
+      width:calc(100% - 24px)!important;
+      margin:0 12px 16px!important;
+    }
+    .syncLikeProject .settingsBody{
+      padding:10px 14px 12px!important;
+    }
+    @media (max-width:760px){
+      .syncTopBlock.syncLikeProject{
+        width:calc(100% - 16px)!important;
+        margin:0 8px 14px!important;
+      }
+    }
+
+  
+
+    /* V36：Supabase 區塊調整成參考圖風格（保留美化、預設隱藏、左右留白） */
+    .syncTopBlock.syncLikeProject{
+      background:#ffffff!important;
+      border:1px solid #dbe7f4!important;
+      border-radius:22px!important;
+      box-shadow:0 10px 26px rgba(15,23,42,.06)!important;
+      margin:0 0 18px!important;
+      overflow:hidden!important;
+    }
+    .syncTopBlock.syncLikeProject summary{
+      list-style:none!important;
+      cursor:pointer!important;
+      min-height:56px!important;
+      display:flex!important;
+      align-items:center!important;
+      padding:0 18px 0 22px!important;
+      background:linear-gradient(90deg,#eef6ff 0%, #f8fbff 58%, #ffffff 100%)!important;
+      color:#0f172a!important;
+      font-size:16px!important;
+      font-weight:1000!important;
+      letter-spacing:.02em!important;
+      border-bottom:1px solid #e5eef8!important;
+      position:relative!important;
+    }
+    .syncTopBlock.syncLikeProject summary::before{
+      content:""!important;
+      width:6px!important;
+      height:26px!important;
+      border-radius:999px!important;
+      background:linear-gradient(180deg,#60a5fa,#2563eb)!important;
+      margin-right:12px!important;
+      flex:0 0 auto!important;
+    }
+    .syncTopBlock.syncLikeProject .settingsBody{
+      padding:14px 20px 18px!important;
+      border-top:0!important;
+      background:#ffffff!important;
+    }
+    .syncTopBlock.syncLikeProject .syncHintLine{
+      padding:0 0 12px!important;
+      color:#64748b!important;
+      font-size:12px!important;
+      font-weight:700!important;
+      line-height:1.55!important;
+    }
+    .syncTopBlock.syncLikeProject .syncProjectRow{
+      display:grid!important;
+      grid-template-columns:minmax(240px,1.15fr) minmax(280px,1.55fr) auto auto auto!important;
+      gap:10px!important;
+      align-items:center!important;
+      width:100%!important;
+    }
+    .syncTopBlock.syncLikeProject .syncProjectRow input{
+      width:100%!important;
+      height:52px!important;
+      min-width:0!important;
+      box-sizing:border-box!important;
+      border:1px solid #bfd0ea!important;
+      border-radius:16px!important;
+      background:#ffffff!important;
+      padding:0 16px!important;
+      font-size:17px!important;
+      font-weight:700!important;
+      color:#0f172a!important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.8)!important;
+    }
+    .syncTopBlock.syncLikeProject .syncProjectRow input::placeholder{
+      color:#94a3b8!important;
+      font-weight:800!important;
+    }
+    .syncTopBlock.syncLikeProject .syncProjectRow .btn{
+      height:50px!important;
+      min-width:88px!important;
+      padding:0 18px!important;
+      border-radius:16px!important;
+      font-size:15px!important;
+      font-weight:1000!important;
+      box-shadow:none!important;
+      transform:none!important;
+      white-space:nowrap!important;
+    }
+    .syncTopBlock.syncLikeProject .syncConnectBtn{
+      background:#1d4ed8!important;
+      color:#ffffff!important;
+      border:1px solid #1d4ed8!important;
+    }
+    .syncTopBlock.syncLikeProject .syncNowBtn{
+      background:#f8fbff!important;
+      color:#1e293b!important;
+      border:1px solid #bfd0ea!important;
+    }
+    .syncTopBlock.syncLikeProject .syncStopBtn{
+      background:#ffe8ea!important;
+      color:#ef4444!important;
+      border:1px solid #fecdd3!important;
+    }
+    .syncTopBlock.syncLikeProject .syncProjectStatusLine{
+      display:flex!important;
+      align-items:center!important;
+      gap:10px!important;
+      flex-wrap:wrap!important;
+      margin-top:12px!important;
+      min-height:36px!important;
+    }
+    .syncTopBlock.syncLikeProject .syncProjectStatusLine #sbStatus,
+    .syncTopBlock.syncLikeProject .syncProjectStatusLine .syncMessage{
+      min-height:36px!important;
+      display:inline-flex!important;
+      align-items:center!important;
+      border-radius:999px!important;
+      font-size:14px!important;
+      font-weight:900!important;
+      padding:7px 13px!important;
+    }
+    .syncTopBlock.syncLikeProject .syncProjectStatusLine .syncMessage{
+      background:transparent!important;
+      color:#64748b!important;
+      border-color:transparent!important;
+      padding-left:0!important;
+    }
+    @media (max-width:1400px){
+      .syncTopBlock.syncLikeProject .syncProjectRow{
+        grid-template-columns:minmax(220px,1fr) minmax(260px,1.2fr) auto auto auto!important;
+      }
+    }
+    @media (max-width:1120px){
+      .syncTopBlock.syncLikeProject .syncProjectRow{
+        grid-template-columns:1fr 1fr auto auto auto!important;
+      }
+      .syncTopBlock.syncLikeProject .syncProjectRow input{
+        font-size:15px!important;
+      }
+    }
+    @media (max-width:920px){
+      .syncTopBlock.syncLikeProject .syncProjectRow{
+        grid-template-columns:1fr!important;
+      }
+      .syncTopBlock.syncLikeProject .syncProjectRow .btn{
+        width:100%!important;
+      }
+    }
+
+</style>
 </head>
 <body>
 <div class="app">
@@ -2592,8 +2784,8 @@
       <div class="settingsBody">
         <div class="syncHintLine">這版以 V14 為基底，改成兩台可共用同一份資料。</div>
         <div class="syncProjectRow">
-          <input id="sbUrl" placeholder="https://xxxx.supabase.co">
-          <input id="sbKey" placeholder="貼上 Supabase Publishable Key">
+          <input id="sbUrl" placeholder="🔗 URL">
+          <input id="sbKey" placeholder="🔑 Key">
           <button class="btn syncConnectBtn" onclick="connectSupabase()">連線</button>
           <button class="btn syncNowBtn" onclick="syncSupabaseNow()">立即同步</button>
           <button class="btn syncStopBtn" onclick="disconnectSupabase()">中斷</button>
