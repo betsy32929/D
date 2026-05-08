@@ -1,0 +1,4811 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>D夾｜單機版_V9_修正版30_基本資料平均左側填滿</title>
+  <style>
+    :root{
+      --bg:#f4f8ff;
+      --card:#ffffff;
+      --text:#162033;
+      --muted:#64748b;
+      --line:#dbe7f5;
+      --pri:#2563eb;
+      --priDark:#1d4ed8;
+      --pri2:#38bdf8;
+      --soft:#eef6ff;
+      --green:#16a34a;
+      --red:#dc2626;
+      --orange:#f97316;
+      --purple:#7c3aed;
+      --yellow:#facc15;
+      --shadow:0 12px 28px rgba(37,99,235,.12);
+      --sidePad:20px;
+      --tableFont:13px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:"Microsoft JhengHei","Noto Sans TC",Arial,sans-serif;font-size:14px;}
+    body{min-width:1540px;overflow-x:auto;}
+    button,input,select,textarea{font-family:inherit;font-size:14px;}
+    .app{min-width:1540px;padding-bottom:42px;}
+    .hero{background:linear-gradient(100deg,#1e40af 0%,#2563eb 45%,#38bdf8 100%);color:#fff;padding:18px var(--sidePad);box-shadow:var(--shadow);}
+    .heroTop{display:flex;align-items:center;justify-content:space-between;gap:14px;}
+    .titleWrap h1{margin:0;font-size:30px;letter-spacing:3px;font-weight:900;}
+    .subText{font-size:12px;opacity:.95;margin-top:4px;}
+    .clock{font-weight:900;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);padding:8px 12px;border-radius:999px;white-space:nowrap;}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px;}
+    .statusChip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);padding:7px 10px;font-size:12px;white-space:nowrap;font-weight:800;}
+    .container{padding:var(--sidePad);}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
+    .panelTitle{min-height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:linear-gradient(90deg,#dbeafe 0%,#eff6ff 55%,#ffffff 100%);border-bottom:1px solid var(--line);font-weight:900;font-size:17px;position:relative;}
+    .panelTitle:before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(180deg,#2563eb,#38bdf8);}
+    .panelTitle span:first-child{padding-left:7px;}
+    .panelTitle .meta{font-size:12px;color:var(--muted);font-weight:800;}
+    .panelBody{padding:12px 14px;}
+    .btn{border:0;border-radius:999px;padding:8px 13px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(15,23,42,.08);white-space:nowrap;transition:.12s ease;}
+    .btn:hover{filter:brightness(.98);transform:translateY(-1px)}
+    .btnPrimary{background:#0f5bd7;color:#fff;}
+    .btnBlue{background:#dbeafe;color:#1d4ed8;}
+    .btnGreen{background:#dcfce7;color:#15803d;}
+    .btnOrange{background:#ffedd5;color:#c2410c;}
+    .btnRed{background:#fee2e2;color:#b91c1c;}
+    .btnGray{background:#e2e8f0;color:#334155;}
+    .btnPurple{background:#ede9fe;color:#6d28d9;}
+    .btnMini{font-size:12px;padding:5px 9px;box-shadow:none;}
+    .btnTiny{font-size:12px;padding:3px 7px;box-shadow:none;}
+    table{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--tableFont);}
+    th,td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:center;vertical-align:middle;}
+    th{background:#f1f7ff;color:#0f172a;font-weight:900;position:sticky;top:0;z-index:1;}
+    tr:hover td{background:#fbfdff;}
+    .rowClick{cursor:pointer;}
+    .nowrap{white-space:nowrap;}
+    .muted{color:var(--muted);}
+    .small{font-size:12px;}
+    .tag{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:3px 8px;font-weight:900;font-size:12px;margin:2px;border:1px solid transparent;white-space:nowrap;}
+    .tagBlue{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}
+    .tagGreen{background:#dcfce7;color:#15803d;border-color:#bbf7d0;}
+    .tagRed{background:#fee2e2;color:#b91c1c;border-color:#fecaca;}
+    .tagOrange{background:#ffedd5;color:#c2410c;border-color:#fed7aa;}
+    .tagGray{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}
+    .tagPurple{background:#ede9fe;color:#6d28d9;border-color:#ddd6fe;}
+    .progressBox{display:flex;align-items:center;justify-content:center;gap:6px;}
+    .bar{width:88px;height:9px;background:#e2e8f0;border-radius:999px;overflow:hidden;}
+    .barInner{height:100%;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:999px;}
+    .empty{padding:20px;color:var(--muted);text-align:center;font-weight:800;}
+    details.settings{background:#fff;border:1px solid var(--line);border-radius:18px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow);}
+    details.settings summary{cursor:pointer;padding:12px 14px;background:linear-gradient(90deg,#eff6ff,#ffffff);font-weight:900;list-style:none;}
+    details.settings summary::-webkit-details-marker{display:none}
+    .settingsBody{padding:12px 14px;border-top:1px solid var(--line);}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+    .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+    .field{display:flex;flex-direction:column;gap:4px;}
+    .field label{font-weight:900;color:#334155;font-size:13px;}
+    input,select,textarea{border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px;background:#fff;color:#0f172a;outline:none;}
+    input:focus,select:focus,textarea:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.18);}
+    textarea{min-height:72px;resize:vertical;line-height:1.55;}
+    .inline{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+    .modalMask{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:18px;}
+    .modalMask.show{display:flex;}
+    .modal{background:#fff;border-radius:22px;box-shadow:0 25px 80px rgba(15,23,42,.30);width:720px;max-height:92vh;overflow:auto;border:1px solid #dbe4f0;}
+    .modalLarge{width:1320px;}
+    .modalHeader{position:sticky;top:0;z-index:5;background:linear-gradient(90deg,#1d4ed8,#38bdf8);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .modalHeader h2{margin:0;font-size:20px;letter-spacing:1px;}
+    .modalBody{padding:14px 16px;}
+    .modalFooter{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;}
+    .closeX{border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:999px;width:34px;height:34px;font-size:18px;font-weight:900;cursor:pointer;}
+    .sectionBlock{border:1px solid var(--line);border-radius:16px;margin-bottom:12px;overflow:hidden;background:#fff;}
+    .sectionHead{min-height:36px;background:linear-gradient(90deg,#eff6ff,#ffffff);border-bottom:1px solid var(--line);padding:8px 12px;font-weight:900;color:#0f172a;display:flex;align-items:center;justify-content:space-between;position:relative;}
+    .sectionHead:before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:#60a5fa;}
+    .sectionHead span:first-child,.sectionHead{padding-left:14px;}
+    .sectionContent{padding:12px;}
+    .conditionGrid{display:grid;grid-template-columns:1fr 1fr 1.35fr 1.05fr 1.05fr 1.45fr;gap:8px;align-items:end;}
+    .dualLine{display:flex;gap:6px;align-items:center;}
+    .dualLine input{width:100%;min-width:0;}
+    .taskTools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;justify-content:space-between;}
+    .seg{display:inline-flex;background:#e2e8f0;padding:3px;border-radius:999px;gap:3px;}
+    .seg button{border:0;border-radius:999px;background:transparent;padding:5px 10px;font-weight:900;cursor:pointer;color:#475569;}
+    .seg button.active{background:#fff;color:#1d4ed8;box-shadow:0 1px 4px rgba(15,23,42,.10);}
+    .toggleBtns{display:flex;justify-content:center;gap:4px;}
+    .toggleBtns button{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:900;cursor:pointer;color:#475569;}
+    .toggleBtns button.activeAuto{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;}
+    .toggleBtns button.activeReq{background:#dcfce7;color:#15803d;border-color:#86efac;}
+    .toggleBtns button.activeNo{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
+    .assistantBtns{display:flex;justify-content:center;gap:4px;flex-wrap:wrap;}
+    .assistantBtns button{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;cursor:pointer;color:#475569;}
+    .assistantBtns button.active{background:#ede9fe;color:#6d28d9;border-color:#c4b5fd;box-shadow:0 1px 4px rgba(109,40,217,.16);}
+    .doneLine{display:flex;align-items:center;gap:8px;justify-content:flex-start;font-weight:900;}
+    .doneCheck{width:18px;height:18px;cursor:pointer;accent-color:#2563eb;}
+    .taskTableWrap{max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:12px;}
+    .rulesWrap{max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:12px;}
+    .rulesWrap th{font-size:12px;padding:7px 4px;}
+    .rulesWrap td{font-size:12px;padding:5px 4px;}
+    .switchVX{border:0;border-radius:999px;padding:4px 8px;font-weight:900;cursor:pointer;}
+    .switchVX.v{background:#dcfce7;color:#15803d;}
+    .switchVX.x{background:#fee2e2;color:#b91c1c;}
+    .filterLine{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px;}
+    .searchInput{width:300px;}
+    .hiddenFile{display:none;}
+    .dangerText{color:var(--red);font-weight:900;}
+    .okText{color:var(--green);font-weight:900;}
+    .caseNameCell{font-weight:900;text-align:left;}
+    .condCell{text-align:left;line-height:1.45;max-width:150px;}
+    .condEmpty{color:#94a3b8;font-weight:700;}
+    .printNote{color:#64748b;font-size:12px;}
+    .settingTable input{width:100%;padding:6px 8px;border-radius:8px;}
+    .orderBtns{display:flex;gap:3px;justify-content:center;}
+    .orderBtns button{border:1px solid #cbd5e1;background:#fff;border-radius:9px;padding:3px 6px;font-weight:900;cursor:pointer;color:#334155;}
+    .tableScroll{overflow:auto;border:1px solid var(--line);border-radius:12px;}
+
+    /* V3 調整：畫面不左右滑動、欄位重新排版、NEW本風格再美化 */
+    html,body{width:100%;max-width:100%;overflow-x:hidden;}
+    body{min-width:0;overflow-x:hidden;}
+    .app{min-width:0;width:100%;max-width:100%;}
+    .container{width:100%;max-width:1680px;margin:0 auto;padding:16px;}
+    .hero{padding:18px 18px 16px;border-bottom-left-radius:26px;border-bottom-right-radius:26px;}
+    .heroTop{align-items:flex-start;}
+    .clock{font-size:13px;}
+    .toolbar{margin-top:12px;}
+    .panel{border-radius:22px;}
+    .tableScroll{width:100%;max-width:100%;overflow-x:hidden;}
+    .tableScroll table{table-layout:fixed;width:100%;}
+    .tableScroll th,.tableScroll td{min-width:0!important;word-break:break-word;overflow-wrap:anywhere;padding:7px 4px;}
+    .tableScroll th{font-size:12px;line-height:1.25;}
+    .tableScroll td{font-size:12px;line-height:1.35;}
+    .filterLine{gap:10px;align-items:center;}
+    .filterControls{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;width:100%;}
+    .filterControls select{min-width:136px;}
+    .searchInput{width:min(360px,100%);}
+    .modal{max-width:calc(100vw - 28px);}
+    .modalLarge{width:min(1320px,calc(100vw - 28px));}
+    .modalMask{overflow:hidden;}
+    .modalBody{overflow-x:hidden;}
+    input,select,textarea{max-width:100%;}
+    textarea{width:100%;min-height:120px;}
+    .caseNoteBox{width:100%;min-height:150px;display:block;}
+    .conditionGrid{display:none;}
+    .conditionStack{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
+    .condCard{border:1px solid #dbeafe;background:linear-gradient(180deg,#ffffff,#f8fbff);border-radius:16px;padding:10px;min-height:76px;}
+    .condCardWide{grid-column:1 / -1;}
+    .condCard label{display:block;font-weight:900;color:#1e3a8a;margin-bottom:7px;}
+    .condCard textarea{min-height:80px;}
+    .dualLine{gap:8px;}
+    .dualLine span{font-weight:900;color:#475569;white-space:nowrap;}
+    .taskTools{justify-content:flex-start;background:#f8fbff;border:1px solid #e0ecfb;border-radius:14px;padding:9px 10px;}
+    .taskTableWrap{max-height:520px;overflow:auto;}
+    .taskTableWrap table{table-layout:fixed;}
+    .taskTableWrap th,.taskTableWrap td{word-break:break-word;overflow-wrap:anywhere;}
+    .taskNameCell{font-weight:900;text-align:left;display:flex;align-items:center;gap:8px;}
+    .vxBadge{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:900;white-space:nowrap;}
+    .vxV{background:#dcfce7;color:#15803d;border:1px solid #86efac;}
+    .vxX{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;}
+    .taskRowX td{background:#f8fafc;color:#64748b;}
+    .toggleBtns button{min-width:54px;}
+    .toggleBtns button:first-child{min-width:92px;}
+    .modalFooter{align-items:center;justify-content:space-between;}
+    .footerLeft{font-size:12px;color:#64748b;font-weight:900;}
+    @media (max-width: 980px){
+      .conditionStack{grid-template-columns:1fr;}
+      .grid3,.grid4,.grid2{grid-template-columns:1fr;}
+      .heroTop{flex-direction:column;}
+      .filterLine{flex-direction:column;align-items:stretch;}
+      .filterControls{justify-content:flex-start;}
+    }
+
+    /* V4 美化與操作調整 */
+    .filterLineStack{display:block;}
+    .filterGrid{
+      display:grid;
+      grid-template-columns: repeat(6, minmax(0,1fr));
+      gap:8px;
+      align-items:end;
+      margin-top:9px;
+      width:100%;
+    }
+    .filterGrid label{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      font-size:12px;
+      font-weight:900;
+      color:#334155;
+    }
+    .filterGrid input,.filterGrid select{
+      width:100%;
+      padding:7px 9px;
+      border-radius:12px;
+      background:#fff;
+    }
+    .compactConditions .sectionContent{padding:10px;}
+    .conditionStack{
+      display:grid!important;
+      grid-template-columns: 1fr 1fr 1.35fr .9fr;
+      gap:8px;
+      align-items:stretch;
+    }
+    .condCard{
+      min-height:0!important;
+      padding:8px 9px!important;
+      border-radius:14px!important;
+      background:linear-gradient(180deg,#ffffff 0%,#f7fbff 100%)!important;
+      box-shadow:0 2px 10px rgba(37,99,235,.05);
+    }
+    .condCard label{margin-bottom:5px!important;font-size:13px;}
+    .condCard input,.condCard select,.condCard textarea{padding:7px 8px;border-radius:10px;font-size:13px;}
+    .condDate{grid-column: span 2;}
+    .condTerms{grid-column: span 2;}
+    .condTerms textarea{min-height:54px!important;height:54px;}
+    .dateDuo{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .dualLine{gap:5px!important;}
+    .dualLine span{font-size:12px;}
+    .taskTableWrap{
+      max-height:none!important;
+      overflow:visible!important;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+    }
+    .taskTableWrap table{table-layout:fixed;width:100%;}
+    .taskTableWrap th{position:static;top:auto;z-index:auto;background:#eaf4ff;}
+    .taskTableWrap th,.taskTableWrap td{padding:7px 6px;line-height:1.35;}
+    .taskNamePlain{text-align:left;font-weight:900;color:#172033;}
+    .actionCircle{
+      width:32px;height:32px;border-radius:999px;border:0;
+      font-weight:1000;cursor:pointer;box-shadow:0 2px 8px rgba(15,23,42,.10);
+      display:inline-flex;align-items:center;justify-content:center;
+    }
+    .actionCircle.v{background:#dcfce7;color:#15803d;border:1px solid #86efac;}
+    .actionCircle.x{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;}
+    .statusBtns{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;}
+    .statusBtns button{
+      border:1px solid #cbd5e1;background:#fff;border-radius:999px;
+      padding:4px 9px;font-size:12px;font-weight:900;cursor:pointer;color:#475569;
+    }
+    .statusBtns .onPending{background:#ffedd5;color:#c2410c;border-color:#fed7aa;}
+    .statusBtns .onDone{background:#dcfce7;color:#15803d;border-color:#86efac;}
+    .statusBtns .onX{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
+    .taskRowDone td{background:#f0fdf4;}
+    .taskRowX td{background:#f8fafc!important;color:#64748b;}
+    .caseCompleteTag{background:#dcfce7;color:#15803d;border:1px solid #86efac;}
+    .caseMakingTag{background:#ffedd5;color:#c2410c;border:1px solid #fed7aa;}
+    .colTight{white-space:normal;font-size:12px;}
+    @media (max-width: 1180px){
+      .filterGrid{grid-template-columns:repeat(3,minmax(0,1fr));}
+      .conditionStack{grid-template-columns:1fr 1fr;}
+      .condDate,.condTerms{grid-column:span 2;}
+    }
+    @media (max-width: 760px){
+      .filterGrid{grid-template-columns:1fr;}
+      .conditionStack{grid-template-columns:1fr;}
+      .condDate,.condTerms{grid-column:auto;}
+      .dateDuo{grid-template-columns:1fr;}
+    }
+
+  
+
+    /* V5：變更條件三行緊湊版＋日期錯誤警示 */
+    .compactConditions .sectionContent{padding:10px 12px!important;}
+    .conditionStack.condition3{
+      display:grid!important;
+      grid-template-columns:1fr 1.18fr 1.28fr;
+      grid-template-areas:
+        "price date relist"
+        "bottom change key"
+        "terms terms terms";
+      gap:8px;
+      align-items:stretch;
+    }
+    .conditionStack.condition3 .condCard{
+      display:grid;
+      grid-template-columns:78px minmax(0,1fr);
+      padding:0!important;
+      min-height:38px!important;
+      border:1px solid #d9e3f0!important;
+      border-radius:12px!important;
+      overflow:hidden;
+      background:#fff!important;
+      box-shadow:0 2px 10px rgba(37,99,235,.04);
+    }
+    .conditionStack.condition3 .condCard label{
+      margin:0!important;
+      padding:0 7px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-right:1px solid #d9e3f0;
+      font-size:13px!important;
+      font-weight:900;
+      white-space:nowrap;
+      text-align:center;
+    }
+    .conditionStack.condition3 .condBody{
+      display:flex;
+      align-items:center;
+      gap:5px;
+      padding:5px 7px;
+      min-width:0;
+      flex-wrap:nowrap;
+    }
+    .conditionStack.condition3 .condPrice label{background:#eaf3ff;color:#2878dc;}
+    .conditionStack.condition3 .condBottom label{background:#ebf9f0;color:#159452;}
+    .conditionStack.condition3 .condDate label{background:#fff3df;color:#df8500;}
+    .conditionStack.condition3 .condRelist label{background:#f4eeff;color:#7c3aed;}
+    .conditionStack.condition3 .condChange label{background:#fff0f6;color:#db2777;}
+    .conditionStack.condition3 .condKey label{background:#e8fbff;color:#0694b5;}
+    .conditionStack.condition3 .condTerms label{background:#f1f5f9;color:#64748b;}
+
+    /* V7：固定三行位置，避免被舊版 condDate / condTerms 規則擠位 */
+    .conditionStack.condition3 .condPrice{grid-area:price!important;grid-column:auto!important;}
+    .conditionStack.condition3 .condDate{grid-area:date!important;grid-column:auto!important;}
+    .conditionStack.condition3 .condRelist{grid-area:relist!important;grid-column:auto!important;}
+    .conditionStack.condition3 .condBottom{grid-area:bottom!important;grid-column:auto!important;}
+    .conditionStack.condition3 .condChange{grid-area:change!important;grid-column:auto!important;}
+    .conditionStack.condition3 .condKey{grid-area:key!important;grid-column:auto!important;}
+    .conditionStack.condition3 .condTerms{grid-area:terms!important;grid-column:1 / -1!important;grid-template-columns:94px minmax(0,1fr);}
+    .conditionStack.condition3 input,.conditionStack.condition3 select{
+      height:27px;
+      border:1px solid #cbd5e1;
+      border-radius:8px;
+      padding:3px 7px;
+      font-size:13px;
+      min-width:0;
+      background:#fff;
+    }
+    .conditionStack.condition3 .num{width:62px;text-align:right;}
+    .conditionStack.condition3 .dateInput{width:88px;text-align:center;}
+    .conditionStack.condition3 .short{width:78px;}
+    .conditionStack.condition3 .growInput{flex:1;min-width:120px;}
+    .conditionStack.condition3 .termsInput{flex:1;min-width:220px;}
+    .conditionStack.condition3 .miniLabel,.conditionStack.condition3 .unit{
+      font-size:12px;
+      font-weight:900;
+      color:#475569;
+      white-space:nowrap;
+    }
+    .conditionStack.condition3 .relistSelect{width:100%;max-width:100%;}
+    .conditionStack.condition3 input{text-align:center;}
+    .conditionStack.condition3 .num{text-align:right;}
+    .conditionStack.condition3 .condPrice .condBody,
+    .conditionStack.condition3 .condBottom .condBody{
+      display:grid;
+      grid-template-columns:auto 62px auto 62px auto;
+      justify-content:start;
+      align-items:center;
+      column-gap:5px;
+    }
+    .conditionStack.condition3 .condDate .condBody{
+      display:grid;
+      grid-template-columns:auto 88px auto 88px;
+      justify-content:start;
+      align-items:center;
+      column-gap:5px;
+    }
+    .conditionStack.condition3 .condChange .condBody{
+      display:grid;
+      grid-template-columns:minmax(70px,78px) auto minmax(70px,78px);
+      justify-content:start;
+      align-items:center;
+      column-gap:5px;
+    }
+    .relistBtnGroup{
+      display:flex;
+      align-items:center;
+      gap:4px;
+      width:100%;
+      min-width:0;
+      flex-wrap:nowrap;
+    }
+    .relistBtnGroup button{
+      border:1px solid #cbd5e1;
+      background:#fff;
+      color:#334155;
+      border-radius:999px;
+      height:27px;
+      padding:0 8px;
+      font-size:12px;
+      font-weight:900;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .relistBtnGroup button.active{
+      background:#7c3aed;
+      color:#fff;
+      border-color:#7c3aed;
+      box-shadow:0 1px 5px rgba(124,58,237,.18);
+    }
+    .statusPill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:52px;
+      border-radius:999px;
+      padding:4px 10px;
+      font-size:12px;
+      font-weight:900;
+      border:1px solid #cbd5e1;
+      white-space:nowrap;
+    }
+    .statusPill.pending{background:#ffedd5;color:#c2410c;border-color:#fed7aa;}
+    .statusPill.done{background:#dcfce7;color:#15803d;border-color:#86efac;}
+    .statusPill.x{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
+    .dateInvalid{border-color:#ef4444!important;background:#fff7f7!important;box-shadow:0 0 0 2px rgba(239,68,68,.14)!important;}
+    .dateWarn{display:none;color:#dc2626;font-size:12px;font-weight:900;margin-top:4px;line-height:1.3;}
+    .dateWarn.show{display:block;}
+    .field .dateWarn{width:100%;}
+    .conditionStack.condition3 .dateWrap{display:flex;flex-direction:column;gap:0;}
+    @media (max-width:980px){
+      .conditionStack.condition3{
+        grid-template-columns:1fr;
+        grid-template-areas:
+          "price"
+          "date"
+          "relist"
+          "bottom"
+          "change"
+          "key"
+          "terms";
+      }
+      .conditionStack.condition3 .condCard,.conditionStack.condition3 .condTerms{grid-template-columns:92px minmax(0,1fr);grid-column:auto!important;}
+      .conditionStack.condition3 .condBody{flex-wrap:wrap;}
+    }
+
+    /* V6 細部調整 */
+    .modalHeader h2{line-height:1.25;}
+    .editTitleCase{display:block;font-size:20px;font-weight:1000;letter-spacing:1px;}
+    .editTitleContract{display:block;font-size:13px;font-weight:800;opacity:.92;margin-top:3px;letter-spacing:0;}
+    .filterGridMaking{
+      grid-template-columns:1.15fr .95fr .95fr .95fr 1.05fr 1.35fr auto;
+      align-items:end;
+    }
+    .filterActionBox{display:flex;align-items:flex-end;justify-content:flex-start;height:100%;}
+    .taskTableWrap th{position:sticky!important;top:58px!important;z-index:6!important;background:#eaf4ff!important;box-shadow:0 1px 0 var(--line);}
+    .taskTableWrap input.taskNoteInput{width:100%;min-width:180px;}
+    .taskTableWrap .statusBtns{justify-content:center;}
+    .settingTable{table-layout:fixed;width:100%;}
+    .settingTable th,.settingTable td{overflow-wrap:anywhere;}
+    .settingTable .condCol{width:10.5%;}
+    .settingTable .nameCol{width:20%;}
+    .settingTable .orderCol{width:7%;}
+    .settingTable .opsCol{width:7%;}
+    @media (max-width:1180px){
+      .filterGridMaking{grid-template-columns:repeat(3,minmax(0,1fr));}
+    }
+    @media (max-width:760px){
+      .filterGridMaking{grid-template-columns:1fr;}
+    }
+
+
+    /* V9 美化：換色、列表置中、篩選列一致、完成率漸層 */
+    :root{
+      --bg:#f6f8ff;
+      --pri:#2166d5;
+      --priDark:#1746a2;
+      --pri2:#5dd6d6;
+      --line:#d7e0ef;
+      --soft:#eef7ff;
+      --shadow:0 14px 30px rgba(30,64,175,.10);
+    }
+    .hero{
+      background:linear-gradient(105deg,#1746a2 0%,#2f80ed 48%,#67e8f9 100%)!important;
+    }
+    .panelTitle{
+      background:linear-gradient(90deg,#e0f2fe 0%,#eff6ff 52%,#ffffff 100%)!important;
+    }
+    .panelTitle:before{
+      background:linear-gradient(180deg,#2f80ed,#22c7c7)!important;
+    }
+    .btnPrimary{background:linear-gradient(90deg,#1d4ed8,#0891b2)!important;color:#fff;}
+    .btnBlue{background:#dff4ff!important;color:#075985!important;}
+    .btnGreen{background:#e7f8ee!important;color:#047857!important;}
+    .btnPurple{background:#f1eaff!important;color:#6d28d9!important;}
+    .btnGray{background:#eef2f7!important;color:#334155!important;}
+
+    .filterGridMaking,
+    .filterGridCompleted{
+      grid-template-columns:.9fr .78fr .78fr .78fr .9fr 1.25fr auto!important;
+      align-items:end;
+    }
+    .filterGrid input,.filterGrid select{
+      padding:6px 8px!important;
+      height:33px!important;
+      border-radius:10px!important;
+      text-align:center;
+    }
+    .filterGrid label{
+      color:#1e3a5f!important;
+    }
+
+    .tableScroll td,
+    .tableScroll th{
+      text-align:center!important;
+      vertical-align:middle!important;
+    }
+    .caseNameCell,
+    .condCell,
+    .taskNamePlain{
+      text-align:center!important;
+    }
+    .condCell{
+      line-height:1.28!important;
+      max-width:none!important;
+      font-size:12px!important;
+    }
+
+    .progressPctWrap{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:100%;
+    }
+    .progressPct{
+      width:92px;
+      height:24px;
+      border-radius:999px;
+      border:1px solid #bfdbfe;
+      background:#e5edf8;
+      overflow:hidden;
+      position:relative;
+      box-shadow:inset 0 1px 2px rgba(15,23,42,.06);
+    }
+    .progressPctFill{
+      position:absolute;
+      left:0;top:0;bottom:0;
+      border-radius:999px;
+      background:linear-gradient(90deg,#60a5fa,#22c55e);
+      min-width:0;
+    }
+    .progressPctText{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:12px;
+      font-weight:1000;
+      color:#0f172a;
+      text-shadow:0 1px 0 rgba(255,255,255,.58);
+    }
+
+    .conditionStack.condition3{
+      grid-template-columns:1fr 1.05fr 1.14fr!important;
+      gap:7px!important;
+    }
+    .conditionStack.condition3 .condCard{
+      grid-template-columns:72px minmax(0,1fr)!important;
+      min-height:36px!important;
+      border-color:#d5e2f2!important;
+      box-shadow:0 2px 8px rgba(37,99,235,.035)!important;
+    }
+    .conditionStack.condition3 .condTerms{
+      grid-template-columns:82px minmax(0,1fr)!important;
+    }
+    .conditionStack.condition3 .condCard label{
+      justify-content:center!important;
+      font-size:13px!important;
+      padding:0 5px!important;
+    }
+    .conditionStack.condition3 .condKey label{
+      justify-content:flex-start!important;
+      padding-left:12px!important;
+    }
+    .conditionStack.condition3 .condBody{
+      padding:4px 6px!important;
+      gap:0!important;
+    }
+    .conditionStack.condition3 input{
+      height:27px!important;
+      padding:3px 6px!important;
+      text-align:center!important;
+    }
+    .conditionStack.condition3 .condPrice .condBody,
+    .conditionStack.condition3 .condBottom .condBody{
+      display:grid!important;
+      grid-template-columns:22px 1fr 22px 1fr 20px!important;
+      justify-content:stretch!important;
+      column-gap:4px!important;
+      align-items:center!important;
+    }
+    .conditionStack.condition3 .condDate .condBody{
+      display:grid!important;
+      grid-template-columns:22px 1fr 22px 1fr!important;
+      justify-content:stretch!important;
+      column-gap:4px!important;
+      align-items:center!important;
+    }
+    .conditionStack.condition3 .condChange .condBody{
+      display:grid!important;
+      grid-template-columns:1fr 22px 1fr!important;
+      justify-content:stretch!important;
+      column-gap:4px!important;
+      align-items:center!important;
+    }
+    .conditionStack.condition3 .condKey .condBody,
+    .conditionStack.condition3 .condTerms .condBody{
+      display:grid!important;
+      grid-template-columns:1fr!important;
+    }
+    .conditionStack.condition3 .num,
+    .conditionStack.condition3 .dateInput,
+    .conditionStack.condition3 .short,
+    .conditionStack.condition3 .growInput,
+    .conditionStack.condition3 .termsInput{
+      width:100%!important;
+      min-width:0!important;
+      flex:unset!important;
+    }
+    .conditionStack.condition3 .miniLabel,
+    .conditionStack.condition3 .unit{
+      text-align:center!important;
+      font-size:12px!important;
+      color:#334155!important;
+      margin:0!important;
+    }
+    .conditionStack.condition3 .condPrice label{background:#e7f0ff!important;color:#1d4ed8!important;}
+    .conditionStack.condition3 .condBottom label{background:#e9f9f2!important;color:#047857!important;}
+    .conditionStack.condition3 .condDate label{background:#fff4de!important;color:#b45309!important;}
+    .conditionStack.condition3 .condRelist label{background:#f0eaff!important;color:#6d28d9!important;}
+    .conditionStack.condition3 .condChange label{background:#ffeaf2!important;color:#be185d!important;}
+    .conditionStack.condition3 .condKey label{background:#e6fbff!important;color:#0e7490!important;}
+    .conditionStack.condition3 .condTerms label{background:#edf2f7!important;color:#475569!important;}
+
+    .relistBtnGroup{
+      justify-content:space-between!important;
+      gap:4px!important;
+    }
+    .relistBtnGroup button{
+      flex:1 1 0;
+      padding:0 5px!important;
+      height:27px!important;
+      font-size:12px!important;
+      background:#fff!important;
+    }
+    .relistBtnGroup button.active{
+      background:linear-gradient(90deg,#7c3aed,#2563eb)!important;
+      color:#fff!important;
+      border-color:#7c3aed!important;
+    }
+
+    .taskTableWrap th{
+      top:0!important;
+    }
+    .taskTableWrap input.taskNoteInput{
+      min-width:260px!important;
+      width:100%!important;
+    }
+
+    .settingTable .condCol{width:10.8%!important;}
+    .settingTable .nameCol{width:19%!important;}
+    .settingTable .orderCol{width:6%!important;}
+    .settingTable .opsCol{width:6%!important;}
+    .settingTable th,.settingTable td{text-align:center!important;}
+
+    @media (max-width:1180px){
+      .filterGridMaking,.filterGridCompleted{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+    }
+    @media (max-width:760px){
+      .filterGridMaking,.filterGridCompleted{grid-template-columns:1fr!important;}
+    }
+
+
+    /* ===== V9修正版：只在 V9 基礎上補修，不重製設定 ===== */
+    .caseNoteBox{
+      min-height:72px!important;
+      height:72px!important;
+      max-height:116px!important;
+      resize:vertical;
+    }
+
+    .compactConditions{
+      position:sticky!important;
+      top:0!important;
+      z-index:9!important;
+      box-shadow:0 8px 18px rgba(15,23,42,.08);
+    }
+    .compactConditions .sectionHead{
+      background:linear-gradient(90deg,#e0f2fe,#ffffff)!important;
+    }
+    .compactConditions .sectionHead .btnTiny{
+      margin-right:2px;
+      padding:4px 10px;
+      line-height:1.2;
+    }
+
+    .conditionStack.condition3{
+      grid-template-columns:1fr 1.12fr 1.30fr!important;
+      gap:7px!important;
+    }
+    .conditionStack.condition3 .condCard{
+      min-height:34px!important;
+      grid-template-columns:78px minmax(0,1fr)!important;
+      border-color:#d5e2f2!important;
+    }
+    .conditionStack.condition3 .condTerms{
+      grid-template-columns:86px minmax(0,1fr)!important;
+    }
+    .conditionStack.condition3 .condCard label{
+      font-size:12.5px!important;
+      letter-spacing:0!important;
+      justify-content:center!important;
+      padding:0 5px!important;
+    }
+    .conditionStack.condition3 .condKey label{
+      justify-content:flex-start!important;
+      text-align:left!important;
+      padding-left:12px!important;
+    }
+    .conditionStack.condition3 .condBody{
+      padding:4px 6px!important;
+      gap:0!important;
+    }
+    .conditionStack.condition3 input{
+      height:26px!important;
+      padding:3px 6px!important;
+      border-radius:8px!important;
+      text-align:center!important;
+    }
+    .conditionStack.condition3 .condPrice .condBody,
+    .conditionStack.condition3 .condBottom .condBody{
+      display:grid!important;
+      grid-template-columns:20px 1fr 20px 1fr 18px!important;
+      justify-content:stretch!important;
+      column-gap:3px!important;
+      align-items:center!important;
+    }
+    .conditionStack.condition3 .condDate .condBody{
+      display:grid!important;
+      grid-template-columns:20px 1fr 20px 1fr!important;
+      justify-content:stretch!important;
+      column-gap:3px!important;
+      align-items:center!important;
+    }
+    .conditionStack.condition3 .condChange .condBody{
+      display:grid!important;
+      grid-template-columns:1fr 20px 1fr!important;
+      justify-content:stretch!important;
+      column-gap:3px!important;
+      align-items:center!important;
+    }
+    .conditionStack.condition3 .condKey .condBody,
+    .conditionStack.condition3 .condTerms .condBody{
+      display:grid!important;
+      grid-template-columns:1fr!important;
+    }
+    .conditionStack.condition3 .num,
+    .conditionStack.condition3 .dateInput,
+    .conditionStack.condition3 .short,
+    .conditionStack.condition3 .growInput,
+    .conditionStack.condition3 .termsInput{
+      width:100%!important;
+      min-width:0!important;
+      flex:unset!important;
+    }
+    .conditionStack.condition3 .condKey input,
+    .conditionStack.condition3 .condTerms input{
+      text-align:left!important;
+    }
+    .conditionStack.condition3 .miniLabel,
+    .conditionStack.condition3 .unit{
+      text-align:center!important;
+      font-size:12px!important;
+      color:#334155!important;
+      margin:0!important;
+      white-space:nowrap!important;
+    }
+
+    .relistBtnGroup{
+      justify-content:flex-start!important;
+      gap:5px!important;
+      flex-wrap:nowrap!important;
+      overflow:visible!important;
+    }
+    .relistBtnGroup button{
+      flex:0 0 auto!important;
+      width:auto!important;
+      min-width:0!important;
+      height:26px!important;
+      padding:0 9px!important;
+      font-size:12px!important;
+      line-height:24px!important;
+      box-shadow:none!important;
+      white-space:nowrap!important;
+    }
+    .relistBtnGroup button.active{
+      background:linear-gradient(90deg,#7c3aed,#2563eb)!important;
+      color:#fff!important;
+      border-color:#7c3aed!important;
+    }
+
+    .taskTableWrap{
+      max-height:520px!important;
+      overflow:auto!important;
+      border-radius:12px!important;
+      position:relative;
+    }
+    .taskFilterBar{
+      position:sticky;
+      top:0;
+      z-index:8;
+      display:flex;
+      align-items:center;
+      gap:7px;
+      padding:7px 8px;
+      background:#ffffff;
+      border-bottom:1px solid var(--line);
+      box-shadow:0 1px 0 rgba(15,23,42,.04);
+    }
+    .taskFilterBar button{
+      border:1px solid #cbd5e1;
+      background:#fff;
+      color:#334155;
+      border-radius:999px;
+      padding:5px 12px;
+      font-size:12px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .taskFilterBar button.active{
+      background:linear-gradient(90deg,#2563eb,#0891b2);
+      color:#fff;
+      border-color:#2563eb;
+    }
+    .taskTableWrap th{
+      position:sticky!important;
+      top:38px!important;
+      z-index:7!important;
+      background:#eaf4ff!important;
+      box-shadow:0 1px 0 var(--line);
+    }
+    .taskRowX td{
+      background:#fff!important;
+      color:#111827!important;
+    }
+    .taskRowX:hover td{
+      background:#fbfdff!important;
+      color:#111827!important;
+    }
+    .statusPill.x{
+      background:transparent!important;
+      border-color:transparent!important;
+      color:#111827!important;
+    }
+    .actionCircle.x{
+      background:#fff!important;
+      color:#111827!important;
+      border:1px solid #cbd5e1!important;
+      box-shadow:none!important;
+    }
+    .assistantBtns{
+      gap:10px!important;
+    }
+    .assistantBtns button{
+      margin:0 2px!important;
+      padding:4px 12px!important;
+    }
+    .taskNoteInput{
+      width:calc(100% - 18px)!important;
+      min-width:0!important;
+      margin-right:14px!important;
+    }
+
+    @media (max-width:980px){
+      .compactConditions{position:relative!important;top:auto!important;}
+      .taskTableWrap th{top:38px!important;}
+      .conditionStack.condition3 .condBody{flex-wrap:wrap;}
+    }
+
+
+    /* ===== V9修正版2：做法2固定浮動＋更新清單全顯示 ===== */
+
+    .modalBody{
+      scroll-behavior:smooth;
+    }
+
+    /* 做法2：變更條件整區固定 */
+    .compactConditions{
+      position:sticky!important;
+      top:0!important;
+      z-index:40!important;
+      box-shadow:0 8px 18px rgba(15,23,42,.10)!important;
+    }
+
+    /* 更新清單不要自己上下滑動，改由整個輸入視窗滑動 */
+    .taskTableWrap{
+      max-height:none!important;
+      overflow:visible!important;
+      border-radius:12px!important;
+      border:1px solid var(--line)!important;
+      position:relative!important;
+    }
+
+    /* 篩選按鈕固定在變更條件下方 */
+    .taskFilterBar{
+      position:sticky!important;
+      top:172px!important;
+      z-index:35!important;
+      display:flex!important;
+      align-items:center!important;
+      gap:7px!important;
+      padding:7px 8px!important;
+      background:#ffffff!important;
+      border-bottom:1px solid var(--line)!important;
+      box-shadow:0 1px 0 rgba(15,23,42,.04)!important;
+    }
+
+    /* 表頭固定在篩選按鈕下方 */
+    .taskTableWrap th{
+      position:sticky!important;
+      top:211px!important;
+      z-index:34!important;
+      background:#eaf4ff!important;
+      box-shadow:0 1px 0 var(--line)!important;
+    }
+
+    /* X 不用底色，黑色文字 */
+    .taskRowX td{
+      background:#fff!important;
+      color:#111827!important;
+    }
+    .taskRowX:hover td{
+      background:#fbfdff!important;
+      color:#111827!important;
+    }
+    .statusPill.x{
+      background:transparent!important;
+      border-color:transparent!important;
+      color:#111827!important;
+    }
+    .actionCircle.x{
+      background:#fff!important;
+      color:#111827!important;
+      border:1px solid #cbd5e1!important;
+      box-shadow:none!important;
+    }
+
+    /* 備註框右邊再縮一點，避免跟最後更新時間重疊 */
+    .taskNoteInput{
+      width:calc(100% - 34px)!important;
+      min-width:0!important;
+      margin-right:26px!important;
+    }
+
+    /* 麗卉 / 紹薇按鈕分開 */
+    .assistantBtns{
+      gap:12px!important;
+    }
+    .assistantBtns button{
+      margin:0 3px!important;
+      padding:4px 13px!important;
+    }
+
+    /* 變更條件：KEY / 特約條款內容靠左 */
+    .conditionStack.condition3 .condKey input,
+    .conditionStack.condition3 .condTerms input{
+      text-align:left!important;
+    }
+
+    @media (max-width:980px){
+      .taskFilterBar{top:0!important;}
+      .taskTableWrap th{top:39px!important;}
+      .compactConditions{position:relative!important;top:auto!important;}
+    }
+
+
+    /* ===== V9修正版3：修正固定浮動失效 =====
+       原因：輸入視窗是 .modal 在捲動，且 sectionBlock 有 overflow:hidden，
+       sticky 需要在 modal 捲動層內，且父層不能把 sticky 裁掉。 */
+    .modal{
+      overflow:auto!important;
+      --sticky-head-h:58px;
+      --sticky-cond-h:150px;
+      --sticky-filter-h:39px;
+    }
+    .modalBody,
+    .modalBody .sectionBlock,
+    .modalBody .sectionContent,
+    .taskTableWrap{
+      overflow:visible!important;
+    }
+    .modalHeader{
+      position:sticky!important;
+      top:0!important;
+      z-index:70!important;
+    }
+    .compactConditions{
+      position:sticky!important;
+      top:var(--sticky-head-h)!important;
+      z-index:60!important;
+      overflow:visible!important;
+      box-shadow:0 10px 20px rgba(15,23,42,.12)!important;
+    }
+    .compactConditions .sectionHead,
+    .compactConditions .sectionContent{
+      background:#fff!important;
+    }
+    .taskTableWrap{
+      max-height:none!important;
+      overflow:visible!important;
+      position:relative!important;
+    }
+    .taskFilterBar{
+      position:sticky!important;
+      top:calc(var(--sticky-head-h) + var(--sticky-cond-h))!important;
+      z-index:55!important;
+      background:#fff!important;
+      box-shadow:0 2px 8px rgba(15,23,42,.08)!important;
+    }
+    .taskTableWrap table thead th,
+    .taskTableWrap th{
+      position:sticky!important;
+      top:calc(var(--sticky-head-h) + var(--sticky-cond-h) + var(--sticky-filter-h))!important;
+      z-index:54!important;
+      background:#eaf4ff!important;
+      box-shadow:0 1px 0 var(--line), 0 2px 8px rgba(15,23,42,.06)!important;
+    }
+
+    @media (max-width:980px){
+      .compactConditions{
+        position:relative!important;
+        top:auto!important;
+      }
+      .taskFilterBar{
+        position:sticky!important;
+        top:var(--sticky-head-h)!important;
+      }
+      .taskTableWrap table thead th,
+      .taskTableWrap th{
+        position:sticky!important;
+        top:calc(var(--sticky-head-h) + var(--sticky-filter-h))!important;
+      }
+    }
+
+
+    /* ===== V9修正版4：委託時間原/改/時間＋更新清單欄位順序 ===== */
+    .conditionStack.condition3 .condDate .condBody{
+      grid-template-columns:20px 1fr 20px 1fr 26px!important;
+    }
+    .taskNoteInput{
+      width:calc(100% - 26px)!important;
+      min-width:0!important;
+      margin-right:20px!important;
+    }
+
+
+    /* ===== V9修正版5：方案 B：變更條件摘要列固定，不固定大區塊 ===== */
+
+    /* 大的變更條件區不固定，避免操作更新清單時被擋住 */
+    .compactConditions{
+      position:relative!important;
+      top:auto!important;
+      z-index:auto!important;
+      box-shadow:none!important;
+    }
+
+    .modal{
+      overflow:auto!important;
+      --sticky-head-h:58px;
+      --summary-h:34px;
+      --filter-h:39px;
+    }
+    .modalHeader{
+      position:sticky!important;
+      top:0!important;
+      z-index:70!important;
+    }
+    .modalBody,
+    .modalBody .sectionBlock,
+    .modalBody .sectionContent,
+    .taskTableWrap{
+      overflow:visible!important;
+    }
+
+    .taskTableWrap{
+      max-height:none!important;
+      overflow:visible!important;
+      border-radius:12px!important;
+      position:relative!important;
+    }
+
+    .conditionSummaryBar{
+      position:sticky!important;
+      top:var(--sticky-head-h)!important;
+      z-index:60!important;
+      min-height:34px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex-wrap:wrap;
+      padding:7px 9px;
+      background:#ffffff;
+      border-bottom:1px solid var(--line);
+      box-shadow:0 2px 8px rgba(15,23,42,.08);
+    }
+    .conditionSummaryBar .summaryLabel{
+      font-size:12px;
+      font-weight:1000;
+      color:#1e3a5f;
+      margin-right:3px;
+      white-space:nowrap;
+    }
+    .conditionSummaryBar .summaryChip{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      padding:3px 8px;
+      font-size:12px;
+      font-weight:900;
+      border:1px solid #cbd5e1;
+      background:#fff;
+      color:#334155;
+      white-space:nowrap;
+    }
+    .conditionSummaryBar .summaryChip.on{
+      background:#dcfce7;
+      border-color:#86efac;
+      color:#15803d;
+    }
+    .conditionSummaryBar .summaryChip.off{
+      background:#f8fafc;
+      border-color:#e2e8f0;
+      color:#64748b;
+    }
+    .conditionSummaryBar .summaryChip.type{
+      background:#f0eaff;
+      border-color:#c4b5fd;
+      color:#6d28d9;
+    }
+
+    .taskFilterBar{
+      position:sticky!important;
+      top:calc(var(--sticky-head-h) + var(--summary-h))!important;
+      z-index:55!important;
+      background:#fff!important;
+      box-shadow:0 2px 8px rgba(15,23,42,.06)!important;
+    }
+
+    .taskTableWrap table thead th,
+    .taskTableWrap th{
+      position:sticky!important;
+      top:calc(var(--sticky-head-h) + var(--summary-h) + var(--filter-h))!important;
+      z-index:54!important;
+      background:#eaf4ff!important;
+      box-shadow:0 1px 0 var(--line), 0 2px 8px rgba(15,23,42,.05)!important;
+    }
+
+    @media (max-width:980px){
+      .conditionSummaryBar{
+        position:sticky!important;
+        top:var(--sticky-head-h)!important;
+      }
+      .taskFilterBar{
+        top:calc(var(--sticky-head-h) + var(--summary-h))!important;
+      }
+      .taskTableWrap table thead th,
+      .taskTableWrap th{
+        top:calc(var(--sticky-head-h) + var(--summary-h) + var(--filter-h))!important;
+      }
+    }
+
+
+    /* V9修正版6：摘要列顯示實際內容 */
+    .conditionSummaryBar{
+      align-items:flex-start!important;
+      row-gap:5px!important;
+    }
+    .conditionSummaryBar .summaryChip{
+      max-width:260px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+
+    /* V9修正版7：首頁標題列與列表欄寬調整 */
+    .heroOneLine{
+      align-items:center!important;
+      gap:14px!important;
+    }
+    .hero .titleWrap h1{
+      margin:0!important;
+      line-height:1!important;
+    }
+    .toolbarMain{
+      margin-left:auto;
+      justify-content:flex-end!important;
+      gap:9px!important;
+      flex-wrap:wrap;
+    }
+    .subText{display:none!important;}
+    .addObjectBtn{
+      font-size:16px!important;
+      padding:11px 22px!important;
+      border:2px solid rgba(255,255,255,.62)!important;
+      background:linear-gradient(90deg,#ff8a00,#f97316,#ef4444)!important;
+      color:#fff!important;
+      box-shadow:0 8px 20px rgba(239,68,68,.28)!important;
+      letter-spacing:.04em;
+      transform:translateY(-1px);
+    }
+    .addObjectBtn:hover{
+      filter:brightness(1.04);
+      transform:translateY(-2px);
+    }
+    .clock{
+      white-space:nowrap!important;
+      font-weight:900!important;
+    }
+    .statusChip#saveStatus{
+      background:#dcfce7!important;
+      color:#15803d!important;
+      border-color:#86efac!important;
+      font-weight:1000!important;
+    }
+    .filterGridMaking,
+    .filterGridCompleted{
+      grid-template-columns:1fr .68fr .68fr .68fr .88fr 1.35fr auto!important;
+    }
+    .filterGrid input,
+    .filterGrid select{
+      height:32px!important;
+      padding:5px 7px!important;
+      font-size:12px!important;
+    }
+    .tableScroll th,
+    .tableScroll td{
+      padding-left:4px!important;
+      padding-right:4px!important;
+      font-size:12px!important;
+    }
+    .tableScroll .colTight{
+      font-size:11.5px!important;
+      line-height:1.22!important;
+    }
+    .condCell{
+      font-size:11.5px!important;
+      line-height:1.22!important;
+    }
+    .progressPctWrap{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      width:100%;
+    }
+    .progressPct{
+      width:78px;
+      height:23px;
+      border-radius:999px;
+      border:1px solid #bfdbfe;
+      background:#e5edf8;
+      overflow:hidden;
+      position:relative;
+      box-shadow:inset 0 1px 2px rgba(15,23,42,.06);
+    }
+    .progressPctFill{
+      position:absolute;
+      left:0;
+      top:0;
+      bottom:0;
+      border-radius:999px;
+      background:linear-gradient(90deg,#60a5fa,#22c55e);
+      min-width:0;
+    }
+    .progressPctText{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:12px;
+      font-weight:1000;
+      color:#0f172a;
+      text-shadow:0 1px 0 rgba(255,255,255,.65);
+    }
+
+
+    /* V9修正版8：更新清單美化 */
+    .taskTableWrap table{
+      border-collapse:separate!important;
+      border-spacing:0!important;
+    }
+    .taskTableWrap th{
+      font-size:13px!important;
+      font-weight:1000!important;
+      color:#17446f!important;
+      background:linear-gradient(180deg,#eaf4ff,#dff0ff)!important;
+      padding:9px 7px!important;
+      letter-spacing:.03em;
+    }
+    .taskTableWrap td{
+      font-size:13px!important;
+      padding:8px 7px!important;
+      border-bottom:1px solid #e6eef8!important;
+    }
+    .taskNamePlain{
+      font-size:15px!important;
+      font-weight:1000!important;
+      color:#142033!important;
+      letter-spacing:.02em;
+      line-height:1.35!important;
+    }
+    .taskRowDone .taskNamePlain{
+      color:#166534!important;
+    }
+    .taskRowX .taskNamePlain{
+      color:#111827!important;
+    }
+    .taskTableWrap tbody tr{
+      transition:background .15s ease, transform .12s ease;
+    }
+    .taskTableWrap tbody tr:hover td{
+      background:#f7fbff!important;
+    }
+    .actionCircle{
+      width:34px!important;
+      height:34px!important;
+      font-size:14px!important;
+      font-weight:1000!important;
+      box-shadow:0 3px 10px rgba(15,23,42,.10)!important;
+    }
+    .actionCircle.v{
+      background:linear-gradient(180deg,#dcfce7,#bbf7d0)!important;
+      color:#15803d!important;
+      border:1px solid #86efac!important;
+    }
+    .actionCircle.x{
+      background:#ffffff!important;
+      color:#111827!important;
+      border:1px solid #cbd5e1!important;
+      box-shadow:0 2px 6px rgba(15,23,42,.06)!important;
+    }
+    .assistantBtns button{
+      font-size:13px!important;
+      font-weight:1000!important;
+      padding:5px 14px!important;
+      border-radius:999px!important;
+      box-shadow:0 2px 7px rgba(15,23,42,.06);
+    }
+    .assistantBtns button.active{
+      background:linear-gradient(90deg,#2563eb,#06b6d4)!important;
+      color:#fff!important;
+      border-color:#2563eb!important;
+      box-shadow:0 4px 12px rgba(37,99,235,.22)!important;
+    }
+    .taskNoteInput{
+      height:34px!important;
+      font-size:13px!important;
+      border-radius:10px!important;
+      background:#fbfdff!important;
+    }
+    .statusPill{
+      font-size:13px!important;
+      font-weight:1000!important;
+      min-width:58px!important;
+      padding:5px 12px!important;
+    }
+    .statusPill.pending{
+      background:#fff3df!important;
+      color:#c2410c!important;
+      border-color:#fed7aa!important;
+    }
+    .statusPill.done{
+      background:#dcfce7!important;
+      color:#15803d!important;
+      border-color:#86efac!important;
+    }
+    .statusPill.x{
+      background:transparent!important;
+      color:#111827!important;
+      border-color:transparent!important;
+    }
+    .taskFilterBar{
+      background:linear-gradient(90deg,#ffffff,#f7fbff)!important;
+      border-bottom:1px solid #dbeafe!important;
+    }
+    .taskFilterBar button{
+      font-size:13px!important;
+      font-weight:1000!important;
+      padding:6px 14px!important;
+    }
+
+
+    /* V9修正版9：標題列改淡色漸層，不用重藍色 */
+    .hero{
+      background:linear-gradient(105deg,#dff1ff 0%,#b9dcff 42%,#d7fbff 100%)!important;
+      color:#14304f!important;
+      border:1px solid #c7ddf5!important;
+      box-shadow:0 12px 28px rgba(59,130,246,.13)!important;
+    }
+    .hero h1{
+      color:#12335f!important;
+      text-shadow:none!important;
+    }
+    .clock{
+      background:rgba(255,255,255,.58)!important;
+      color:#24435f!important;
+      border:1px solid rgba(148,163,184,.35)!important;
+    }
+
+    .panelTitle{
+      background:linear-gradient(90deg,#eaf6ff 0%,#f4fbff 48%,#ffffff 100%)!important;
+      color:#17446f!important;
+      border-bottom:1px solid #d7e8f7!important;
+    }
+    .panelTitle:before{
+      background:linear-gradient(180deg,#8fc7ff,#7dd3fc)!important;
+    }
+
+    .modalHeader{
+      background:linear-gradient(105deg,#e6f4ff 0%,#bfdefb 50%,#e4fbff 100%)!important;
+      color:#14304f!important;
+      border-bottom:1px solid #c8dff4!important;
+    }
+    .modalHeader h2,
+    .editTitleCase,
+    .editTitleContract{
+      color:#14304f!important;
+      text-shadow:none!important;
+    }
+    .closeX{
+      background:rgba(255,255,255,.72)!important;
+      color:#1e3a5f!important;
+      border:1px solid #cbd5e1!important;
+    }
+
+    .sectionHead{
+      background:linear-gradient(90deg,#edf7ff 0%,#f8fcff 58%,#ffffff 100%)!important;
+      color:#17446f!important;
+      border-bottom:1px solid #dbeafe!important;
+    }
+    .sectionHead:before{
+      background:linear-gradient(180deg,#93c5fd,#67e8f9)!important;
+    }
+
+    .taskTableWrap th{
+      background:linear-gradient(180deg,#f3faff 0%,#e8f5ff 100%)!important;
+      color:#17446f!important;
+      border-bottom:1px solid #d7e8f7!important;
+    }
+
+    .tableScroll th,
+    .rulesWrap th,
+    .settingTable th{
+      background:linear-gradient(180deg,#f3faff 0%,#e8f5ff 100%)!important;
+      color:#17446f!important;
+    }
+
+    .taskFilterBar{
+      background:linear-gradient(90deg,#ffffff 0%,#f6fbff 55%,#edf8ff 100%)!important;
+    }
+
+
+    /* V9修正版10：製作中列表隔行顏色 */
+    #makingList tbody tr:nth-child(odd) td{
+      background:#ffffff!important;
+    }
+    #makingList tbody tr:nth-child(even) td{
+      background:#f4f9ff!important;
+    }
+    #makingList tbody tr:hover td{
+      background:#eaf6ff!important;
+    }
+
+
+    /* V9修正版11：篩選列寬度與框內文字對齊 */
+    .filterGridMaking,
+    .filterGridCompleted{
+      grid-template-columns:max-content .72fr .72fr .72fr .9fr 1.35fr auto!important;
+      align-items:end!important;
+    }
+
+    .filterGrid label:first-child{
+      width:max-content!important;
+      min-width:0!important;
+    }
+
+    #filterOpenAction,
+    #filterDoneAction{
+      width:auto!important;
+      min-width:96px!important;
+      max-width:138px!important;
+      padding-left:8px!important;
+      padding-right:24px!important;
+      text-align:left!important;
+      text-align-last:left!important;
+    }
+
+    .filterGrid input,
+    .filterGrid select{
+      text-align:left!important;
+      text-align-last:left!important;
+    }
+
+    .filterGrid input::placeholder{
+      text-align:left!important;
+      color:#94a3b8!important;
+    }
+
+
+    /* V9修正版12：變更條件區塊淡色強調 */
+    .compactConditions{
+      background:linear-gradient(135deg,#fff7ed 0%,#f0f9ff 48%,#f8fafc 100%)!important;
+      border:1px solid #f3d7b6!important;
+      box-shadow:0 8px 22px rgba(249,115,22,.10)!important;
+    }
+
+    .compactConditions .sectionHead{
+      background:linear-gradient(90deg,#ffedd5 0%,#fff7ed 42%,#f0f9ff 100%)!important;
+      color:#9a3412!important;
+      border-bottom:1px solid #fed7aa!important;
+    }
+
+    .compactConditions .sectionHead:before{
+      background:linear-gradient(180deg,#fb923c,#38bdf8)!important;
+    }
+
+    .compactConditions .sectionContent{
+      background:rgba(255,255,255,.45)!important;
+    }
+
+    .conditionStack.condition3 .condCard{
+      background:rgba(255,255,255,.92)!important;
+      border-color:#eadccf!important;
+      box-shadow:0 2px 8px rgba(15,23,42,.035)!important;
+    }
+
+    .conditionStack.condition3 .condCard:hover{
+      box-shadow:0 4px 12px rgba(249,115,22,.10)!important;
+      transform:translateY(-1px);
+    }
+
+
+    /* V9修正版13：Supabase / GitHub / JSON 匯入匯出 */
+    .btnPurple{
+      background:#ede9fe!important;
+      color:#6d28d9!important;
+    }
+    .syncGrid{
+      display:grid;
+      grid-template-columns:1.1fr 1.5fr .75fr auto;
+      gap:10px;
+      align-items:end;
+    }
+    .syncGrid label{
+      display:flex;
+      flex-direction:column;
+      gap:5px;
+      font-size:12px;
+      font-weight:900;
+      color:#334155;
+    }
+    .syncGrid input[type="text"],
+    .syncGrid input:not([type]){
+      width:100%;
+      height:34px;
+      border:1px solid #cbd5e1;
+      border-radius:10px;
+      padding:7px 9px;
+      background:#fff;
+      outline:none;
+    }
+    .syncGrid input:focus{
+      border-color:#60a5fa;
+      box-shadow:0 0 0 3px rgba(96,165,250,.16);
+    }
+    .checkLine{
+      flex-direction:row!important;
+      align-items:center;
+      gap:7px!important;
+      height:34px;
+      white-space:nowrap;
+    }
+    .checkLine input{
+      width:18px;
+      height:18px;
+      accent-color:#2563eb;
+    }
+    .syncBtns{
+      flex-wrap:wrap;
+    }
+    #sbStatus{
+      background:#f8fafc;
+      color:#334155;
+      border-color:#e2e8f0;
+    }
+    #sbStatus.ok{
+      background:#dcfce7;
+      color:#15803d;
+      border-color:#86efac;
+    }
+    #sbStatus.warn{
+      background:#fff7ed;
+      color:#c2410c;
+      border-color:#fed7aa;
+    }
+    #sbStatus.bad{
+      background:#fee2e2;
+      color:#b91c1c;
+      border-color:#fecaca;
+    }
+    .syncNote{
+      margin-top:12px;
+      font-size:12px;
+      color:#475569;
+      line-height:1.55;
+    }
+    .syncNote pre{
+      margin:8px 0 0;
+      padding:10px 12px;
+      background:#0f172a;
+      color:#e2e8f0;
+      border-radius:12px;
+      overflow:auto;
+      max-height:260px;
+      font-size:12px;
+      line-height:1.45;
+    }
+    .githubSteps{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:9px;
+    }
+    .stepCard{
+      display:flex;
+      gap:9px;
+      align-items:flex-start;
+      background:#fbfdff;
+      border:1px solid #dbeafe;
+      border-radius:14px;
+      padding:10px;
+      line-height:1.5;
+      color:#334155;
+    }
+    .stepCard b{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:26px;
+      height:26px;
+      border-radius:999px;
+      background:#dbeafe;
+      color:#1d4ed8;
+      font-weight:1000;
+    }
+    @media (max-width:980px){
+      .syncGrid,.githubSteps{
+        grid-template-columns:1fr;
+      }
+    }
+
+
+    /* V9修正版18：NEW本式 Supabase 單列，不顯示 GitHub / 工作區 / 找回舊資料 */
+    .syncOneLine{
+      display:grid;
+      grid-template-columns:minmax(220px,1.05fr) minmax(280px,1.35fr) auto auto auto auto minmax(180px,.95fr);
+      gap:8px;
+      align-items:end;
+      width:100%;
+    }
+    .syncOneLine label{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      font-size:12px;
+      font-weight:900;
+      color:#334155;
+      min-width:0;
+    }
+    .syncOneLine input{
+      width:100%;
+      height:33px;
+      border:1px solid #cbd5e1;
+      border-radius:10px;
+      padding:6px 9px;
+      background:#fff;
+      outline:none;
+      text-align:left;
+    }
+    .syncOneLine input:focus{
+      border-color:#60a5fa;
+      box-shadow:0 0 0 3px rgba(96,165,250,.16);
+    }
+    .syncOneLine .btnMini{
+      height:33px;
+      white-space:nowrap;
+    }
+    #sbStatus{
+      font-weight:1000!important;
+      border-color:#e2e8f0;
+      background:#f8fafc;
+      color:#334155;
+    }
+    #sbStatus.ok{background:#dcfce7!important;color:#15803d!important;border-color:#86efac!important;}
+    #sbStatus.warn{background:#fff7ed!important;color:#c2410c!important;border-color:#fed7aa!important;}
+    #sbStatus.bad{background:#fee2e2!important;color:#b91c1c!important;border-color:#fecaca!important;}
+    .syncMessage{
+      display:inline-flex;
+      align-items:center;
+      min-height:28px;
+      padding:5px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:900;
+      color:#475569;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      white-space:nowrap;
+    }
+    .syncMessage.ok{color:#15803d;background:#dcfce7;border-color:#86efac;}
+    .syncMessage.warn{color:#c2410c;background:#fff7ed;border-color:#fed7aa;}
+    .syncMessage.bad{color:#b91c1c;background:#fee2e2;border-color:#fecaca;}
+    .compactSyncNote{
+      margin-top:8px;
+      font-size:12px;
+      color:#64748b;
+    }
+    .syncNote pre{display:none!important;}
+    @media (max-width:1180px){
+      .syncOneLine{grid-template-columns:1fr 1fr auto auto auto;}
+      .syncOneLine #sbStatus,.syncOneLine #sbMessage{grid-column:span 2;}
+    }
+    @media (max-width:760px){
+      .syncOneLine{grid-template-columns:1fr;}
+      .syncOneLine #sbStatus,.syncOneLine #sbMessage{grid-column:auto;}
+    }
+
+
+    /* V9修正版19：基本資料新增業務＋首頁業務欄位與同步區上移 */
+    .basicInfoGrid{
+      display:grid;
+      grid-template-columns:.72fr .72fr .72fr 1.05fr .82fr .82fr 2.05fr;
+      gap:9px;
+      align-items:end;
+    }
+    .basicInfoGrid .field input{width:100%;height:34px;padding:7px 9px;}
+    .basicInfoGrid .basicCaseName input{font-weight:700;}
+    @media (max-width:1180px){
+      .basicInfoGrid{grid-template-columns:repeat(4,minmax(0,1fr));}
+      .basicInfoGrid .basicCaseName{grid-column:span 2;}
+    }
+    @media (max-width:760px){
+      .basicInfoGrid{grid-template-columns:1fr;}
+      .basicInfoGrid .basicCaseName{grid-column:auto;}
+    }
+    .filterGridMaking,
+    .filterGridCompleted{
+      grid-template-columns:max-content .58fr .58fr .58fr .86fr .78fr 1.42fr auto!important;
+      align-items:end!important;
+    }
+    #filterBusiness,#filterDoneBusiness{
+      min-width:0!important;
+    }
+    .syncTopBlock{
+      margin-bottom:14px!important;
+    }
+
+
+    /* V9修正版21：基本資料平均分配兩行 */
+    .basicInfoGrid{
+      display:grid!important;
+      grid-template-columns:repeat(4,minmax(0,1fr))!important;
+      grid-template-areas:
+        "receiptDate receiptNo processDate contractNo"
+        "mainContract business caseName caseName";
+      gap:9px!important;
+      align-items:end!important;
+    }
+    .basicInfoGrid .basicReceiptDate{grid-area:receiptDate!important;}
+    .basicInfoGrid .basicReceiptNo{grid-area:receiptNo!important;}
+    .basicInfoGrid .basicProcessDate{grid-area:processDate!important;}
+    .basicInfoGrid .basicContractNo{grid-area:contractNo!important;}
+    .basicInfoGrid .basicMainContract{grid-area:mainContract!important;}
+    .basicInfoGrid .basicBusiness{grid-area:business!important;}
+    .basicInfoGrid .basicCaseName{grid-area:caseName!important;grid-column:auto!important;}
+    .basicInfoGrid .field input{
+      height:34px!important;
+      width:100%!important;
+    }
+    .basicInfoGrid .basicCaseName input{
+      height:34px!important;
+      font-weight:800!important;
+    }
+    @media (max-width:1180px){
+      .basicInfoGrid{
+        grid-template-columns:1fr 1fr!important;
+        grid-template-areas:
+          "receiptDate receiptNo"
+          "processDate contractNo"
+          "mainContract business"
+          "caseName caseName"!important;
+      }
+    }
+    @media (max-width:760px){
+      .basicInfoGrid{
+        grid-template-columns:1fr!important;
+        grid-template-areas:
+          "receiptDate"
+          "receiptNo"
+          "processDate"
+          "contractNo"
+          "mainContract"
+          "business"
+          "caseName"!important;
+      }
+    }
+
+
+    /* V9修正版22：基本資料依指定順序固定兩排
+       第一排：單據日期／單據號碼／處理日期／案名
+       第二排：契約編號（佔2格）／跟隨主約／業務 */
+    .basicInfoGrid{
+      display:grid!important;
+      grid-template-columns:repeat(4,minmax(0,1fr))!important;
+      grid-template-areas:
+        "receiptDate receiptNo processDate caseName"
+        "contractNo contractNo mainContract business"!important;
+      gap:9px!important;
+      align-items:end!important;
+    }
+    .basicInfoGrid .basicReceiptDate{grid-area:receiptDate!important;}
+    .basicInfoGrid .basicReceiptNo{grid-area:receiptNo!important;}
+    .basicInfoGrid .basicProcessDate{grid-area:processDate!important;}
+    .basicInfoGrid .basicCaseName{grid-area:caseName!important;grid-column:auto!important;}
+    .basicInfoGrid .basicContractNo{grid-area:contractNo!important;}
+    .basicInfoGrid .basicMainContract{grid-area:mainContract!important;}
+    .basicInfoGrid .basicBusiness{grid-area:business!important;}
+    .basicInfoGrid .field input{
+      height:34px!important;
+      width:100%!important;
+    }
+    .basicInfoGrid .basicCaseName input{
+      height:34px!important;
+      font-weight:800!important;
+    }
+    @media (max-width:1180px){
+      .basicInfoGrid{
+        grid-template-columns:1fr 1fr!important;
+        grid-template-areas:
+          "receiptDate receiptNo"
+          "processDate caseName"
+          "contractNo contractNo"
+          "mainContract business"!important;
+      }
+    }
+    @media (max-width:760px){
+      .basicInfoGrid{
+        grid-template-columns:1fr!important;
+        grid-template-areas:
+          "receiptDate"
+          "receiptNo"
+          "processDate"
+          "caseName"
+          "contractNo"
+          "mainContract"
+          "business"!important;
+      }
+    }
+
+
+    /* V9修正版23：基本資料兩排指定順序，HTML順序與畫面一致
+       第一排：單據日期／單據號碼／處理日期／案名
+       第二排：契約編號（佔2格）／跟隨主約／業務 */
+    #editModalBody .basicInfoGrid{
+      display:grid!important;
+      grid-template-columns:repeat(4,minmax(0,1fr))!important;
+      grid-template-areas:
+        "receiptDate receiptNo processDate caseName"
+        "contractNo contractNo mainContract business"!important;
+      gap:9px!important;
+      align-items:end!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate{grid-area:receiptDate!important;}
+    #editModalBody .basicInfoGrid .basicReceiptNo{grid-area:receiptNo!important;}
+    #editModalBody .basicInfoGrid .basicProcessDate{grid-area:processDate!important;}
+    #editModalBody .basicInfoGrid .basicCaseName{grid-area:caseName!important;grid-column:auto!important;}
+    #editModalBody .basicInfoGrid .basicContractNo{grid-area:contractNo!important;}
+    #editModalBody .basicInfoGrid .basicMainContract{grid-area:mainContract!important;}
+    #editModalBody .basicInfoGrid .basicBusiness{grid-area:business!important;}
+    #editModalBody .basicInfoGrid .field input{height:34px!important;width:100%!important;}
+    #editModalBody .basicInfoGrid .basicCaseName input{font-weight:800!important;}
+    @media (max-width:1180px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr 1fr!important;
+        grid-template-areas:
+          "receiptDate receiptNo"
+          "processDate caseName"
+          "contractNo contractNo"
+          "mainContract business"!important;
+      }
+    }
+    @media (max-width:760px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr!important;
+        grid-template-areas:
+          "receiptDate"
+          "receiptNo"
+          "processDate"
+          "caseName"
+          "contractNo"
+          "mainContract"
+          "business"!important;
+      }
+    }
+
+
+  
+
+    /* V9修正版24：基本資料第一排案名拉長＋摘要列移除「時間」 */
+    #editModalBody .basicInfoGrid{
+      display:grid!important;
+      grid-template-columns:repeat(6,minmax(0,1fr))!important;
+      grid-template-areas:
+        "receiptDate receiptNo processDate caseName caseName caseName"
+        "contractNo contractNo contractNo mainContract business business"!important;
+      gap:9px!important;
+      align-items:end!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate{grid-area:receiptDate!important;}
+    #editModalBody .basicInfoGrid .basicReceiptNo{grid-area:receiptNo!important;}
+    #editModalBody .basicInfoGrid .basicProcessDate{grid-area:processDate!important;}
+    #editModalBody .basicInfoGrid .basicCaseName{grid-area:caseName!important;grid-column:auto!important;}
+    #editModalBody .basicInfoGrid .basicContractNo{grid-area:contractNo!important;}
+    #editModalBody .basicInfoGrid .basicMainContract{grid-area:mainContract!important;}
+    #editModalBody .basicInfoGrid .basicBusiness{grid-area:business!important;}
+    #editModalBody .basicInfoGrid .field input{height:34px!important;width:100%!important;}
+    #editModalBody .basicInfoGrid .basicReceiptDate input,
+    #editModalBody .basicInfoGrid .basicReceiptNo input,
+    #editModalBody .basicInfoGrid .basicProcessDate input,
+    #editModalBody .basicInfoGrid .basicMainContract input{
+      padding-left:7px!important;
+      padding-right:7px!important;
+    }
+    #editModalBody .basicInfoGrid .basicCaseName input{
+      font-weight:800!important;
+      min-width:0!important;
+    }
+    @media (max-width:1180px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr 1fr!important;
+        grid-template-areas:
+          "receiptDate receiptNo"
+          "processDate caseName"
+          "contractNo contractNo"
+          "mainContract business"!important;
+      }
+    }
+    @media (max-width:760px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr!important;
+        grid-template-areas:
+          "receiptDate"
+          "receiptNo"
+          "processDate"
+          "caseName"
+          "contractNo"
+          "mainContract"
+          "business"!important;
+      }
+    }
+
+
+    /* V9修正版25：基本資料版面微調
+       第一排：單據日期｜單據號碼｜處理日期｜案名（拉長到右側）
+       第二排：契約編號｜跟隨主約（在處理日期下方）｜業務（跟案名同寬） */
+    #editModalBody .basicInfoGrid{
+      display:grid!important;
+      grid-template-columns:.82fr .82fr .82fr 1.45fr 1.45fr 1.45fr!important;
+      grid-template-areas:
+        "receiptDate receiptNo processDate caseName caseName caseName"
+        "contractNo contractNo mainContract business business business"!important;
+      gap:9px!important;
+      align-items:end!important;
+      width:100%!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate{grid-area:receiptDate!important;}
+    #editModalBody .basicInfoGrid .basicReceiptNo{grid-area:receiptNo!important;}
+    #editModalBody .basicInfoGrid .basicProcessDate{grid-area:processDate!important;}
+    #editModalBody .basicInfoGrid .basicCaseName{grid-area:caseName!important;grid-column:auto!important;}
+    #editModalBody .basicInfoGrid .basicContractNo{grid-area:contractNo!important;}
+    #editModalBody .basicInfoGrid .basicMainContract{grid-area:mainContract!important;}
+    #editModalBody .basicInfoGrid .basicBusiness{grid-area:business!important;}
+    #editModalBody .basicInfoGrid .field input{
+      width:100%!important;
+      height:34px!important;
+      min-width:0!important;
+    }
+    #editModalBody .basicInfoGrid .basicCaseName input,
+    #editModalBody .basicInfoGrid .basicBusiness input{
+      font-weight:800!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate input,
+    #editModalBody .basicInfoGrid .basicReceiptNo input,
+    #editModalBody .basicInfoGrid .basicProcessDate input,
+    #editModalBody .basicInfoGrid .basicMainContract input{
+      padding-left:7px!important;
+      padding-right:7px!important;
+    }
+    @media (max-width:1180px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr 1fr!important;
+        grid-template-areas:
+          "receiptDate receiptNo"
+          "processDate caseName"
+          "mainContract business"
+          "contractNo contractNo"!important;
+      }
+    }
+    @media (max-width:760px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr!important;
+        grid-template-areas:
+          "receiptDate"
+          "receiptNo"
+          "processDate"
+          "caseName"
+          "mainContract"
+          "business"
+          "contractNo"!important;
+      }
+    }
+
+
+    /* V9修正版26：案名加長到右側，業務縮短；跟隨主約固定在處理日期下方 */
+    #editModalBody .basicInfoGrid{
+      display:grid!important;
+      grid-template-columns:.72fr .72fr .72fr 1fr 1fr 1fr 1fr 1fr!important;
+      grid-template-areas:
+        "receiptDate receiptNo processDate caseName caseName caseName caseName caseName"
+        "contractNo contractNo mainContract business business . . ."!important;
+      gap:9px!important;
+      align-items:end!important;
+      width:100%!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate{grid-area:receiptDate!important;}
+    #editModalBody .basicInfoGrid .basicReceiptNo{grid-area:receiptNo!important;}
+    #editModalBody .basicInfoGrid .basicProcessDate{grid-area:processDate!important;}
+    #editModalBody .basicInfoGrid .basicCaseName{grid-area:caseName!important;grid-column:auto!important;}
+    #editModalBody .basicInfoGrid .basicContractNo{grid-area:contractNo!important;}
+    #editModalBody .basicInfoGrid .basicMainContract{grid-area:mainContract!important;}
+    #editModalBody .basicInfoGrid .basicBusiness{grid-area:business!important;}
+    #editModalBody .basicInfoGrid .field input{
+      width:100%!important;
+      height:34px!important;
+      min-width:0!important;
+    }
+    #editModalBody .basicInfoGrid .basicCaseName input{font-weight:800!important;}
+    #editModalBody .basicInfoGrid .basicBusiness input{font-weight:700!important;}
+    @media (max-width:1180px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr 1fr!important;
+        grid-template-areas:
+          "receiptDate receiptNo"
+          "processDate caseName"
+          "mainContract business"
+          "contractNo contractNo"!important;
+      }
+    }
+    @media (max-width:760px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr!important;
+        grid-template-areas:
+          "receiptDate"
+          "receiptNo"
+          "processDate"
+          "caseName"
+          "mainContract"
+          "business"
+          "contractNo"!important;
+      }
+    }
+
+
+    /* V9修正版27：看圖再修正－案名拉到右側更長，業務縮短，跟隨主約固定在處理日期下方 */
+    #editModalBody .basicInfoGrid{
+      display:grid!important;
+      grid-template-columns:repeat(16,minmax(0,1fr))!important;
+      grid-template-areas:
+        "receiptDate receiptDate receiptNo receiptNo processDate processDate caseName caseName caseName caseName caseName caseName caseName caseName caseName caseName"
+        "contractNo contractNo contractNo contractNo mainContract mainContract business business . . . . . . . ."!important;
+      gap:9px!important;
+      align-items:end!important;
+      width:100%!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate{grid-area:receiptDate!important;}
+    #editModalBody .basicInfoGrid .basicReceiptNo{grid-area:receiptNo!important;}
+    #editModalBody .basicInfoGrid .basicProcessDate{grid-area:processDate!important;}
+    #editModalBody .basicInfoGrid .basicCaseName{grid-area:caseName!important;grid-column:auto!important;}
+    #editModalBody .basicInfoGrid .basicContractNo{grid-area:contractNo!important;}
+    #editModalBody .basicInfoGrid .basicMainContract{grid-area:mainContract!important;}
+    #editModalBody .basicInfoGrid .basicBusiness{grid-area:business!important;}
+    #editModalBody .basicInfoGrid .field input{
+      width:100%!important;
+      height:34px!important;
+      min-width:0!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate input,
+    #editModalBody .basicInfoGrid .basicReceiptNo input,
+    #editModalBody .basicInfoGrid .basicProcessDate input,
+    #editModalBody .basicInfoGrid .basicMainContract input,
+    #editModalBody .basicInfoGrid .basicBusiness input{
+      padding-left:7px!important;
+      padding-right:7px!important;
+    }
+    #editModalBody .basicInfoGrid .basicCaseName input{
+      font-weight:800!important;
+    }
+    #editModalBody .basicInfoGrid .basicBusiness input{
+      font-weight:700!important;
+    }
+    @media (max-width:1180px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr 1fr!important;
+        grid-template-areas:
+          "receiptDate receiptNo"
+          "processDate caseName"
+          "mainContract business"
+          "contractNo contractNo"!important;
+      }
+    }
+    @media (max-width:760px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:1fr!important;
+        grid-template-areas:
+          "receiptDate"
+          "receiptNo"
+          "processDate"
+          "caseName"
+          "mainContract"
+          "business"
+          "contractNo"!important;
+      }
+    }
+
+
+
+    /* V9修正版29：依使用者最新調整值固定基本資料欄寬
+       第一排：單據日期160｜單據號碼160｜處理日期160｜案名600
+       第二排：契約編號320｜跟隨主約169｜業務600 */
+    #editModalBody .basicInfoGrid{
+      display:grid!important;
+      grid-template-columns:160px 160px 169px 600px!important;
+      grid-template-areas:
+        "receiptDate receiptNo processDate caseName"
+        "contractNo contractNo mainContract business"!important;
+      column-gap:10px!important;
+      row-gap:9px!important;
+      align-items:end!important;
+      justify-content:start!important;
+      width:max-content!important;
+      max-width:100%!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate{grid-area:receiptDate!important;}
+    #editModalBody .basicInfoGrid .basicReceiptNo{grid-area:receiptNo!important;}
+    #editModalBody .basicInfoGrid .basicProcessDate{grid-area:processDate!important;}
+    #editModalBody .basicInfoGrid .basicCaseName{grid-area:caseName!important;grid-column:auto!important;}
+    #editModalBody .basicInfoGrid .basicContractNo{grid-area:contractNo!important;}
+    #editModalBody .basicInfoGrid .basicMainContract{grid-area:mainContract!important;}
+    #editModalBody .basicInfoGrid .basicBusiness{grid-area:business!important;}
+    #editModalBody .basicInfoGrid .field{min-width:0!important;}
+    #editModalBody .basicInfoGrid .field input{
+      height:34px!important;
+      min-width:0!important;
+      box-sizing:border-box!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate input,
+    #editModalBody .basicInfoGrid .basicReceiptNo input,
+    #editModalBody .basicInfoGrid .basicProcessDate input{
+      width:160px!important;
+    }
+    #editModalBody .basicInfoGrid .basicMainContract input{
+      width:169px!important;
+    }
+    #editModalBody .basicInfoGrid .basicCaseName input{
+      width:600px!important;
+      font-weight:800!important;
+    }
+    #editModalBody .basicInfoGrid .basicContractNo input{
+      width:320px!important;
+    }
+    #editModalBody .basicInfoGrid .basicBusiness input{
+      width:600px!important;
+      font-weight:700!important;
+    }
+    @media (max-width:1180px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:160px 160px 169px 600px!important;
+        grid-template-areas:
+          "receiptDate receiptNo processDate caseName"
+          "contractNo contractNo mainContract business"!important;
+      }
+    }
+    @media (max-width:760px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:160px 160px 169px 600px!important;
+        grid-template-areas:
+          "receiptDate receiptNo processDate caseName"
+          "contractNo contractNo mainContract business"!important;
+      }
+    }
+
+
+    /* V9修正版30：右側空白修正
+       案名、業務固定 600px 不動；
+       左側三欄（單據日期／單據號碼／處理日期）平均分配剩餘寬度，填滿基本資料列。 */
+    #editModalBody .basicInfoGrid{
+      display:grid!important;
+      grid-template-columns:minmax(160px,1fr) minmax(160px,1fr) minmax(160px,1fr) 600px!important;
+      grid-template-areas:
+        "receiptDate receiptNo processDate caseName"
+        "contractNo contractNo mainContract business"!important;
+      column-gap:10px!important;
+      row-gap:9px!important;
+      align-items:end!important;
+      justify-content:stretch!important;
+      width:100%!important;
+      max-width:100%!important;
+    }
+    #editModalBody .basicInfoGrid .basicReceiptDate{grid-area:receiptDate!important;}
+    #editModalBody .basicInfoGrid .basicReceiptNo{grid-area:receiptNo!important;}
+    #editModalBody .basicInfoGrid .basicProcessDate{grid-area:processDate!important;}
+    #editModalBody .basicInfoGrid .basicCaseName{grid-area:caseName!important;grid-column:auto!important;}
+    #editModalBody .basicInfoGrid .basicContractNo{grid-area:contractNo!important;}
+    #editModalBody .basicInfoGrid .basicMainContract{grid-area:mainContract!important;}
+    #editModalBody .basicInfoGrid .basicBusiness{grid-area:business!important;}
+    #editModalBody .basicInfoGrid .field{min-width:0!important;}
+    #editModalBody .basicInfoGrid .field input{
+      width:100%!important;
+      height:34px!important;
+      min-width:0!important;
+      box-sizing:border-box!important;
+    }
+    #editModalBody .basicInfoGrid .basicCaseName input,
+    #editModalBody .basicInfoGrid .basicBusiness input{
+      width:600px!important;
+      max-width:100%!important;
+    }
+    #editModalBody .basicInfoGrid .basicCaseName input{font-weight:800!important;}
+    #editModalBody .basicInfoGrid .basicBusiness input{font-weight:700!important;}
+    @media (max-width:1180px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:minmax(160px,1fr) minmax(160px,1fr) minmax(160px,1fr) 600px!important;
+        grid-template-areas:
+          "receiptDate receiptNo processDate caseName"
+          "contractNo contractNo mainContract business"!important;
+      }
+    }
+    @media (max-width:760px){
+      #editModalBody .basicInfoGrid{
+        grid-template-columns:minmax(160px,1fr) minmax(160px,1fr) minmax(160px,1fr) 600px!important;
+        grid-template-areas:
+          "receiptDate receiptNo processDate caseName"
+          "contractNo contractNo mainContract business"!important;
+      }
+    }
+
+
+    /* V31：Supabase 區塊改成參考圖版面 */
+    .syncLikeProject{
+      background:#f7fbff!important;
+      border:0!important;
+      border-radius:0!important;
+      box-shadow:none!important;
+      margin:0 0 16px!important;
+      overflow:visible!important;
+    }
+    .syncLikeProject summary{
+      list-style:none!important;
+      cursor:pointer;
+      padding:2px 0 17px!important;
+      background:#ffffff!important;
+      border-bottom:2px solid #111827!important;
+      color:#0f172a!important;
+      font-size:20px!important;
+      font-weight:1000!important;
+      letter-spacing:.02em;
+    }
+    .syncLikeProject summary::-webkit-details-marker{display:none!important;}
+    .syncLikeProject .settingsBody{
+      border-top:0!important;
+      padding:0 0 14px!important;
+      background:#f7fbff!important;
+    }
+    .syncHintLine{
+      padding:7px 0 16px!important;
+      color:#475569!important;
+      font-size:12px!important;
+      font-weight:700!important;
+      line-height:1.35;
+    }
+    .syncProjectRow{
+      display:grid!important;
+      grid-template-columns:minmax(420px,.95fr) minmax(560px,1.25fr) auto auto auto;
+      gap:10px!important;
+      align-items:center!important;
+      width:100%!important;
+    }
+    .syncProjectRow input{
+      width:100%!important;
+      height:50px!important;
+      border:1px solid #b7c9ef!important;
+      border-radius:14px!important;
+      background:#ffffff!important;
+      padding:9px 16px!important;
+      font-size:20px!important;
+      line-height:1.2!important;
+      color:#0f172a!important;
+      text-align:left!important;
+      outline:none!important;
+      box-shadow:none!important;
+    }
+    .syncProjectRow input:focus{
+      border-color:#60a5fa!important;
+      box-shadow:0 0 0 3px rgba(96,165,250,.18)!important;
+    }
+    .syncProjectRow .btn{
+      height:50px!important;
+      min-width:72px!important;
+      padding:0 18px!important;
+      border-radius:14px!important;
+      font-size:18px!important;
+      font-weight:900!important;
+      box-shadow:none!important;
+      white-space:nowrap!important;
+      transform:none!important;
+    }
+    .syncConnectBtn{
+      background:#1d4ed8!important;
+      color:#ffffff!important;
+      border:1px solid #1d4ed8!important;
+    }
+    .syncNowBtn{
+      background:#ffffff!important;
+      color:#0f172a!important;
+      border:1px solid #b7c9ef!important;
+    }
+    .syncStopBtn{
+      background:#ffe4e6!important;
+      color:#dc2626!important;
+      border:1px solid #fecdd3!important;
+    }
+    .syncProjectStatusLine{
+      display:flex!important;
+      align-items:center!important;
+      gap:10px!important;
+      flex-wrap:wrap!important;
+      margin-top:12px!important;
+    }
+    .syncProjectStatusLine #sbStatus,
+    .syncProjectStatusLine .syncMessage{
+      min-height:36px!important;
+      display:inline-flex!important;
+      align-items:center!important;
+      border-radius:999px!important;
+      font-size:14px!important;
+      font-weight:900!important;
+      padding:7px 13px!important;
+    }
+    .syncProjectStatusLine #sbStatus.ok{
+      background:#dcfce7!important;
+      color:#15803d!important;
+      border-color:#86efac!important;
+    }
+    .syncProjectStatusLine .syncMessage{
+      background:transparent!important;
+      border-color:transparent!important;
+      color:#475569!important;
+      padding-left:0!important;
+    }
+    .syncProjectStatusLine .syncMessage.ok,
+    .syncProjectStatusLine .syncMessage.warn,
+    .syncProjectStatusLine .syncMessage.bad{
+      background:transparent!important;
+      border-color:transparent!important;
+    }
+    @media (max-width:1280px){
+      .syncProjectRow{
+        grid-template-columns:1fr 1.2fr auto auto auto!important;
+      }
+      .syncProjectRow input{font-size:17px!important;}
+    }
+    @media (max-width:980px){
+      .syncProjectRow{
+        grid-template-columns:1fr!important;
+      }
+      .syncProjectRow .btn{
+        width:100%!important;
+      }
+    }
+
+
+
+    /* V32：Supabase 區塊縮小＋恢復美化；D夾列表隔行底色 */
+    .syncLikeProject{
+      background:#ffffff!important;
+      border:1px solid var(--line)!important;
+      border-radius:20px!important;
+      box-shadow:var(--shadow)!important;
+      margin:0 0 16px!important;
+      overflow:hidden!important;
+    }
+    .syncLikeProject summary{
+      list-style:none!important;
+      cursor:pointer!important;
+      min-height:38px!important;
+      display:flex!important;
+      align-items:center!important;
+      padding:0 14px 0 21px!important;
+      background:linear-gradient(90deg,#eaf6ff 0%,#f4fbff 52%,#ffffff 100%)!important;
+      border-bottom:1px solid #d7e8f7!important;
+      color:#17446f!important;
+      font-size:16px!important;
+      font-weight:1000!important;
+      letter-spacing:.02em!important;
+      position:relative!important;
+    }
+    .syncLikeProject summary:before{
+      content:""!important;
+      position:absolute!important;
+      left:0!important;
+      top:0!important;
+      bottom:0!important;
+      width:7px!important;
+      background:linear-gradient(180deg,#93c5fd,#67e8f9)!important;
+    }
+    .syncLikeProject summary::-webkit-details-marker{display:none!important;}
+    .syncLikeProject .settingsBody{
+      border-top:0!important;
+      padding:10px 14px 12px!important;
+      background:linear-gradient(135deg,#ffffff 0%,#f7fbff 62%,#f0f9ff 100%)!important;
+    }
+    .syncHintLine{
+      padding:0 0 8px!important;
+      color:#64748b!important;
+      font-size:12px!important;
+      font-weight:800!important;
+      line-height:1.35!important;
+    }
+    .syncProjectRow{
+      display:grid!important;
+      grid-template-columns:minmax(260px,1.05fr) minmax(360px,1.45fr) auto auto auto!important;
+      gap:8px!important;
+      align-items:center!important;
+      width:100%!important;
+    }
+    .syncProjectRow input{
+      width:100%!important;
+      height:34px!important;
+      border:1px solid #b7c9ef!important;
+      border-radius:12px!important;
+      background:#ffffff!important;
+      padding:6px 10px!important;
+      font-size:13px!important;
+      line-height:1.2!important;
+      color:#0f172a!important;
+      text-align:left!important;
+      outline:none!important;
+      box-shadow:0 1px 4px rgba(15,23,42,.03)!important;
+    }
+    .syncProjectRow input:focus{
+      border-color:#60a5fa!important;
+      box-shadow:0 0 0 3px rgba(96,165,250,.16)!important;
+    }
+    .syncProjectRow .btn{
+      height:34px!important;
+      min-width:62px!important;
+      padding:0 13px!important;
+      border-radius:999px!important;
+      font-size:13px!important;
+      font-weight:1000!important;
+      box-shadow:0 2px 8px rgba(15,23,42,.08)!important;
+      white-space:nowrap!important;
+      transform:none!important;
+    }
+    .syncConnectBtn{
+      background:linear-gradient(90deg,#1d4ed8,#0891b2)!important;
+      color:#ffffff!important;
+      border:0!important;
+    }
+    .syncNowBtn{
+      background:#eaf6ff!important;
+      color:#075985!important;
+      border:1px solid #bae6fd!important;
+    }
+    .syncStopBtn{
+      background:#fee2e2!important;
+      color:#b91c1c!important;
+      border:1px solid #fecaca!important;
+    }
+    .syncProjectStatusLine{
+      display:flex!important;
+      align-items:center!important;
+      gap:8px!important;
+      flex-wrap:wrap!important;
+      margin-top:9px!important;
+    }
+    .syncProjectStatusLine #sbStatus,
+    .syncProjectStatusLine .syncMessage{
+      min-height:26px!important;
+      display:inline-flex!important;
+      align-items:center!important;
+      border-radius:999px!important;
+      font-size:12px!important;
+      font-weight:900!important;
+      padding:4px 10px!important;
+    }
+    .syncProjectStatusLine #sbStatus.ok{
+      background:#dcfce7!important;
+      color:#15803d!important;
+      border-color:#86efac!important;
+    }
+    .syncProjectStatusLine .syncMessage{
+      background:transparent!important;
+      border-color:transparent!important;
+      color:#475569!important;
+      padding-left:0!important;
+    }
+    #allList tbody tr:nth-child(odd) td{
+      background:#ffffff!important;
+    }
+    #allList tbody tr:nth-child(even) td{
+      background:#f4f9ff!important;
+    }
+    #allList tbody tr:hover td{
+      background:#eaf6ff!important;
+    }
+    @media (max-width:1180px){
+      .syncProjectRow{
+        grid-template-columns:1fr 1fr auto auto auto!important;
+      }
+    }
+    @media (max-width:760px){
+      .syncProjectRow{
+        grid-template-columns:1fr!important;
+      }
+      .syncProjectRow .btn{
+        width:100%!important;
+      }
+    }
+
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="hero">
+    <div class="heroTop heroOneLine">
+      <div class="titleWrap">
+        <h1>D夾</h1>
+      </div>
+      <div class="toolbar toolbarMain">
+        <button class="btn btnPrimary addObjectBtn" onclick="createBlankCaseAndOpen()">＋ 新增物件</button>
+        <button class="btn btnBlue" onclick="exportData()">匯出EXCEL</button>
+        <button class="btn btnPurple" onclick="exportJsonData()">匯出JSON</button>
+        <button class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
+        <span class="statusChip" id="saveStatus">已自動存檔</span>
+        <div class="clock" id="headerLastUpdate">最後更新時間：—</div>
+        <input id="importFile" class="hiddenFile" type="file" accept="application/json,.json" onchange="importData(event)">
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <details class="settings syncTopBlock syncLikeProject" id="supabaseSettings">
+      <summary>雲端同步設定（設定隱藏）</summary>
+      <div class="settingsBody">
+        <div class="syncHintLine">這版以 V14 為基底，改成兩台可共用同一份資料。</div>
+        <div class="syncProjectRow">
+          <input id="sbUrl" placeholder="https://xxxx.supabase.co">
+          <input id="sbKey" placeholder="貼上 Supabase Publishable Key">
+          <button class="btn syncConnectBtn" onclick="connectSupabase()">連線</button>
+          <button class="btn syncNowBtn" onclick="syncSupabaseNow()">立即同步</button>
+          <button class="btn syncStopBtn" onclick="disconnectSupabase()">中斷</button>
+        </div>
+        <div class="syncProjectStatusLine">
+          <span class="statusChip" id="sbStatus">未連線</span>
+          <span class="syncMessage" id="sbMessage">尚未連線</span>
+        </div>
+      </div>
+    </details>
+
+    <section class="panel">
+      <div class="panelTitle">
+        <span>製作中</span>
+        <span class="meta" id="makingCount">0 筆</span>
+      </div>
+      <div class="panelBody">
+        <div class="filterLine filterLineStack">
+          <div class="filterGrid filterGridMaking">
+            <label>動作未做<select id="filterOpenAction" onchange="renderAll()"><option value="">全部</option><option value="__ANY__">任何動作</option></select></label>
+            <label>單據日期<input id="filterReceiptDate" placeholder="單據日期" oninput="renderAll()"></label>
+            <label>單據號碼<input id="filterReceiptNo" placeholder="單據號碼" oninput="renderAll()"></label>
+            <label>處理日期<input id="filterProcessDate" placeholder="處理日期" oninput="renderAll()"></label>
+            <label>契約編號<input id="filterContractNo" placeholder="契約編號" oninput="renderAll()"></label>
+            <label>業務<input id="filterBusiness" placeholder="業務" oninput="renderAll()"></label>
+            <label>案名<input id="filterCaseName" placeholder="案名" oninput="renderAll()"></label>
+            <div class="filterActionBox"><button class="btn btnGray btnMini" onclick="clearMakingFilters()">清除篩選</button></div>
+          </div>
+        </div>
+        <div class="tableScroll" id="makingList"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle">
+        <span>D夾</span>
+        <span class="meta" id="allCount">0 筆</span>
+      </div>
+      <div class="panelBody">
+        <div class="filterLine filterLineStack">
+          <div class="filterGrid filterGridCompleted">
+            <label>動作<select id="filterDoneAction" onchange="renderAll()"><option value="">全部</option><option value="__ANY__">任何動作</option></select></label>
+            <label>單據日期<input id="filterDoneReceiptDate" placeholder="單據日期" oninput="renderAll()"></label>
+            <label>單據號碼<input id="filterDoneReceiptNo" placeholder="單據號碼" oninput="renderAll()"></label>
+            <label>處理日期<input id="filterDoneProcessDate" placeholder="處理日期" oninput="renderAll()"></label>
+            <label>契約編號<input id="filterDoneContractNo" placeholder="契約編號" oninput="renderAll()"></label>
+            <label>業務<input id="filterDoneBusiness" placeholder="業務" oninput="renderAll()"></label>
+            <label>案名<input id="filterDoneCaseName" placeholder="案名" oninput="renderAll()"></label>
+            <div class="filterActionBox"><button class="btn btnGray btnMini" onclick="clearDoneFilters()">清除篩選</button></div>
+          </div>
+        </div>
+        <div class="tableScroll" id="allList"></div>
+      </div>
+    </section>
+
+    
+
+
+
+
+<details class="settings" id="assistantSettings">
+      <summary>▶ 助理名單（隱藏）</summary>
+      <div class="settingsBody">
+        <div class="inline" style="margin-bottom:10px;">
+          <input id="newAssistantName" placeholder="新增助理姓名" style="width:220px;">
+          <button class="btn btnBlue btnMini" onclick="addAssistant()">新增</button>
+        </div>
+        <div class="rulesWrap" id="assistantsTable"></div>
+      </div>
+    </details>
+
+    <details class="settings" id="itemSettings">
+      <summary>▶ 項目設定（隱藏）</summary>
+      <div class="settingsBody">
+        <div class="inline" style="justify-content:space-between;margin-bottom:10px;">
+          <div class="inline">
+            <input id="newRuleName" placeholder="新增項目名稱" style="width:260px;">
+            <button class="btn btnBlue btnMini" onclick="addRuleItem()">新增項目</button>
+          </div>
+          <div class="inline">
+            <button class="btn btnGreen btnMini" onclick="saveRulesFromUI()">儲存項目設定</button>
+            <button class="btn btnRed btnMini" onclick="resetDefaultRules()">恢復預設 V/X</button>
+          </div>
+        </div>
+        <div class="rulesWrap" id="rulesTable"></div>
+      </div>
+    </details>
+  </main>
+</div>
+
+<!-- 編輯案件 -->
+<div class="modalMask" id="editModalMask" onclick="maskCloseEdit(event)">
+  <div class="modal modalLarge" onclick="event.stopPropagation()">
+    <div class="modalHeader">
+      <h2 id="editModalTitle">案件內容</h2>
+      <button class="closeX" onclick="closeEditModal()">×</button>
+    </div>
+    <div class="modalBody" id="editModalBody">
+      <div class="sectionBlock">
+        <div class="sectionHead">基本資料</div>
+        <div class="sectionContent">
+          <div class="basicInfoGrid">
+            <div class="field basicReceiptDate"><label>單據日期</label><input class="roc-date editField" data-key="receiptDate" placeholder="例：4/30"></div>
+            <div class="field basicReceiptNo"><label>單據號碼</label><input class="editField" data-key="receiptNo"></div>
+            <div class="field basicProcessDate"><label>處理日期</label><input class="roc-date editField" data-key="processDate" placeholder="例：4/30"></div>
+            <div class="field basicCaseName"><label>案名</label><input class="editField" data-key="caseName" placeholder="請輸入案名"></div>
+            <div class="field basicContractNo"><label>契約編號</label><input class="editField" data-key="contractNo"></div>
+            <div class="field basicMainContract"><label>跟隨主約</label><input class="editField" data-key="mainContractNo" placeholder="主約編號"></div>
+            <div class="field basicBusiness"><label>業務</label><input class="editField" data-key="business" placeholder="業務"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sectionBlock compactConditions">
+        <div class="sectionHead"><span>變更條件</span><button type="button" class="btn btnGray btnTiny" onclick="clearConditionFields(event)">清空</button></div>
+        <div class="sectionContent">
+          <div class="conditionStack condition3">
+            <div class="condCard condPrice">
+              <label>開價</label>
+              <div class="condBody">
+                <span class="miniLabel">原</span>
+                <input class="editField condField num" data-key="priceOld">
+                <span class="miniLabel">改</span>
+                <input class="editField condField num" data-key="priceNew">
+                <span class="unit">萬</span>
+              </div>
+            </div>
+
+            <div class="condCard condDate">
+              <label>委託時間</label>
+              <div class="condBody">
+                <span class="miniLabel">原</span>
+                <span class="dateWrap"><input class="roc-date editField condField dateInput" data-key="contractEndOld" placeholder="115/4/30"></span>
+                <span class="miniLabel">改</span>
+                <span class="dateWrap"><input class="roc-date editField condField dateInput" data-key="contractEndNew" placeholder="3/31"></span>
+              </div>
+            </div>
+
+            <div class="condCard condRelist">
+              <label>重新上架</label>
+              <div class="condBody">
+                <input type="hidden" class="editField condField relistInput" data-key="relistType">
+                <div class="relistBtnGroup" id="relistBtnGroup">
+                  <button type="button" data-value="" onclick="setRelistType('')">無</button>
+                  <button type="button" data-value="委託中上架" onclick="setRelistType('委託中上架')">委託中</button>
+                  <button type="button" data-value="跨年份上架" onclick="setRelistType('跨年份上架')">跨年份</button>
+                  <button type="button" data-value="下架重新上架" onclick="setRelistType('下架重新上架')">下架重新上架</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="condCard condBottom">
+              <label>底價</label>
+              <div class="condBody">
+                <span class="miniLabel">原</span>
+                <input class="editField condField num" data-key="bottomPriceOld">
+                <span class="miniLabel">改</span>
+                <input class="editField condField num" data-key="bottomPriceNew">
+                <span class="unit">萬</span>
+              </div>
+            </div>
+
+            <div class="condCard condChange">
+              <label>換約</label>
+              <div class="condBody">
+                <input class="editField condField short" data-key="contractTypeOld" placeholder="原約">
+                <span class="miniLabel">換</span>
+                <input class="editField condField short" data-key="contractTypeNew" placeholder="新約">
+              </div>
+            </div>
+
+            <div class="condCard condKey">
+              <label>KEY</label>
+              <div class="condBody">
+                <input class="editField condField growInput" data-key="keyText" placeholder="KEY">
+              </div>
+            </div>
+
+            <div class="condCard condTerms">
+              <label>特約條款</label>
+              <div class="condBody">
+                <input class="editField condField termsInput" data-key="specialTerms" placeholder="輸入特約條款">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sectionBlock">
+        <div class="sectionHead">
+          <span>更新清單</span>
+          <span id="editProgressText" class="small muted">—</span>
+        </div>
+        <div class="sectionContent">
+          <div class="taskTableWrap" id="taskTable"></div>
+        </div>
+      </div>
+
+      <div class="sectionBlock">
+        <div class="sectionHead">案件備註</div>
+        <div class="sectionContent">
+          <textarea rows="3" class="editField caseNoteBox" data-key="note" placeholder="可輸入案件備註"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modalFooter">
+      <div class="inline">
+        <button class="btn btnRed" onclick="deleteCurrentCase()">刪除案件</button>
+        <button class="btn btnGray" onclick="closeEditModal()">關閉</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'DCLIP_APP_STATE_V1';
+const CONDITION_LABELS = {
+  priceChange:'開價',
+  bottomPriceChange:'底價',
+  extendContract:'委託時間',
+  relist:'重新上架',
+  contractChange:'換約',
+  specialTerms:'特約條款'
+};
+const DEFAULT_RULES = [
+  {id:'r01', name:'專約回報', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
+  {id:'r02', name:'帆布', priceChange:true, bottomPriceChange:false, extendContract:false, relist:false, contractChange:false, specialTerms:false},
+  {id:'r03', name:'房管', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r04', name:'主約上傳', priceChange:false, bottomPriceChange:false, extendContract:false, relist:true, contractChange:true, specialTerms:false},
+  {id:'r05', name:'產調', priceChange:true, bottomPriceChange:false, extendContract:false, relist:false, contractChange:true, specialTerms:false},
+  {id:'r06', name:'現詢調', priceChange:false, bottomPriceChange:false, extendContract:false, relist:false, contractChange:true, specialTerms:false},
+  {id:'r07', name:'房管新增契變', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
+  {id:'r08', name:'房管上傳照片', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r09', name:'內網上架', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r10', name:'官網上架', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r11', name:'總表', priceChange:true, bottomPriceChange:false, extendContract:false, relist:true, contractChange:true, specialTerms:true},
+  {id:'r12', name:'統整表', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r13', name:'土增稅', priceChange:false, bottomPriceChange:false, extendContract:false, relist:true, contractChange:true, specialTerms:false},
+  {id:'r14', name:'屋齡', priceChange:false, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r15', name:'物件本上架', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:true},
+  {id:'r16', name:'封背', priceChange:false, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r17', name:'物件本彩色表', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:false, specialTerms:true},
+  {id:'r18', name:'5168網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r19', name:'我家網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r20', name:'YES319網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r21', name:'HouseInfor網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r22', name:'591網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r23', name:'NAS照片原檔', priceChange:false, bottomPriceChange:false, extendContract:false, relist:true, contractChange:false, specialTerms:false},
+  {id:'r24', name:'LED', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r25', name:'櫥窗', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r26', name:'記事本檔名', priceChange:false, bottomPriceChange:false, extendContract:false, relist:false, contractChange:false, specialTerms:false},
+  {id:'r27', name:'公司物件存檔資料夾檔名', priceChange:false, bottomPriceChange:false, extendContract:false, relist:false, contractChange:false, specialTerms:false},
+  {id:'r28', name:'格局圖檔名/更新', priceChange:false, bottomPriceChange:false, extendContract:false, relist:false, contractChange:false, specialTerms:false},
+  {id:'r29', name:'鑰匙', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:false, specialTerms:false},
+  {id:'r30', name:'NAS銷售本', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r31', name:'契約紙本', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
+  {id:'r32', name:'掃描圖片', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
+  {id:'r33', name:'歸檔公司物件存檔', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
+  {id:'r34', name:'放歸檔彩雷上', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true}
+];
+let state = {
+  version:'9.0',
+  systemName:'D夾',
+  assistants:[{id:'a1',name:'麗卉',active:true},{id:'a2',name:'紹薇',active:true}],
+  rules: cloneRules(DEFAULT_RULES),
+  cases:[],
+  lastSaved:''
+};
+let currentCaseId = null;
+let currentTaskFilter = 'all';
+let saveTimer = null;
+
+function cloneRules(rules){ return JSON.parse(JSON.stringify(rules)); }
+function uid(prefix='dclip'){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
+function nowISO(){ return new Date().toISOString(); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function rocYear(d=new Date()){ return d.getFullYear() - 1911; }
+function rocDateTime(d=new Date()){
+  const week = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][d.getDay()];
+  return `${rocYear(d)}/${d.getMonth()+1}/${d.getDate()} ${week} ${pad(d.getHours())}點${pad(d.getMinutes())}分${pad(d.getSeconds())}秒`;
+}
+function rocFileTime(d=new Date()){
+  return `${rocYear(d)}年${d.getMonth()+1}月${d.getDate()}日_${d.getHours()}點${pad(d.getMinutes())}分`;
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function parseRocDate(val, opts={}){
+  const r = normalizeRocDate(val, opts);
+  return r.valid ? r.value : String(val || '').trim();
+}
+function normalizeRocDate(val, opts={}){
+  const original = String(val || '').trim();
+  if(!original) return {valid:true, value:''};
+  let s = original
+    .replace(/[.。-]/g,'/')
+    .replace(/[年月]/g,'/')
+    .replace(/日/g,'')
+    .replace(/\/+/g,'/');
+  const m = s.match(/^(\d{1,4})\/(\d{1,2})(?:\/(\d{1,2}))?$/);
+  if(!m) return {valid:false, value:original};
+  let a = Number(m[1]), b = Number(m[2]), c = m[3] ? Number(m[3]) : null;
+  let y, mo, da;
+  if(c === null){
+    y = rocYear(); mo = a; da = b;
+    if(opts.futureAnnual){
+      const today = new Date();
+      if(mo < today.getMonth()+1 || (mo === today.getMonth()+1 && da < today.getDate())) y += 1;
+    }
+  }else{
+    y = a > 1911 ? a - 1911 : a; mo = b; da = c;
+  }
+  if(!Number.isInteger(y) || !Number.isInteger(mo) || !Number.isInteger(da)) return {valid:false, value:original};
+  if(y < 1 || mo < 1 || mo > 12 || da < 1 || da > 31) return {valid:false, value:original};
+  const adYear = y + 1911;
+  const d = new Date(adYear, mo - 1, da);
+  if(d.getFullYear() !== adYear || d.getMonth() !== mo - 1 || d.getDate() !== da) return {valid:false, value:original};
+  return {valid:true, value:`${y}/${mo}/${da}`};
+}
+function setDateWarning(el, msg=''){
+  if(!el) return;
+  let warn = el.nextElementSibling;
+  if(!warn || !warn.classList || !warn.classList.contains('dateWarn')){
+    warn = document.createElement('div');
+    warn.className = 'dateWarn';
+    el.insertAdjacentElement('afterend', warn);
+  }
+  if(msg){
+    el.classList.add('dateInvalid');
+    warn.textContent = msg;
+    warn.classList.add('show');
+  }else{
+    el.classList.remove('dateInvalid');
+    warn.textContent = '';
+    warn.classList.remove('show');
+  }
+}
+function normalizeDateField(el, showWarning=true){
+  if(!el) return true;
+  const raw = el.value.trim();
+  if(!raw){ setDateWarning(el,''); return true; }
+  const r = normalizeRocDate(raw, {futureAnnual: el.dataset.key === 'contractEndNew'});
+  if(r.valid){
+    el.value = r.value;
+    setDateWarning(el,'');
+    return true;
+  }
+  if(showWarning) setDateWarning(el, '日期錯誤，請輸入例：115/4/30 或 4/30');
+  return false;
+}
+function validateVisibleDateFields(showWarning=true){
+  let ok = true;
+  document.querySelectorAll('#editModalMask .roc-date').forEach(el=>{
+    if(!normalizeDateField(el, showWarning)) ok = false;
+  });
+  return ok;
+}
+function formatSavedTime(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  if(Number.isNaN(d.getTime())) return iso;
+  return `${rocYear(d)}/${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function formatHeaderSavedTime(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  if(Number.isNaN(d.getTime())) return iso;
+  return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function shortText(s, max=26){
+  s = String(s || '').trim();
+  return s.length > max ? s.slice(0,max) + '…' : s;
+}
+function makeBlankCase(){
+  return {
+    id:uid(), receiptDate:'', receiptNo:'', processDate:'', contractNo:'', mainContractNo:'', business:'', caseName:'',
+    priceOld:'', priceNew:'', bottomPriceOld:'', bottomPriceNew:'', contractEndOld:'', contractEndNew:'', relistType:'',
+    contractTypeOld:'', contractTypeNew:'', keyText:'', specialTerms:'', note:'', tasks:{}, createdAt:nowISO(), updatedAt:nowISO()
+  };
+}
+function migrateState(){
+  if(!Array.isArray(state.assistants)) state.assistants = [{id:'a1',name:'麗卉',active:true},{id:'a2',name:'紹薇',active:true}];
+  if(state.assistants.length && typeof state.assistants[0] === 'string'){
+    state.assistants = state.assistants.map((name,i)=>({id:'a'+(i+1), name, active:true}));
+  }
+  state.assistants = state.assistants.filter(a=>a && a.name).map((a,i)=>({id:a.id||uid('a'), name:String(a.name).trim(), active:a.active !== false}));
+  if(!Array.isArray(state.rules) || !state.rules.length) state.rules = cloneRules(DEFAULT_RULES);
+  state.rules = state.rules.map((r,i)=>{
+    const def = DEFAULT_RULES.find(d=>d.name === r.name) || DEFAULT_RULES[i];
+    return Object.assign({}, def || {}, r, {id:r.id || (def && def.id) || uid('r'), name:r.name || (def && def.name) || '未命名項目'});
+  });
+  if(!Array.isArray(state.cases)) state.cases = [];
+  state.cases.forEach(c=>{
+    if(c.followMain && !c.mainContractNo) c.mainContractNo = '';
+    delete c.followMain;
+    if(typeof c.business !== 'string') c.business = '';
+    if(!c.tasks || typeof c.tasks !== 'object') c.tasks = {};
+    state.rules.forEach(rule=>{
+      if(c.tasks[rule.name] && !c.tasks[rule.id]) c.tasks[rule.id] = c.tasks[rule.name];
+    });
+    ensureCaseTasks(c);
+  });
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) state = Object.assign({}, state, JSON.parse(raw));
+    migrateState();
+  }catch(e){ alert('讀取本機資料失敗，已改用空白資料。'); migrateState(); }
+}
+function saveState(){
+  state.version = '13.0';
+  state.lastSaved = nowISO();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  updateSaveStatus();
+  queueSupabaseAutoSync();
+}
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  document.getElementById('saveStatus').textContent = '自動存檔中...';
+  saveTimer = setTimeout(()=>{ saveState(); renderAll(false); }, 220);
+}
+function updateSaveStatus(){
+  const saveEl = document.getElementById('saveStatus');
+  if(saveEl) saveEl.textContent = '已自動存檔';
+  const text = '最後更新時間：' + (state.lastSaved ? formatHeaderSavedTime(state.lastSaved) : '—');
+  const header = document.getElementById('headerLastUpdate');
+  if(header) header.textContent = text;
+  const old = document.getElementById('lastSavedText');
+  if(old) old.textContent = text;
+}
+function tickClock(){ updateSaveStatus(); }
+
+function createBlankCaseAndOpen(){
+  const item = makeBlankCase();
+  ensureCaseTasks(item);
+  state.cases.unshift(item);
+  saveState();
+  renderAll();
+  openEditModal(item.id);
+}
+function getCase(id){ return state.cases.find(c=>c.id===id); }
+function activeAssistants(){ return (state.assistants || []).filter(a=>a.active !== false); }
+function updateEditModalTitle(c){
+  const title = document.getElementById('editModalTitle');
+  if(!title || !c) return;
+  const caseName = c.caseName || '新增案件';
+  const contract = c.contractNo || '—';
+  title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleContract">契約編號：${esc(contract)}</span>`;
+}
+function openEditModal(id){
+  currentCaseId = id;
+  currentTaskFilter = 'all';
+  const c = getCase(id);
+  if(!c) return;
+  updateEditModalTitle(c);
+  document.querySelectorAll('#editModalMask .editField').forEach(el=>{ el.value = c[el.dataset.key] || ''; });
+  updateRelistButtons(c.relistType || '');
+  bindEditFields();
+  validateVisibleDateFields(false);
+  renderTaskTable();
+  document.getElementById('editModalMask').classList.add('show');
+  setTimeout(()=>{
+    const first = document.querySelector('#editModalMask .editField[data-key="receiptDate"]');
+    if(first) first.focus();
+  },60);
+}
+function updateRelistButtons(value){
+  const group = document.getElementById('relistBtnGroup');
+  if(!group) return;
+  group.querySelectorAll('button').forEach(btn=>{
+    btn.classList.toggle('active', (btn.dataset.value || '') === (value || ''));
+  });
+}
+function setRelistType(value){
+  const input = document.querySelector('#editModalMask .editField[data-key="relistType"]');
+  if(input) input.value = value || '';
+  updateRelistButtons(value || '');
+  saveCurrentCase(false);
+  renderTaskTable();
+}
+function closeEditModal(){
+  if(currentCaseId) saveCurrentCase(false);
+  document.getElementById('editModalMask').classList.remove('show');
+  currentCaseId = null;
+  renderAll();
+}
+function bindEditFields(){
+  document.querySelectorAll('#editModalMask .editField').forEach(el=>{
+    const updateField = function(){
+      if(el.classList.contains('roc-date') && !el.value.trim()) setDateWarning(el,'');
+      saveCurrentCase(false);
+      if(el.classList.contains('condField')) renderTaskTable();
+    };
+    el.oninput = updateField;
+    el.onchange = function(){
+      if(el.classList.contains('roc-date')) normalizeDateField(el, true);
+      updateField();
+    };
+    el.onblur = function(){
+      if(el.classList.contains('roc-date')) normalizeDateField(el, true);
+      saveCurrentCase(false);
+      if(el.classList.contains('condField')) renderTaskTable();
+    };
+  });
+}
+function saveCurrentCase(showMsg){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  document.querySelectorAll('#editModalMask .editField').forEach(el=>{ c[el.dataset.key] = el.value.trim(); });
+  c.updatedAt = nowISO();
+  ensureCaseTasks(c);
+  updateEditModalTitle(c);
+  saveState();
+  renderTaskTable();
+  renderAll(false);
+}
+function deleteCurrentCase(){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  if(!confirm('確定要刪除這筆 D夾案件？')) return;
+  state.cases = state.cases.filter(x=>x.id!==currentCaseId);
+  saveState();
+  document.getElementById('editModalMask').classList.remove('show');
+  currentCaseId = null;
+  renderAll();
+}
+function activeConditions(c){
+  return {
+    priceChange: !!(c.priceNew && c.priceNew.trim()),
+    bottomPriceChange: !!(c.bottomPriceNew && c.bottomPriceNew.trim()),
+    extendContract: !!(c.contractEndNew && c.contractEndNew.trim()),
+    relist: !!(c.relistType && c.relistType.trim()),
+    contractChange: !!((c.contractTypeOld && c.contractTypeOld.trim()) || (c.contractTypeNew && c.contractTypeNew.trim())),
+    specialTerms: !!(c.specialTerms && c.specialTerms.trim())
+  };
+}
+function ensureCaseTasks(c){
+  if(!c.tasks || typeof c.tasks !== 'object') c.tasks = {};
+  state.rules.forEach(rule=>{
+    if(c.tasks[rule.name] && !c.tasks[rule.id]) c.tasks[rule.id] = c.tasks[rule.name];
+    if(!c.tasks[rule.id]) c.tasks[rule.id] = {override:'auto', done:false, assistant:'', note:'', updatedAt:''};
+    if(!('updatedAt' in c.tasks[rule.id])) c.tasks[rule.id].updatedAt = '';
+  });
+}
+function taskInfo(c, rule){
+  ensureCaseTasks(c);
+  const active = activeConditions(c);
+  const triggers = Object.keys(active).filter(k => active[k] && rule[k]);
+  const systemRequired = triggers.length > 0;
+  const t = c.tasks[rule.id] || {override:'auto', done:false, assistant:'', note:'', updatedAt:''};
+  let finalRequired = systemRequired;
+  if(t.override === 'required') finalRequired = true;
+  if(t.override === 'notRequired') finalRequired = false;
+  return {systemRequired, finalRequired, triggers, task:t};
+}
+function caseStats(c){
+  ensureCaseTasks(c);
+  let required=0, done=0, pending=0, x=0, touched=0;
+  state.rules.forEach(rule=>{
+    const info = taskInfo(c, rule);
+    if(info.finalRequired){
+      required++;
+      if(info.task.done || info.task.assistant) done++; else pending++;
+    }else{
+      x++;
+    }
+    if(info.task && info.task.updatedAt) touched++;
+  });
+  const complete = required > 0 && done >= required;
+  const pct = required ? Math.round((done / required) * 100) : 0;
+  return {required, done, pending, x, touched, complete, pct};
+}
+function matchSearch(c, q){
+  if(!q) return true;
+  q = q.toLowerCase();
+  return [c.caseName,c.business,c.contractNo,c.receiptNo,c.receiptDate,c.processDate,c.mainContractNo,c.priceOld,c.priceNew,c.bottomPriceOld,c.bottomPriceNew,c.contractEndOld,c.contractEndNew,c.relistType,c.contractTypeOld,c.contractTypeNew,c.keyText,c.specialTerms].some(v=>String(v||'').toLowerCase().includes(q));
+}
+function matchSearchBy(c, q, field){
+  if(!q) return true;
+  q = q.toLowerCase();
+  if(field && field !== 'all') return String(c[field] || '').toLowerCase().includes(q);
+  return matchSearch(c, q);
+}
+
+function getInputValue(id){
+  const el = document.getElementById(id);
+  return el ? el.value.trim().toLowerCase() : '';
+}
+function matchFieldContains(c, field, q){
+  if(!q) return true;
+  return String(c[field] || '').toLowerCase().includes(q);
+}
+function caseHasOpenAction(c, ruleId){
+  ensureCaseTasks(c);
+  if(ruleId === '__ANY__'){
+    return state.rules.some(rule=>{
+      const info = taskInfo(c, rule);
+      return info.finalRequired && !info.task.done;
+    });
+  }
+  const rule = state.rules.find(r=>r.id === ruleId);
+  if(!rule) return true;
+  const info = taskInfo(c, rule);
+  return info.finalRequired && !info.task.done;
+}
+function matchMakingFilters(c){
+  const receiptDate = getInputValue('filterReceiptDate');
+  const receiptNo = getInputValue('filterReceiptNo');
+  const processDate = getInputValue('filterProcessDate');
+  const contractNo = getInputValue('filterContractNo');
+  const business = getInputValue('filterBusiness');
+  const caseName = getInputValue('filterCaseName');
+  const action = (document.getElementById('filterOpenAction') && document.getElementById('filterOpenAction').value) || '';
+  return matchFieldContains(c,'receiptDate',receiptDate)
+    && matchFieldContains(c,'receiptNo',receiptNo)
+    && matchFieldContains(c,'processDate',processDate)
+    && matchFieldContains(c,'contractNo',contractNo)
+    && matchFieldContains(c,'business',business)
+    && matchFieldContains(c,'caseName',caseName)
+    && (!action || caseHasOpenAction(c, action));
+}
+function updateActionFilterOptions(){
+  const sel = document.getElementById('filterOpenAction');
+  if(!sel) return;
+  const current = sel.value;
+  const options = ['<option value="">全部</option>','<option value="__ANY__">任何動作</option>']
+    .concat(state.rules.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`));
+  sel.innerHTML = options.join('');
+  if([...sel.options].some(o=>o.value === current)) sel.value = current;
+}
+function clearMakingFilters(){
+  ['filterReceiptDate','filterReceiptNo','filterProcessDate','filterContractNo','filterBusiness','filterCaseName'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const action = document.getElementById('filterOpenAction');
+  if(action) action.value = '';
+  renderAll();
+}
+
+function renderAll(alsoSettings=true){
+  renderCaseLists();
+  if(alsoSettings){ renderAssistantsSettings(); renderRulesSettings(); }
+  updateSaveStatus();
+}
+function condPair(oldVal, newVal, unit=''){
+  if(!oldVal && !newVal) return '<span class="condEmpty">—</span>';
+  if(newVal) return `${esc(oldVal || '—')} → <b>${esc(newVal)}${unit}</b>`;
+  return esc(oldVal) + unit;
+}
+function renderCaseLists(){
+  updateActionFilterOptions();
+  const allQ = document.getElementById('allSearch').value.trim();
+  const making = state.cases.filter(c=>!caseStats(c).complete).filter(matchMakingFilters);
+  const completed = state.cases.filter(c=>caseStats(c).complete).filter(c=>matchSearch(c,allQ));
+  document.getElementById('makingCount').textContent = `${making.length} 筆`;
+  document.getElementById('allCount').textContent = `${completed.length} 筆`;
+  document.getElementById('makingList').innerHTML = renderCaseTable(making);
+  document.getElementById('allList').innerHTML = renderCaseTable(completed);
+}
+function renderCaseTable(list){
+  if(!list.length) return `<div class="empty">目前沒有資料</div>`;
+  const rows = list.map(c=>{
+    const s = caseStats(c);
+    const pct = s.required ? Math.round((s.done / s.required) * 100) : 0;
+    const progress = `<div class="progressPctWrap"><div class="progressPct"><div class="progressPctFill" style="width:${pct}%"></div><div class="progressPctText">${pct}%</div></div></div>`;
+    return `<tr class="rowClick" onclick="openEditModal('${c.id}')">
+      <td class="nowrap colTight">${esc(c.receiptDate)}</td>
+      <td class="nowrap colTight">${esc(c.receiptNo)}</td>
+      <td class="nowrap colTight">${esc(c.processDate)}</td>
+      <td class="nowrap colTight">${esc(c.contractNo)}${c.mainContractNo ? '<br><span class="small muted">跟隨'+esc(c.mainContractNo)+'</span>' : ''}</td>
+      <td class="caseNameCell">${esc(c.caseName || '未命名案件')}</td>
+      <td class="nowrap colTight">${esc(c.business || '')}</td>
+      <td class="condCell">${condPair(c.priceOld,c.priceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.bottomPriceOld,c.bottomPriceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.contractEndOld,c.contractEndNew,'')}</td>
+      <td class="condCell">${c.relistType ? esc(c.relistType) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${(c.contractTypeOld || c.contractTypeNew) ? `${esc(c.contractTypeOld||'—')} → <b>${esc(c.contractTypeNew||'—')}</b>` : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${c.keyText ? esc(shortText(c.keyText,16)) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${c.specialTerms ? esc(shortText(c.specialTerms,22)) : '<span class="condEmpty">—</span>'}</td>
+      <td>${progress}</td>
+      <td class="nowrap small muted">${esc(formatSavedTime(c.updatedAt))}</td>
+    </tr>`;
+  }).join('');
+  return `<table>
+    <colgroup>
+      <col style="width:4.1%"><col style="width:4.2%"><col style="width:4.1%"><col style="width:6.7%">
+      <col style="width:16.5%"><col style="width:5.6%"><col style="width:5.4%"><col style="width:5.4%">
+      <col style="width:7%"><col style="width:6.6%"><col style="width:6.6%"><col style="width:5.1%">
+      <col style="width:9.3%"><col style="width:7.4%"><col style="width:6%">
+    </colgroup>
+    <thead><tr>
+      <th>單據日期</th><th>單據號碼</th><th>處理日期</th><th>契約編號</th>
+      <th>案名</th><th>業務</th><th>開價</th><th>底價</th><th>委託時間</th>
+      <th>重新上架</th><th>換約</th><th>KEY</th><th>特約條款</th>
+      <th>完成率</th><th>最後更新日期</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+function renderTaskTable(){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  ensureCaseTasks(c);
+  const stats = caseStats(c);
+  document.getElementById('editProgressText').textContent = `狀態：未做 ${stats.pending}｜完成 ${stats.done}｜X ${stats.x}`;
+  const assistants = activeAssistants();
+  const rows = state.rules.map(rule=>{
+    const info = taskInfo(c, rule);
+    const t = info.task;
+    const action = info.finalRequired ? 'V' : 'X';
+    const status = info.finalRequired ? ((t.done || t.assistant) ? '完成' : '未做') : 'X';
+    const rowClass = !info.finalRequired ? 'taskRowX' : (status === '完成' ? 'taskRowDone' : '');
+    const assistantButtons = assistants.length ? assistants.map(a=>`<button class="${t.assistant === a.name ? 'active' : ''}" onclick="selectTaskAssistant('${rule.id}','${encodeURIComponent(a.name)}')">${esc(a.name)}</button>`).join('') : '<span class="small muted">尚未設定</span>';
+    return `<tr class="${rowClass}">
+      <td style="width:21%;"><div class="taskNamePlain">${esc(rule.name)}</div></td>
+      <td style="width:7%;"><button class="actionCircle ${action==='V'?'v':'x'}" title="點一下切換 V/X" onclick="toggleTaskAction('${rule.id}')">${action}</button></td>
+      <td style="width:17%;"><div class="assistantBtns">${assistantButtons}</div></td>
+      <td style="width:31%;"><input class="taskNoteInput" value="${esc(t.note || '')}" placeholder="備註" oninput="setTaskNote('${rule.id}', this.value)"></td>
+      <td style="width:13%;"><span class="statusPill ${status==='完成'?'done':(status==='X'?'x':'pending')}">${status}</span></td>
+      <td style="width:11%;" class="nowrap small muted">${esc(formatSavedTime(t.updatedAt))}</td>
+    </tr>`;
+  });
+  document.getElementById('taskTable').innerHTML = `<table>
+    <thead><tr><th>項目</th><th>動作</th><th>助理操作</th><th>備註</th><th>狀態</th><th>最後更新時間</th></tr></thead>
+    <tbody>${rows.join('')}</tbody></table>`;
+}
+function setTaskFilter(f){ currentTaskFilter = f; renderTaskTable(); }
+function touchTask(c, task){ task.updatedAt = nowISO(); c.updatedAt = nowISO(); }
+function toggleTaskAction(ruleId){
+  const c = getCase(currentCaseId); if(!c) return;
+  ensureCaseTasks(c);
+  const rule = state.rules.find(r=>r.id===ruleId); if(!rule) return;
+  const info = taskInfo(c, rule);
+  const t = c.tasks[ruleId];
+  if(info.finalRequired){
+    t.override = 'notRequired';
+    t.done = false;
+    t.assistant = '';
+  }else{
+    t.override = 'required';
+    t.done = false;
+  }
+  touchTask(c,t); saveState(); renderTaskTable(); renderAll(false);
+}
+function setTaskStatus(ruleId, status){
+  const c = getCase(currentCaseId); if(!c) return;
+  ensureCaseTasks(c); const t = c.tasks[ruleId];
+  if(status === 'x'){
+    t.override = 'notRequired';
+    t.done = false;
+    t.assistant = '';
+  }else if(status === 'done'){
+    t.override = 'required';
+    t.done = true;
+  }else{
+    t.override = 'required';
+    t.done = false;
+    t.assistant = '';
+  }
+  touchTask(c,t); saveState(); renderTaskTable(); renderAll(false);
+}
+function setTaskOverride(ruleId, value){
+  const c = getCase(currentCaseId); if(!c) return;
+  ensureCaseTasks(c); const t = c.tasks[ruleId];
+  t.override = value; touchTask(c,t);
+  const rule = state.rules.find(r=>r.id===ruleId);
+  if(rule && !taskInfo(c, rule).finalRequired) t.done = false;
+  saveState(); renderTaskTable(); renderAll(false);
+}
+function setTaskDone(ruleId, checked){
+  const c = getCase(currentCaseId); if(!c) return;
+  ensureCaseTasks(c); const t = c.tasks[ruleId];
+  t.done = !!checked; touchTask(c,t); saveState(); renderTaskTable(); renderAll(false);
+}
+function selectTaskAssistant(ruleId, encodedName){
+  const c = getCase(currentCaseId); if(!c) return;
+  const name = decodeURIComponent(encodedName);
+  ensureCaseTasks(c); 
+  const rule = state.rules.find(r=>r.id===ruleId);
+  const t = c.tasks[ruleId];
+  if(t.assistant === name){
+    t.assistant = '';
+    if(rule && taskInfo(c, rule).finalRequired) t.done = false;
+  }else{
+    t.override = 'required';
+    t.assistant = name;
+    t.done = true;
+  }
+  touchTask(c,t); saveState(); renderTaskTable(); renderAll(false);
+}
+function setTaskNote(ruleId, value){
+  const c = getCase(currentCaseId); if(!c) return;
+  ensureCaseTasks(c); const t = c.tasks[ruleId];
+  t.note = value; touchTask(c,t); scheduleSave();
+}
+function renderAssistantsSettings(){
+  const rows = (state.assistants || []).map(a=>`<tr>
+    <td style="text-align:left;font-weight:900;">${esc(a.name)}</td>
+    <td>${a.active !== false ? '<span class="tag tagGreen">使用中</span>' : '<span class="tag tagGray">已停用</span>'}</td>
+    <td><button class="btn ${a.active !== false ? 'btnOrange' : 'btnGreen'} btnMini" onclick="toggleAssistant('${a.id}')">${a.active !== false ? '停用' : '啟用'}</button></td>
+  </tr>`).join('') || '<tr><td colspan="3" class="empty">尚未設定助理</td></tr>';
+  document.getElementById('assistantsTable').innerHTML = `<table><thead><tr><th>助理</th><th>狀態</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function addAssistant(){
+  const el = document.getElementById('newAssistantName');
+  const name = el.value.trim();
+  if(!name) return;
+  if((state.assistants || []).some(a=>a.name === name)){ alert('助理名單已經有這個名字'); return; }
+  state.assistants.push({id:uid('a'), name, active:true});
+  el.value = '';
+  saveState(); renderAssistantsSettings(); if(currentCaseId) renderTaskTable();
+}
+function toggleAssistant(id){
+  const a = state.assistants.find(x=>x.id===id); if(!a) return;
+  a.active = !a.active;
+  saveState(); renderAssistantsSettings(); if(currentCaseId) renderTaskTable();
+}
+function renderRulesSettings(){
+  const conds = Object.keys(CONDITION_LABELS);
+  const colgroup = `<colgroup><col class="orderCol"><col class="nameCol">${conds.map(()=>'<col class="condCol">').join('')}<col class="opsCol"></colgroup>`;
+  const header = `<thead><tr><th>排序</th><th>項目名稱</th>${conds.map(k=>`<th>${CONDITION_LABELS[k]}</th>`).join('')}<th>操作</th></tr></thead>`;
+  const body = state.rules.map((r,idx)=>`<tr>
+    <td><div class="orderBtns"><button onclick="moveRule(${idx},-1)">▲</button><button onclick="moveRule(${idx},1)">▼</button></div></td>
+    <td><input value="${esc(r.name)}" onblur="renameRule('${r.id}', this.value)"></td>
+    ${conds.map(k=>`<td><button class="switchVX ${r[k]?'v':'x'}" onclick="toggleRuleVX('${r.id}','${k}')">${r[k]?'V':'X'}</button></td>`).join('')}
+    <td><button class="btn btnRed btnTiny" onclick="deleteRuleItem('${r.id}')">刪除</button></td>
+  </tr>`).join('');
+  document.getElementById('rulesTable').innerHTML = `<table class="settingTable">${colgroup}${header}<tbody>${body}</tbody></table>`;
+}
+function addRuleItem(){
+  const el = document.getElementById('newRuleName');
+  const name = el.value.trim();
+  if(!name) return;
+  if(state.rules.some(r=>r.name === name)){ alert('已有相同項目名稱'); return; }
+  const item = {id:uid('r'), name, priceChange:false, bottomPriceChange:false, extendContract:false, relist:false, contractChange:false, specialTerms:false};
+  state.rules.push(item);
+  state.cases.forEach(ensureCaseTasks);
+  el.value = '';
+  saveState(); renderRulesSettings(); if(currentCaseId) renderTaskTable(); renderAll(false);
+}
+function renameRule(ruleId, name){
+  const r = state.rules.find(x=>x.id===ruleId); if(!r) return;
+  name = name.trim();
+  if(!name){ renderRulesSettings(); return; }
+  r.name = name;
+  saveState(); renderRulesSettings(); if(currentCaseId) renderTaskTable(); renderAll(false);
+}
+function moveRule(idx, delta){
+  const next = idx + delta;
+  if(next < 0 || next >= state.rules.length) return;
+  const temp = state.rules[idx]; state.rules[idx] = state.rules[next]; state.rules[next] = temp;
+  saveState(); renderRulesSettings(); if(currentCaseId) renderTaskTable(); renderAll(false);
+}
+function toggleRuleVX(ruleId, key){
+  const r = state.rules.find(x=>x.id===ruleId); if(!r) return;
+  r[key] = !r[key];
+  saveState(); renderRulesSettings(); if(currentCaseId) renderTaskTable(); renderAll(false);
+}
+function deleteRuleItem(ruleId){
+  const r = state.rules.find(x=>x.id===ruleId); if(!r) return;
+  if(!confirm('確定刪除項目：「' + r.name + '」？')) return;
+  state.rules = state.rules.filter(x=>x.id!==ruleId);
+  saveState(); renderRulesSettings(); if(currentCaseId) renderTaskTable(); renderAll(false);
+}
+function saveRulesFromUI(){
+  state.cases.forEach(ensureCaseTasks);
+  saveState(); renderAll(); if(currentCaseId) renderTaskTable(); alert('項目設定已儲存');
+}
+function resetDefaultRules(){
+  if(!confirm('確定要恢復預設 V/X 規則？')) return;
+  state.rules = cloneRules(DEFAULT_RULES);
+  state.cases.forEach(ensureCaseTasks);
+  saveState(); renderAll(); if(currentCaseId) renderTaskTable();
+}
+function exportData(){
+  saveState();
+  const headers = ['狀態','單據日期','單據號碼','處理日期','契約編號','跟隨主約','案名','業務','開價原','開價改','底價原','底價改','委託原','委託改','重新上架','換約原','換約改','KEY','特約條款','完成率','最後更新'];
+  const rows = state.cases.map(c=>{
+    const s = caseStats(c);
+    const pct = s.required ? Math.round((s.done / s.required) * 100) + '%' : '0%';
+    return [
+      s.complete ? '完成' : '製作中',
+      c.receiptDate || '', c.receiptNo || '', c.processDate || '', c.contractNo || '', c.mainContractNo || '', c.caseName || '', c.business || '',
+      c.priceOld || '', c.priceNew || '', c.bottomPriceOld || '', c.bottomPriceNew || '',
+      c.contractEndOld || '', c.contractEndNew || '', c.relistType || '',
+      c.contractTypeOld || '', c.contractTypeNew || '', c.keyText || '', c.specialTerms || '',
+      pct, formatSavedTime(c.updatedAt)
+    ];
+  });
+  const escCell = v => String(v ?? '').replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  const table = `<table border="1"><thead><tr>${headers.map(h=>`<th>${escCell(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(v=>`<td style="mso-number-format:'\\@';">${escCell(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const htmlExcel = `<!doctype html><html><head><meta charset="utf-8"></head><body><h2>D夾</h2>${table}</body></html>`;
+  const blob = new Blob(['\ufeff' + htmlExcel], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `D夾_${rocFileTime(new Date())}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function importData(event){
+  const file = event.target.files[0]; event.target.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(){
+    try{
+      const imported = JSON.parse(reader.result);
+      if(!confirm('匯入會覆蓋目前本機 D夾資料，確定匯入？')) return;
+      state = Object.assign({version:'9.0',systemName:'D夾',assistants:[{id:'a1',name:'麗卉',active:true},{id:'a2',name:'紹薇',active:true}],rules:cloneRules(DEFAULT_RULES),cases:[],lastSaved:''}, imported);
+      migrateState(); saveState(); renderAll(); alert('匯入完成');
+    }catch(e){ alert('匯入失敗，請確認檔案格式。'); }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+function setupDateBlur(){
+  document.addEventListener('blur', function(e){
+    if(e.target && e.target.classList && e.target.classList.contains('roc-date')){
+      e.target.value = parseRocDate(e.target.value, {futureAnnual: e.target.dataset.key === 'contractEndNew'});
+    }
+  }, true);
+}
+
+// ===== V9 overrides =====
+function optionListForActionSelect(labelAny){
+  return ['<option value="">全部</option>',`<option value="__ANY__">${labelAny || '任何動作'}</option>`]
+    .concat(state.rules.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`));
+}
+function updateActionFilterOptions(){
+  const selects = [
+    {id:'filterOpenAction', any:'任何動作'},
+    {id:'filterDoneAction', any:'任何動作'}
+  ];
+  selects.forEach(cfg=>{
+    const sel = document.getElementById(cfg.id);
+    if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = optionListForActionSelect(cfg.any).join('');
+    if([...sel.options].some(o=>o.value === current)) sel.value = current;
+  });
+}
+function clearDoneFilters(){
+  ['filterDoneReceiptDate','filterDoneReceiptNo','filterDoneProcessDate','filterDoneContractNo','filterDoneBusiness','filterDoneCaseName'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const action = document.getElementById('filterDoneAction');
+  if(action) action.value = '';
+  renderAll();
+}
+function caseHasAction(c, ruleId){
+  ensureCaseTasks(c);
+  if(ruleId === '__ANY__'){
+    return state.rules.some(rule=>taskInfo(c, rule).finalRequired);
+  }
+  const rule = state.rules.find(r=>r.id === ruleId);
+  if(!rule) return true;
+  return taskInfo(c, rule).finalRequired;
+}
+function matchDoneFilters(c){
+  const receiptDate = getInputValue('filterDoneReceiptDate');
+  const receiptNo = getInputValue('filterDoneReceiptNo');
+  const processDate = getInputValue('filterDoneProcessDate');
+  const contractNo = getInputValue('filterDoneContractNo');
+  const business = getInputValue('filterDoneBusiness');
+  const caseName = getInputValue('filterDoneCaseName');
+  const action = (document.getElementById('filterDoneAction') && document.getElementById('filterDoneAction').value) || '';
+  return matchFieldContains(c,'receiptDate',receiptDate)
+    && matchFieldContains(c,'receiptNo',receiptNo)
+    && matchFieldContains(c,'processDate',processDate)
+    && matchFieldContains(c,'contractNo',contractNo)
+    && matchFieldContains(c,'business',business)
+    && matchFieldContains(c,'caseName',caseName)
+    && (!action || caseHasAction(c, action));
+}
+function renderCaseLists(){
+  updateActionFilterOptions();
+  const making = state.cases.filter(c=>!caseStats(c).complete).filter(matchMakingFilters);
+  const completed = state.cases.filter(c=>caseStats(c).complete).filter(matchDoneFilters);
+  document.getElementById('makingCount').textContent = `${making.length} 筆`;
+  document.getElementById('allCount').textContent = `${completed.length} 筆`;
+  document.getElementById('makingList').innerHTML = renderCaseTable(making);
+  document.getElementById('allList').innerHTML = renderCaseTable(completed);
+}
+function progressPctHtml(s){
+  const pct = Math.max(0, Math.min(100, s.pct || 0));
+  return `<div class="progressPctWrap"><div class="progressPct"><div class="progressPctFill" style="width:${pct}%"></div><div class="progressPctText">${pct}%</div></div></div>`;
+}
+function renderCaseTable(list){
+  if(!list.length) return `<div class="empty">目前沒有資料</div>`;
+  const rows = list.map(c=>{
+    const s = caseStats(c);
+    const progress = progressPctHtml(s);
+    return `<tr class="rowClick" onclick="openEditModal('${c.id}')">
+      <td class="nowrap colTight">${esc(c.receiptDate)}</td>
+      <td class="nowrap colTight">${esc(c.receiptNo)}</td>
+      <td class="nowrap colTight">${esc(c.processDate)}</td>
+      <td class="nowrap colTight">${esc(c.contractNo)}${c.mainContractNo ? '<br><span class="small muted">跟隨'+esc(c.mainContractNo)+'</span>' : ''}</td>
+      <td class="caseNameCell">${esc(c.caseName || '未命名案件')}</td>
+      <td class="nowrap colTight">${esc(c.business || '')}</td>
+      <td class="condCell">${condPair(c.priceOld,c.priceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.bottomPriceOld,c.bottomPriceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.contractEndOld,c.contractEndNew,'')}</td>
+      <td class="condCell">${c.relistType ? esc(c.relistType) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${(c.contractTypeOld || c.contractTypeNew) ? `${esc(c.contractTypeOld||'—')} → <b>${esc(c.contractTypeNew||'—')}</b>` : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${c.keyText ? esc(shortText(c.keyText,16)) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${c.specialTerms ? esc(shortText(c.specialTerms,22)) : '<span class="condEmpty">—</span>'}</td>
+      <td>${progress}</td>
+      <td class="nowrap small muted">${esc(formatSavedTime(c.updatedAt))}</td>
+    </tr>`;
+  }).join('');
+  return `<table>
+    <colgroup>
+      <col style="width:4.1%"><col style="width:4.2%"><col style="width:4.1%"><col style="width:6.6%">
+      <col style="width:16.2%"><col style="width:5.6%"><col style="width:5.4%"><col style="width:5.4%">
+      <col style="width:6.8%"><col style="width:6.6%"><col style="width:6.6%"><col style="width:5.1%">
+      <col style="width:9%"><col style="width:7.1%"><col style="width:6.2%">
+    </colgroup>
+    <thead><tr>
+      <th>單據日期</th><th>單據號碼</th><th>處理日期</th><th>契約編號</th>
+      <th>案名</th><th>業務</th><th>開價</th><th>底價</th><th>委託時間</th>
+      <th>重新上架</th><th>換約</th><th>KEY</th><th>特約條款</th>
+      <th>完成率</th><th>最後更新</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+function validateVisibleDateFields(showWarning=true){
+  let ok = true;
+  document.querySelectorAll('#editModalMask .roc-date').forEach(el=>{
+    if(!normalizeDateField(el, showWarning)) ok = false;
+  });
+  const oldEl = document.querySelector('#editModalMask .editField[data-key="contractEndOld"]');
+  const newEl = document.querySelector('#editModalMask .editField[data-key="contractEndNew"]');
+  if(oldEl && newEl){
+    const oldHas = !!oldEl.value.trim();
+    const newHas = !!newEl.value.trim();
+    if(oldHas !== newHas){
+      ok = false;
+      if(showWarning){
+        if(!oldHas) setDateWarning(oldEl, '委託原日期必填');
+        if(!newHas) setDateWarning(newEl, '委託延長日期必填');
+      }
+    }else if(oldHas && newHas){
+      if(!oldEl.classList.contains('dateInvalid')) setDateWarning(oldEl,'');
+      if(!newEl.classList.contains('dateInvalid')) setDateWarning(newEl,'');
+    }
+  }
+  return ok;
+}
+function bindEditFields(){
+  document.querySelectorAll('#editModalMask .editField').forEach(el=>{
+    const updateField = function(){
+      if(el.classList.contains('roc-date') && !el.value.trim()) setDateWarning(el,'');
+      saveCurrentCase(false);
+      if(el.classList.contains('condField')) renderTaskTable();
+    };
+    el.oninput = function(){
+      updateField();
+      if(el.dataset.key === 'contractEndOld' || el.dataset.key === 'contractEndNew'){
+        validateVisibleDateFields(false);
+      }
+    };
+    el.onchange = function(){
+      if(el.classList.contains('roc-date')) normalizeDateField(el, true);
+      if(el.dataset.key === 'contractEndOld' || el.dataset.key === 'contractEndNew'){
+        validateVisibleDateFields(true);
+      }
+      updateField();
+    };
+    el.onblur = function(){
+      if(el.classList.contains('roc-date')) normalizeDateField(el, true);
+      validateVisibleDateFields(true);
+      saveCurrentCase(false);
+      if(el.classList.contains('condField')) renderTaskTable();
+    };
+  });
+}
+function renderTaskTable(){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  ensureCaseTasks(c);
+  const stats = caseStats(c);
+  document.getElementById('editProgressText').textContent = `狀態：未做 ${stats.pending}｜完成 ${stats.done}｜X ${stats.x}`;
+  const assistants = activeAssistants();
+  const rows = state.rules.map(rule=>{
+    const info = taskInfo(c, rule);
+    const t = info.task;
+    const action = info.finalRequired ? 'V' : 'X';
+    const status = info.finalRequired ? ((t.done || t.assistant) ? '完成' : '未做') : 'X';
+    const rowClass = !info.finalRequired ? 'taskRowX' : (status === '完成' ? 'taskRowDone' : '');
+    const assistantButtons = assistants.length ? assistants.map(a=>`<button class="${t.assistant === a.name ? 'active' : ''}" onclick="selectTaskAssistant('${rule.id}','${encodeURIComponent(a.name)}')">${esc(a.name)}</button>`).join('') : '<span class="small muted">尚未設定</span>';
+    return `<tr class="${rowClass}">
+      <td style="width:20%;"><div class="taskNamePlain">${esc(rule.name)}</div></td>
+      <td style="width:7%;"><button class="actionCircle ${action==='V'?'v':'x'}" title="點一下切換 V/X" onclick="toggleTaskAction('${rule.id}')">${action}</button></td>
+      <td style="width:14%;"><span class="statusPill ${status==='完成'?'done':(status==='X'?'x':'pending')}">${status}</span></td>
+      <td style="width:17%;"><div class="assistantBtns">${assistantButtons}</div></td>
+      <td style="width:31%;"><input class="taskNoteInput" value="${esc(t.note || '')}" placeholder="備註" oninput="setTaskNote('${rule.id}', this.value)"></td>
+      <td style="width:11%;" class="nowrap small muted">${esc(formatSavedTime(t.updatedAt))}</td>
+    </tr>`;
+  });
+  document.getElementById('taskTable').innerHTML = `<table>
+    <thead><tr><th>項目</th><th>動作</th><th>狀態</th><th>助理操作</th><th>備註</th><th>最後更新時間</th></tr></thead>
+    <tbody>${rows.join('')}</tbody></table>`;
+}
+
+
+// ===== V9修正版 overrides：保留 V9 資料與設定，只修指定問題 =====
+function strictDateCandidate(raw){
+  const s = String(raw || '').trim().replace(/\s+/g,'');
+  if(!s) return true;
+  return /^\d{1,4}([\/.。年月-])\d{1,2}(([\/.。月-])\d{1,2}日?)?$/.test(s);
+}
+function normalizeDateField(el, showWarning=true){
+  if(!el) return true;
+  const raw = el.value.trim();
+  if(!raw){ setDateWarning(el,''); return true; }
+  if(!strictDateCandidate(raw)){
+    if(showWarning) setDateWarning(el, '日期錯誤，請輸入例：115/4/30 或 4/30');
+    return false;
+  }
+  const r = normalizeRocDate(raw, {futureAnnual: el.dataset.key === 'contractEndNew'});
+  if(r.valid){
+    el.value = r.value;
+    setDateWarning(el,'');
+    return true;
+  }
+  if(showWarning) setDateWarning(el, '日期錯誤，請輸入例：115/4/30 或 4/30');
+  return false;
+}
+function validateVisibleDateFields(showWarning=true){
+  let ok = true;
+  document.querySelectorAll('#editModalMask .roc-date').forEach(el=>{
+    if(!normalizeDateField(el, showWarning)) ok = false;
+  });
+  const oldEl = document.querySelector('#editModalMask .editField[data-key="contractEndOld"]');
+  const newEl = document.querySelector('#editModalMask .editField[data-key="contractEndNew"]');
+  if(oldEl && newEl){
+    const oldHas = !!oldEl.value.trim();
+    const newHas = !!newEl.value.trim();
+    if(oldHas !== newHas){
+      ok = false;
+      if(showWarning){
+        if(!oldHas) setDateWarning(oldEl, '必填');
+        if(!newHas) setDateWarning(newEl, '必填');
+      }
+    }else if(oldHas && newHas){
+      if(!oldEl.classList.contains('dateInvalid')) setDateWarning(oldEl,'');
+      if(!newEl.classList.contains('dateInvalid')) setDateWarning(newEl,'');
+    }
+  }
+  return ok;
+}
+function clearConditionFields(event){
+  if(event) event.stopPropagation();
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  const keys = [
+    'priceOld','priceNew','bottomPriceOld','bottomPriceNew',
+    'contractEndOld','contractEndNew','relistType',
+    'contractTypeOld','contractTypeNew','keyText','specialTerms'
+  ];
+  keys.forEach(k=>{ c[k] = ''; });
+  document.querySelectorAll('#editModalMask .condField').forEach(el=>{
+    el.value = '';
+    if(el.classList.contains('roc-date')) setDateWarning(el,'');
+  });
+  updateRelistButtons('');
+  ensureCaseTasks(c);
+  Object.keys(c.tasks || {}).forEach(id=>{
+    const t = c.tasks[id];
+    t.override = 'auto';
+    t.done = false;
+    t.assistant = '';
+    t.updatedAt = nowISO();
+  });
+  c.updatedAt = nowISO();
+  saveState();
+  renderTaskTable();
+  renderAll(false);
+}
+function setupDateBlur(){
+  document.addEventListener('blur', function(e){
+    if(e.target && e.target.classList && e.target.classList.contains('roc-date')){
+      normalizeDateField(e.target, true);
+      if(e.target.dataset.key === 'contractEndOld' || e.target.dataset.key === 'contractEndNew'){
+        validateVisibleDateFields(true);
+      }
+    }
+  }, true);
+}
+function setTaskFilter(f){
+  currentTaskFilter = f || 'all';
+  renderTaskTable();
+}
+function taskFilterActiveClass(f){
+  return currentTaskFilter === f ? 'active' : '';
+}
+function shouldShowTaskByFilter(status){
+  if(currentTaskFilter === 'all') return true;
+  if(currentTaskFilter === 'pending') return status === '未做';
+  if(currentTaskFilter === 'done') return status === '完成';
+  if(currentTaskFilter === 'x') return status === 'X';
+  if(currentTaskFilter === 'required') return status !== 'X';
+  return true;
+}
+function bindEditFields(){
+  document.querySelectorAll('#editModalMask .editField').forEach(el=>{
+    const updateField = function(){
+      if(el.classList.contains('roc-date') && !el.value.trim()) setDateWarning(el,'');
+      saveCurrentCase(false);
+      if(el.classList.contains('condField')) renderTaskTable();
+    };
+    el.oninput = function(){
+      updateField();
+      if(el.dataset.key === 'contractEndOld' || el.dataset.key === 'contractEndNew'){
+        validateVisibleDateFields(false);
+      }
+    };
+    el.onchange = function(){
+      if(el.classList.contains('roc-date')) normalizeDateField(el, true);
+      if(el.dataset.key === 'contractEndOld' || el.dataset.key === 'contractEndNew'){
+        validateVisibleDateFields(true);
+      }
+      updateField();
+    };
+    el.onblur = function(){
+      if(el.classList.contains('roc-date')) normalizeDateField(el, true);
+      validateVisibleDateFields(true);
+      saveCurrentCase(false);
+      if(el.classList.contains('condField')) renderTaskTable();
+    };
+  });
+}
+function renderTaskTable(){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  ensureCaseTasks(c);
+  const stats = caseStats(c);
+  document.getElementById('editProgressText').textContent = `狀態：未做 ${stats.pending}｜完成 ${stats.done}｜X ${stats.x}`;
+  const assistants = activeAssistants();
+  const rows = state.rules.map(rule=>{
+    const info = taskInfo(c, rule);
+    const t = info.task;
+    const action = info.finalRequired ? 'V' : 'X';
+    const status = info.finalRequired ? ((t.done || t.assistant) ? '完成' : '未做') : 'X';
+    if(!shouldShowTaskByFilter(status)) return '';
+    const rowClass = !info.finalRequired ? 'taskRowX' : (status === '完成' ? 'taskRowDone' : '');
+    const assistantButtons = assistants.length ? assistants.map(a=>`<button class="${t.assistant === a.name ? 'active' : ''}" onclick="selectTaskAssistant('${rule.id}','${encodeURIComponent(a.name)}')">${esc(a.name)}</button>`).join('') : '<span class="small muted">尚未設定</span>';
+    return `<tr class="${rowClass}">
+      <td style="width:20%;"><div class="taskNamePlain">${esc(rule.name)}</div></td>
+      <td style="width:7%;"><button class="actionCircle ${action==='V'?'v':'x'}" title="點一下切換 V/X" onclick="toggleTaskAction('${rule.id}')">${action}</button></td>
+      <td style="width:14%;"><span class="statusPill ${status==='完成'?'done':(status==='X'?'x':'pending')}">${status}</span></td>
+      <td style="width:17%;"><div class="assistantBtns">${assistantButtons}</div></td>
+      <td style="width:31%;"><input class="taskNoteInput" value="${esc(t.note || '')}" placeholder="備註" oninput="setTaskNote('${rule.id}', this.value)"></td>
+      <td style="width:11%;" class="nowrap small muted">${esc(formatSavedTime(t.updatedAt))}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('taskTable').innerHTML = `
+    <div class="taskFilterBar">
+      <button type="button" class="${taskFilterActiveClass('all')}" onclick="setTaskFilter('all')">全部</button>
+      <button type="button" class="${taskFilterActiveClass('pending')}" onclick="setTaskFilter('pending')">未做</button>
+      <button type="button" class="${taskFilterActiveClass('done')}" onclick="setTaskFilter('done')">完成</button>
+      <button type="button" class="${taskFilterActiveClass('x')}" onclick="setTaskFilter('x')">X</button>
+    </div>
+    <table>
+      <thead><tr><th>項目</th><th>動作</th><th>狀態</th><th>助理操作</th><th>備註</th><th>最後更新時間</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" class="empty">沒有符合的項目</td></tr>'}</tbody>
+    </table>`;
+}
+
+
+// ===== V9修正版2 overrides：只修指定功能，保留 V9 設定 =====
+function normalizeDateField(el, showWarning=true){
+  if(!el) return true;
+  const raw = el.value.trim();
+  if(!raw){
+    setDateWarning(el,'');
+    return true;
+  }
+
+  // 日期欄只接受純日期格式，避免 KEY4/3 這種文字被誤判
+  const compact = raw.replace(/\s+/g,'');
+  if(!/^\d{1,4}([\/.。年月-])\d{1,2}(([\/.。月-])\d{1,2}日?)?$/.test(compact)){
+    if(showWarning) setDateWarning(el, '日期錯誤，請輸入例：115/4/30 或 4/30');
+    return false;
+  }
+
+  const r = normalizeRocDate(compact, {futureAnnual: el.dataset.key === 'contractEndNew'});
+  if(r.valid){
+    // 不在輸入中即時改值，避免打 4/3 時中途跳成 115/4/33；
+    // 只有 onchange / blur 時才正式轉民國日期
+    if(showWarning) el.value = r.value;
+    setDateWarning(el,'');
+    return true;
+  }
+
+  if(showWarning) setDateWarning(el, '日期錯誤，請輸入例：115/4/30 或 4/30');
+  return false;
+}
+
+function validateVisibleDateFields(showWarning=true){
+  let ok = true;
+  document.querySelectorAll('#editModalMask .roc-date').forEach(el=>{
+    if(!normalizeDateField(el, showWarning)) ok = false;
+  });
+
+  const oldEl = document.querySelector('#editModalMask .editField[data-key="contractEndOld"]');
+  const newEl = document.querySelector('#editModalMask .editField[data-key="contractEndNew"]');
+  if(oldEl && newEl){
+    const oldHas = !!oldEl.value.trim();
+    const newHas = !!newEl.value.trim();
+    if(oldHas !== newHas){
+      ok = false;
+      if(showWarning){
+        if(!oldHas) setDateWarning(oldEl, '必填');
+        if(!newHas) setDateWarning(newEl, '必填');
+      }
+    }else if(oldHas && newHas){
+      if(!oldEl.classList.contains('dateInvalid')) setDateWarning(oldEl,'');
+      if(!newEl.classList.contains('dateInvalid')) setDateWarning(newEl,'');
+    }
+  }
+  return ok;
+}
+
+function bindEditFields(){
+  document.querySelectorAll('#editModalMask .editField').forEach(el=>{
+    const updateField = function(){
+      if(el.classList.contains('roc-date') && !el.value.trim()) setDateWarning(el,'');
+      saveCurrentCase(false);
+      if(el.classList.contains('condField')) renderTaskTable();
+    };
+
+    el.oninput = function(){
+      // oninput 只存檔與重算，不即時轉換日期
+      updateField();
+      if(el.dataset.key === 'contractEndOld' || el.dataset.key === 'contractEndNew'){
+        validateVisibleDateFields(false);
+      }
+    };
+
+    el.onchange = function(){
+      if(el.classList.contains('roc-date')) normalizeDateField(el, true);
+      if(el.dataset.key === 'contractEndOld' || el.dataset.key === 'contractEndNew'){
+        validateVisibleDateFields(true);
+      }
+      updateField();
+    };
+
+    el.onblur = function(){
+      if(el.classList.contains('roc-date')) normalizeDateField(el, true);
+      validateVisibleDateFields(true);
+      saveCurrentCase(false);
+      if(el.classList.contains('condField')) renderTaskTable();
+    };
+  });
+}
+
+function setTaskFilter(f){
+  currentTaskFilter = f || 'all';
+  renderTaskTable();
+}
+
+function taskFilterActiveClass(f){
+  return currentTaskFilter === f ? 'active' : '';
+}
+
+function shouldShowTaskByFilter(status){
+  if(currentTaskFilter === 'all') return true;
+  if(currentTaskFilter === 'pending') return status === '未做';
+  if(currentTaskFilter === 'done') return status === '完成';
+  if(currentTaskFilter === 'x') return status === 'X';
+  return true;
+}
+
+function renderTaskTable(){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  ensureCaseTasks(c);
+
+  const stats = caseStats(c);
+  document.getElementById('editProgressText').textContent = `狀態：未做 ${stats.pending}｜完成 ${stats.done}｜X ${stats.x}`;
+
+  const assistants = activeAssistants();
+  const rows = state.rules.map(rule=>{
+    const info = taskInfo(c, rule);
+    const t = info.task;
+
+    // 全部項目固定顯示；只有「動作」依變更條件顯示 V / X
+    const action = info.finalRequired ? 'V' : 'X';
+    const status = info.finalRequired ? ((t.done || t.assistant) ? '完成' : '未做') : 'X';
+
+    if(!shouldShowTaskByFilter(status)) return '';
+
+    const rowClass = !info.finalRequired ? 'taskRowX' : (status === '完成' ? 'taskRowDone' : '');
+    const assistantButtons = assistants.length
+      ? assistants.map(a=>`<button class="${t.assistant === a.name ? 'active' : ''}" onclick="selectTaskAssistant('${rule.id}','${encodeURIComponent(a.name)}')">${esc(a.name)}</button>`).join('')
+      : '<span class="small muted">尚未設定</span>';
+
+    return `<tr class="${rowClass}">
+      <td style="width:20%;"><div class="taskNamePlain">${esc(rule.name)}</div></td>
+      <td style="width:7%;"><button class="actionCircle ${action==='V'?'v':'x'}" title="點一下切換 V/X" onclick="toggleTaskAction('${rule.id}')">${action}</button></td>
+      <td style="width:13%;"><span class="statusPill ${status==='完成'?'done':(status==='X'?'x':'pending')}">${status}</span></td>
+      <td style="width:18%;"><div class="assistantBtns">${assistantButtons}</div></td>
+      <td style="width:30%;"><input class="taskNoteInput" value="${esc(t.note || '')}" placeholder="備註" oninput="setTaskNote('${rule.id}', this.value)"></td>
+      <td style="width:12%;" class="nowrap small muted">${esc(formatSavedTime(t.updatedAt))}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('taskTable').innerHTML = `
+    <div class="taskFilterBar">
+      <button type="button" class="${taskFilterActiveClass('all')}" onclick="setTaskFilter('all')">全部</button>
+      <button type="button" class="${taskFilterActiveClass('pending')}" onclick="setTaskFilter('pending')">未做</button>
+      <button type="button" class="${taskFilterActiveClass('done')}" onclick="setTaskFilter('done')">完成</button>
+      <button type="button" class="${taskFilterActiveClass('x')}" onclick="setTaskFilter('x')">X</button>
+    </div>
+    <table>
+      <thead><tr><th>項目</th><th>動作</th><th>狀態</th><th>助理操作</th><th>備註</th><th>最後更新時間</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" class="empty">沒有符合的項目</td></tr>'}</tbody>
+    </table>`;
+}
+
+
+// ===== V9修正版3：依實際高度計算浮動位置 =====
+function updateStickyOffsets(){
+  const modal = document.querySelector('#editModalMask .modal');
+  if(!modal) return;
+  const header = modal.querySelector('.modalHeader');
+  const cond = modal.querySelector('.compactConditions');
+  const filter = modal.querySelector('.taskFilterBar');
+
+  const headH = header ? Math.ceil(header.getBoundingClientRect().height) : 58;
+  const condH = cond ? Math.ceil(cond.getBoundingClientRect().height) : 150;
+  const filterH = filter ? Math.ceil(filter.getBoundingClientRect().height) : 39;
+
+  modal.style.setProperty('--sticky-head-h', headH + 'px');
+  modal.style.setProperty('--sticky-cond-h', condH + 'px');
+  modal.style.setProperty('--sticky-filter-h', filterH + 'px');
+}
+
+(function(){
+  const oldOpenEditModal = window.openEditModal;
+  if(typeof oldOpenEditModal === 'function'){
+    window.openEditModal = function(id){
+      oldOpenEditModal(id);
+      requestAnimationFrame(updateStickyOffsets);
+      setTimeout(updateStickyOffsets, 80);
+    };
+  }
+
+  const oldRenderTaskTable = window.renderTaskTable;
+  if(typeof oldRenderTaskTable === 'function'){
+    window.renderTaskTable = function(){
+      oldRenderTaskTable();
+      requestAnimationFrame(updateStickyOffsets);
+      setTimeout(updateStickyOffsets, 60);
+    };
+  }
+
+  window.addEventListener('resize', updateStickyOffsets);
+})();
+
+
+// ===== V9修正版4 overrides：委託日期前後判斷＋更新清單欄位排序 =====
+function rocDateToNumber(v){
+  const r = normalizeRocDate(String(v || '').trim(), {futureAnnual:false});
+  if(!r.valid || !r.value) return null;
+  const p = r.value.split('/').map(Number);
+  return (p[0] + 1911) * 10000 + p[1] * 100 + p[2];
+}
+
+function validateVisibleDateFields(showWarning=true){
+  let ok = true;
+  document.querySelectorAll('#editModalMask .roc-date').forEach(el=>{
+    if(!normalizeDateField(el, showWarning)) ok = false;
+  });
+
+  const oldEl = document.querySelector('#editModalMask .editField[data-key="contractEndOld"]');
+  const newEl = document.querySelector('#editModalMask .editField[data-key="contractEndNew"]');
+
+  if(oldEl && newEl){
+    const oldHas = !!oldEl.value.trim();
+    const newHas = !!newEl.value.trim();
+
+    if(oldHas !== newHas){
+      ok = false;
+      if(showWarning){
+        if(!oldHas) setDateWarning(oldEl, '必填');
+        if(!newHas) setDateWarning(newEl, '必填');
+      }
+    }else if(oldHas && newHas){
+      const oldNum = rocDateToNumber(oldEl.value);
+      const newNum = rocDateToNumber(newEl.value);
+
+      if(oldNum !== null && newNum !== null){
+        if(oldNum >= newNum){
+          ok = false;
+          if(showWarning){
+            setDateWarning(oldEl, '原時間需早於改時間');
+            setDateWarning(newEl, '改時間需晚於原時間');
+          }
+        }else{
+          if(!oldEl.classList.contains('dateInvalid')) setDateWarning(oldEl,'');
+          if(!newEl.classList.contains('dateInvalid')) setDateWarning(newEl,'');
+        }
+      }
+    }
+  }
+
+  return ok;
+}
+
+function saveCurrentCase(render=true){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+
+  // 若委託時間不符合：原時間必須早於改時間，先不存這兩格
+  const oldEl = document.querySelector('#editModalMask .editField[data-key="contractEndOld"]');
+  const newEl = document.querySelector('#editModalMask .editField[data-key="contractEndNew"]');
+  const blockContractSave = oldEl && newEl && oldEl.value.trim() && newEl.value.trim()
+    && rocDateToNumber(oldEl.value) !== null
+    && rocDateToNumber(newEl.value) !== null
+    && rocDateToNumber(oldEl.value) >= rocDateToNumber(newEl.value);
+
+  document.querySelectorAll('#editModalMask .editField').forEach(el=>{
+    if(blockContractSave && (el.dataset.key === 'contractEndOld' || el.dataset.key === 'contractEndNew')){
+      return;
+    }
+    c[el.dataset.key] = el.value || '';
+  });
+
+  c.updatedAt = nowISO();
+  saveState();
+  updateEditHeader();
+  if(render) renderAll();
+}
+
+function renderTaskTable(){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  ensureCaseTasks(c);
+
+  const stats = caseStats(c);
+  document.getElementById('editProgressText').textContent = `狀態：未做 ${stats.pending}｜完成 ${stats.done}｜X ${stats.x}`;
+
+  const assistants = activeAssistants();
+  const rows = state.rules.map(rule=>{
+    const info = taskInfo(c, rule);
+    const t = info.task;
+
+    const action = info.finalRequired ? 'V' : 'X';
+    const status = info.finalRequired ? ((t.done || t.assistant) ? '完成' : '未做') : 'X';
+
+    if(!shouldShowTaskByFilter(status)) return '';
+
+    const rowClass = !info.finalRequired ? 'taskRowX' : (status === '完成' ? 'taskRowDone' : '');
+    const assistantButtons = assistants.length
+      ? assistants.map(a=>`<button class="${t.assistant === a.name ? 'active' : ''}" onclick="selectTaskAssistant('${rule.id}','${encodeURIComponent(a.name)}')">${esc(a.name)}</button>`).join('')
+      : '<span class="small muted">尚未設定</span>';
+
+    return `<tr class="${rowClass}">
+      <td style="width:20%;"><div class="taskNamePlain">${esc(rule.name)}</div></td>
+      <td style="width:7%;"><button class="actionCircle ${action==='V'?'v':'x'}" title="點一下切換 V/X" onclick="toggleTaskAction('${rule.id}')">${action}</button></td>
+      <td style="width:18%;"><div class="assistantBtns">${assistantButtons}</div></td>
+      <td style="width:30%;"><input class="taskNoteInput" value="${esc(t.note || '')}" placeholder="備註" oninput="setTaskNote('${rule.id}', this.value)"></td>
+      <td style="width:13%;"><span class="statusPill ${status==='完成'?'done':(status==='X'?'x':'pending')}">${status}</span></td>
+      <td style="width:12%;" class="nowrap small muted">${esc(formatSavedTime(t.updatedAt))}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('taskTable').innerHTML = `
+    <div class="taskFilterBar">
+      <button type="button" class="${taskFilterActiveClass('all')}" onclick="setTaskFilter('all')">全部</button>
+      <button type="button" class="${taskFilterActiveClass('pending')}" onclick="setTaskFilter('pending')">未做</button>
+      <button type="button" class="${taskFilterActiveClass('done')}" onclick="setTaskFilter('done')">完成</button>
+      <button type="button" class="${taskFilterActiveClass('x')}" onclick="setTaskFilter('x')">X</button>
+    </div>
+    <table>
+      <thead><tr><th>項目</th><th>動作</th><th>助理操作</th><th>備註</th><th>狀態</th><th>最後更新時間</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" class="empty">沒有符合的項目</td></tr>'}</tbody>
+    </table>`;
+}
+
+
+// ===== V9修正版5 overrides：方案 B 摘要浮動＋關閉修正 =====
+function conditionSummaryHtml(c){
+  const active = activeConditions(c);
+  const keyText = String(c.keyText || '').trim();
+  const termsText = String(c.specialTerms || '').trim();
+
+  const priceText = active.priceChange
+    ? `開價：${c.priceOld || '—'}→${c.priceNew || '—'}萬`
+    : '開價X';
+
+  const bottomText = active.bottomPriceChange
+    ? `底價：${c.bottomPriceOld || '—'}→${c.bottomPriceNew || '—'}萬`
+    : '底價X';
+
+  const contractText = active.extendContract
+    ? `委託：${c.contractEndOld || '—'}→${c.contractEndNew || '—'}`
+    : '委託X';
+
+  const relistText = active.relist
+    ? `上架：${c.relistType || '—'}`
+    : '上架X';
+
+  const changeText = active.contractChange
+    ? `換約：${c.contractTypeOld || '—'}→${c.contractTypeNew || '—'}`
+    : '換約X';
+
+  const keySummary = keyText
+    ? `KEY：${shortText(keyText, 16)}`
+    : 'KEYX';
+
+  const termsSummary = termsText
+    ? `特約：${shortText(termsText, 20)}`
+    : '特約X';
+
+  const items = [
+    {text:priceText, on:active.priceChange},
+    {text:bottomText, on:active.bottomPriceChange},
+    {text:contractText, on:active.extendContract},
+    {text:relistText, on:active.relist, type:active.relist},
+    {text:changeText, on:active.contractChange},
+    {text:keySummary, on:!!keyText},
+    {text:termsSummary, on:!!termsText}
+  ];
+
+  return `<span class="summaryLabel">變更條件</span>` + items.map(x=>{
+    const cls = x.type ? 'type' : (x.on ? 'on' : 'off');
+    return `<span class="summaryChip ${cls}">${esc(x.text)}</span>`;
+  }).join('');
+}
+
+function updateStickyOffsets(){
+  const modal = document.querySelector('#editModalMask .modal');
+  if(!modal) return;
+  const header = modal.querySelector('.modalHeader');
+  const summary = modal.querySelector('.conditionSummaryBar');
+  const filter = modal.querySelector('.taskFilterBar');
+
+  const headH = header ? Math.ceil(header.getBoundingClientRect().height) : 58;
+  const summaryH = summary ? Math.ceil(summary.getBoundingClientRect().height) : 34;
+  const filterH = filter ? Math.ceil(filter.getBoundingClientRect().height) : 39;
+
+  modal.style.setProperty('--sticky-head-h', headH + 'px');
+  modal.style.setProperty('--summary-h', summaryH + 'px');
+  modal.style.setProperty('--filter-h', filterH + 'px');
+}
+
+function maskCloseEdit(event){
+  if(event && event.target && event.target.id === 'editModalMask'){
+    closeEditModal();
+  }
+}
+
+function saveCurrentCase(render=true){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+
+  const oldEl = document.querySelector('#editModalMask .editField[data-key="contractEndOld"]');
+  const newEl = document.querySelector('#editModalMask .editField[data-key="contractEndNew"]');
+  const oldNum = oldEl ? rocDateToNumber(oldEl.value) : null;
+  const newNum = newEl ? rocDateToNumber(newEl.value) : null;
+  const blockContractSave = oldEl && newEl && oldEl.value.trim() && newEl.value.trim()
+    && oldNum !== null && newNum !== null && oldNum >= newNum;
+
+  document.querySelectorAll('#editModalMask .editField').forEach(el=>{
+    if(blockContractSave && (el.dataset.key === 'contractEndOld' || el.dataset.key === 'contractEndNew')){
+      return;
+    }
+    c[el.dataset.key] = el.value || '';
+  });
+
+  c.updatedAt = nowISO();
+  ensureCaseTasks(c);
+  updateEditModalTitle(c);
+  saveState();
+  if(render) renderAll();
+}
+
+function closeEditModal(){
+  if(currentCaseId) saveCurrentCase(false);
+  const mask = document.getElementById('editModalMask');
+  if(mask) mask.classList.remove('show');
+  currentCaseId = null;
+  renderAll();
+}
+
+function renderTaskTable(){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  ensureCaseTasks(c);
+
+  const stats = caseStats(c);
+  document.getElementById('editProgressText').textContent = `狀態：未做 ${stats.pending}｜完成 ${stats.done}｜X ${stats.x}`;
+
+  const assistants = activeAssistants();
+  const rows = state.rules.map(rule=>{
+    const info = taskInfo(c, rule);
+    const t = info.task;
+
+    const action = info.finalRequired ? 'V' : 'X';
+    const status = info.finalRequired ? ((t.done || t.assistant) ? '完成' : '未做') : 'X';
+
+    if(!shouldShowTaskByFilter(status)) return '';
+
+    const rowClass = !info.finalRequired ? 'taskRowX' : (status === '完成' ? 'taskRowDone' : '');
+    const assistantButtons = assistants.length
+      ? assistants.map(a=>`<button class="${t.assistant === a.name ? 'active' : ''}" onclick="selectTaskAssistant('${rule.id}','${encodeURIComponent(a.name)}')">${esc(a.name)}</button>`).join('')
+      : '<span class="small muted">尚未設定</span>';
+
+    return `<tr class="${rowClass}">
+      <td style="width:20%;"><div class="taskNamePlain">${esc(rule.name)}</div></td>
+      <td style="width:7%;"><button class="actionCircle ${action==='V'?'v':'x'}" title="點一下切換 V/X" onclick="toggleTaskAction('${rule.id}')">${action}</button></td>
+      <td style="width:18%;"><div class="assistantBtns">${assistantButtons}</div></td>
+      <td style="width:30%;"><input class="taskNoteInput" value="${esc(t.note || '')}" placeholder="備註" oninput="setTaskNote('${rule.id}', this.value)"></td>
+      <td style="width:13%;"><span class="statusPill ${status==='完成'?'done':(status==='X'?'x':'pending')}">${status}</span></td>
+      <td style="width:12%;" class="nowrap small muted">${esc(formatSavedTime(t.updatedAt))}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('taskTable').innerHTML = `
+    <div class="conditionSummaryBar">${conditionSummaryHtml(c)}</div>
+    <div class="taskFilterBar">
+      <button type="button" class="${taskFilterActiveClass('all')}" onclick="setTaskFilter('all')">全部</button>
+      <button type="button" class="${taskFilterActiveClass('pending')}" onclick="setTaskFilter('pending')">未做</button>
+      <button type="button" class="${taskFilterActiveClass('done')}" onclick="setTaskFilter('done')">完成</button>
+      <button type="button" class="${taskFilterActiveClass('x')}" onclick="setTaskFilter('x')">X</button>
+    </div>
+    <table>
+      <thead><tr><th>項目</th><th>動作</th><th>助理操作</th><th>備註</th><th>狀態</th><th>最後更新時間</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" class="empty">沒有符合的項目</td></tr>'}</tbody>
+    </table>`;
+
+  requestAnimationFrame(updateStickyOffsets);
+  setTimeout(updateStickyOffsets, 60);
+}
+
+(function(){
+  window.addEventListener('resize', updateStickyOffsets);
+  setTimeout(updateStickyOffsets, 120);
+})();
+
+
+// ===== V9修正版13：JSON 匯出匯入 + Supabase sync =====
+const SUPABASE_CFG_KEY = 'DCLIP_SUPABASE_CONFIG_V1';
+let sbAutoTimer = null;
+let sbSuppressAuto = false;
+
+function exportJsonData(){
+  saveState();
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `D夾_${rocFileTime(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function getSupabaseConfigFromUI(){
+  return {
+    url:(document.getElementById('sbUrl')?.value || '').trim().replace(/\/+$/,''),
+    key:(document.getElementById('sbKey')?.value || '').trim(),
+    workspace:(document.getElementById('sbWorkspace')?.value || 'dclip-main').trim() || 'dclip-main',
+    auto:!!document.getElementById('sbAuto')?.checked
+  };
+}
+
+function setSupabaseStatus(msg, type=''){
+  const el = document.getElementById('sbStatus');
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.remove('ok','warn','bad');
+  if(type) el.classList.add(type);
+}
+
+function loadSupabaseConfig(){
+  try{
+    return JSON.parse(localStorage.getItem(SUPABASE_CFG_KEY) || '{}');
+  }catch(e){
+    return {};
+  }
+}
+
+function initSupabasePanel(){
+  const cfg = loadSupabaseConfig();
+  const url = document.getElementById('sbUrl');
+  const key = document.getElementById('sbKey');
+  const workspace = document.getElementById('sbWorkspace');
+  const auto = document.getElementById('sbAuto');
+  if(url) url.value = cfg.url || '';
+  if(key) key.value = cfg.key || '';
+  if(workspace) workspace.value = cfg.workspace || 'dclip-main';
+  if(auto) auto.checked = !!cfg.auto;
+  setSupabaseStatus(cfg.url && cfg.key ? '設定已載入' : '尚未連線', cfg.url && cfg.key ? 'ok' : '');
+}
+
+function saveSupabaseConfig(){
+  const cfg = getSupabaseConfigFromUI();
+  localStorage.setItem(SUPABASE_CFG_KEY, JSON.stringify(cfg));
+  setSupabaseStatus('設定已儲存', 'ok');
+  return cfg;
+}
+
+function supabaseReady(cfg){
+  if(!cfg.url || !cfg.key){
+    setSupabaseStatus('請先填 Project URL 與 Publishable Key', 'warn');
+    return false;
+  }
+  return true;
+}
+
+function supabaseHeaders(cfg){
+  return {
+    apikey: cfg.key,
+    Authorization: `Bearer ${cfg.key}`,
+    'Content-Type':'application/json'
+  };
+}
+
+function supabaseTableUrl(cfg){
+  return `${cfg.url}/rest/v1/dclip_state`;
+}
+
+async function testSupabaseConnection(){
+  const cfg = saveSupabaseConfig();
+  if(!supabaseReady(cfg)) return;
+  setSupabaseStatus('連線測試中...', '');
+  try{
+    const res = await fetch(`${supabaseTableUrl(cfg)}?select=workspace_key&limit=1`, {
+      method:'GET',
+      headers:supabaseHeaders(cfg)
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(txt || res.statusText);
+    }
+    setSupabaseStatus('連線成功', 'ok');
+  }catch(err){
+    console.error(err);
+    setSupabaseStatus('連線失敗，請確認 SQL / URL / Key', 'bad');
+    alert('Supabase 連線失敗：\\n' + (err.message || err));
+  }
+}
+
+async function uploadSupabaseState(silent=false){
+  const cfg = saveSupabaseConfig();
+  if(!supabaseReady(cfg)) return;
+  if(!silent) setSupabaseStatus('上傳中...', '');
+  try{
+    const payload = {
+      workspace_key: cfg.workspace,
+      payload: state,
+      updated_at: new Date().toISOString()
+    };
+    const res = await fetch(`${supabaseTableUrl(cfg)}?on_conflict=workspace_key`, {
+      method:'POST',
+      headers:{...supabaseHeaders(cfg), Prefer:'resolution=merge-duplicates,return=representation'},
+      body:JSON.stringify(payload)
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(txt || res.statusText);
+    }
+    setSupabaseStatus('已同步雲端 ' + formatHeaderSavedTime(new Date().toISOString()), 'ok');
+  }catch(err){
+    console.error(err);
+    setSupabaseStatus('同步失敗', 'bad');
+    if(!silent) alert('上傳 Supabase 失敗：\\n' + (err.message || err));
+  }
+}
+
+async function downloadSupabaseState(){
+  const cfg = saveSupabaseConfig();
+  if(!supabaseReady(cfg)) return;
+  if(!confirm('下載雲端資料會覆蓋目前本機 D夾資料，確定下載？')) return;
+  setSupabaseStatus('下載中...', '');
+  try{
+    const qWorkspace = encodeURIComponent(cfg.workspace);
+    const res = await fetch(`${supabaseTableUrl(cfg)}?workspace_key=eq.${qWorkspace}&select=payload,updated_at&limit=1`, {
+      method:'GET',
+      headers:supabaseHeaders(cfg)
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(txt || res.statusText);
+    }
+    const rows = await res.json();
+    if(!rows || !rows.length || !rows[0].payload){
+      setSupabaseStatus('雲端沒有資料', 'warn');
+      alert('雲端目前沒有資料。');
+      return;
+    }
+    sbSuppressAuto = true;
+    state = Object.assign({version:'9.0',systemName:'D夾',assistants:[{id:'a1',name:'麗卉',active:true},{id:'a2',name:'紹薇',active:true}],rules:cloneRules(DEFAULT_RULES),cases:[],lastSaved:''}, rows[0].payload);
+    migrateState();
+    saveState();
+    sbSuppressAuto = false;
+    renderAll();
+    setSupabaseStatus('已下載雲端 ' + formatHeaderSavedTime(rows[0].updated_at || nowISO()), 'ok');
+  }catch(err){
+    sbSuppressAuto = false;
+    console.error(err);
+    setSupabaseStatus('下載失敗', 'bad');
+    alert('下載 Supabase 失敗：\\n' + (err.message || err));
+  }
+}
+
+function queueSupabaseAutoSync(){
+  if(sbSuppressAuto) return;
+  const cfg = loadSupabaseConfig();
+  if(!cfg.auto || !cfg.url || !cfg.key) return;
+  clearTimeout(sbAutoTimer);
+  sbAutoTimer = setTimeout(()=>uploadSupabaseState(true), 1400);
+}
+
+
+// ===== V9修正版18：NEW本式 Supabase 同步覆蓋函式 =====
+function getSupabaseConfigFromUI(){
+  const oldCfg = loadSupabaseConfig();
+  return {
+    url:(document.getElementById('sbUrl')?.value || '').trim().replace(/\/+$/,''),
+    key:(document.getElementById('sbKey')?.value || '').trim(),
+    workspace: oldCfg.workspace || 'dclip-main'
+  };
+}
+function setSupabaseStatus(msg, type=''){
+  const el = document.getElementById('sbStatus');
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.remove('ok','warn','bad');
+  if(type) el.classList.add(type);
+}
+function setSupabaseMessage(msg, type=''){
+  const el = document.getElementById('sbMessage');
+  if(!el) return;
+  el.textContent = msg || '';
+  el.classList.remove('ok','warn','bad');
+  if(type) el.classList.add(type);
+}
+function loadSupabaseConfig(){
+  try{
+    return JSON.parse(localStorage.getItem(SUPABASE_CFG_KEY) || '{}');
+  }catch(e){
+    return {};
+  }
+}
+function saveSupabaseConfig(extra={}){
+  const cfg = Object.assign(loadSupabaseConfig(), getSupabaseConfigFromUI(), extra);
+  cfg.workspace = cfg.workspace || 'dclip-main';
+  localStorage.setItem(SUPABASE_CFG_KEY, JSON.stringify(cfg));
+  return cfg;
+}
+function initSupabasePanel(){
+  const cfg = loadSupabaseConfig();
+  const url = document.getElementById('sbUrl');
+  const key = document.getElementById('sbKey');
+  if(url) url.value = cfg.url || '';
+  if(key) key.value = cfg.key || '';
+  if(cfg.connected && cfg.url && cfg.key){
+    setSupabaseStatus('已連線','ok');
+    setSupabaseMessage('雲端同步已啟用','ok');
+    startSupabasePolling();
+  }else{
+    setSupabaseStatus('未連線','');
+    setSupabaseMessage('尚未連線','');
+  }
+}
+function supabaseReady(cfg){
+  if(!cfg.url || !cfg.key){
+    setSupabaseStatus('未連線','warn');
+    setSupabaseMessage('請先填 Project URL 與 Publishable Key','warn');
+    return false;
+  }
+  return true;
+}
+function supabaseHeaders(cfg){
+  return {
+    apikey: cfg.key,
+    Authorization: `Bearer ${cfg.key}`,
+    'Content-Type':'application/json'
+  };
+}
+function supabaseTableUrl(cfg){
+  return `${cfg.url}/rest/v1/dclip_state`;
+}
+function remoteTimeKey(cfg){
+  return `DCLIP_SUPABASE_REMOTE_TIME_${cfg.workspace || 'dclip-main'}`;
+}
+function setLastRemoteTime(cfg, t){
+  if(t) localStorage.setItem(remoteTimeKey(cfg), t);
+}
+function getLastRemoteTime(cfg){
+  return localStorage.getItem(remoteTimeKey(cfg)) || '';
+}
+async function fetchSupabaseRemote(cfg){
+  const qWorkspace = encodeURIComponent(cfg.workspace || 'dclip-main');
+  const res = await fetch(`${supabaseTableUrl(cfg)}?workspace_key=eq.${qWorkspace}&select=payload,updated_at&limit=1`, {
+    method:'GET',
+    headers:supabaseHeaders(cfg)
+  });
+  if(!res.ok){
+    const txt = await res.text();
+    throw new Error(txt || res.statusText);
+  }
+  const rows = await res.json();
+  return rows && rows.length ? rows[0] : null;
+}
+async function connectSupabase(){
+  const cfg = saveSupabaseConfig({connected:false});
+  if(!supabaseReady(cfg)) return;
+
+  setSupabaseStatus('連線中...','warn');
+  setSupabaseMessage('正在連線 Supabase','warn');
+
+  try{
+    const res = await fetch(`${supabaseTableUrl(cfg)}?select=workspace_key&limit=1`, {
+      method:'GET',
+      headers:supabaseHeaders(cfg)
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(txt || res.statusText);
+    }
+    saveSupabaseConfig({connected:true});
+    setSupabaseStatus('已連線','ok');
+    setSupabaseMessage('已連線，請按「立即同步」','ok');
+    startSupabasePolling();
+  }catch(err){
+    console.error(err);
+    saveSupabaseConfig({connected:false});
+    setSupabaseStatus('未連線','bad');
+    setSupabaseMessage('連線失敗，請確認 SQL / URL / Key','bad');
+    alert('Supabase 連線失敗：\n' + (err.message || err));
+  }
+}
+function disconnectSupabase(){
+  clearInterval(sbPollTimer);
+  sbPollTimer = null;
+  clearTimeout(sbAutoTimer);
+  sbAutoTimer = null;
+  saveSupabaseConfig({connected:false});
+  setSupabaseStatus('未連線','');
+  setSupabaseMessage('已中斷連線','warn');
+}
+async function uploadSupabaseState(silent=false){
+  const cfg = saveSupabaseConfig();
+  if(!supabaseReady(cfg)) return;
+  if(!silent) setSupabaseMessage('上傳中...','warn');
+
+  try{
+    const payload = {
+      workspace_key: cfg.workspace || 'dclip-main',
+      payload: state,
+      updated_at: new Date().toISOString()
+    };
+    const res = await fetch(`${supabaseTableUrl(cfg)}?on_conflict=workspace_key`, {
+      method:'POST',
+      headers:{...supabaseHeaders(cfg), Prefer:'resolution=merge-duplicates,return=representation'},
+      body:JSON.stringify(payload)
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(txt || res.statusText);
+    }
+    const rows = await res.json().catch(()=>[]);
+    const remoteTime = rows && rows[0] && rows[0].updated_at ? rows[0].updated_at : new Date().toISOString();
+    setLastRemoteTime(cfg, remoteTime);
+    setSupabaseStatus('已連線','ok');
+    setSupabaseMessage('已同步雲端 ' + formatHeaderSavedTime(remoteTime), 'ok');
+  }catch(err){
+    console.error(err);
+    setSupabaseStatus('已連線','warn');
+    setSupabaseMessage('同步失敗','bad');
+    if(!silent) alert('上傳 Supabase 失敗：\n' + (err.message || err));
+  }
+}
+async function applySupabasePayload(row, cfg, message='已收到另一台電腦的最新更新。'){
+  if(!row || !row.payload) return false;
+
+  const localCases = Array.isArray(state.cases) ? state.cases.length : 0;
+  const remoteCases = Array.isArray(row.payload.cases) ? row.payload.cases.length : 0;
+  if(localCases > 0 && remoteCases === 0){
+    setLastRemoteTime(cfg, row.updated_at || nowISO());
+    setSupabaseStatus('已連線','warn');
+    setSupabaseMessage('雲端資料為空，已保留本機資料','warn');
+    return false;
+  }
+
+  try{
+    localStorage.setItem('DCLIP_BACKUP_BEFORE_CLOUD_' + Date.now(), JSON.stringify(state));
+  }catch(e){}
+
+  sbSuppressAuto = true;
+  state = Object.assign(
+    {version:'9.0',systemName:'D夾',assistants:[{id:'a1',name:'麗卉',active:true},{id:'a2',name:'紹薇',active:true}],rules:cloneRules(DEFAULT_RULES),cases:[],lastSaved:''},
+    row.payload
+  );
+  migrateState();
+  saveState();
+  sbSuppressAuto = false;
+  setLastRemoteTime(cfg, row.updated_at || nowISO());
+  renderAll();
+  if(currentCaseId && getCase(currentCaseId)) renderTaskTable();
+  setSupabaseStatus('已連線','ok');
+  setSupabaseMessage(message,'ok');
+  return true;
+}
+async function syncSupabaseNow(fromConnect=false){
+  const cfg = saveSupabaseConfig({connected:true});
+  if(!supabaseReady(cfg)) return;
+
+  setSupabaseStatus('已連線','ok');
+  setSupabaseMessage('立即同步中...','warn');
+
+  try{
+    const row = await fetchSupabaseRemote(cfg);
+    const localCases = Array.isArray(state.cases) ? state.cases.length : 0;
+
+    if(!row || !row.payload){
+      await uploadSupabaseState(true);
+      setSupabaseMessage('雲端無資料，已上傳本機資料','ok');
+      return;
+    }
+
+    const remoteCases = Array.isArray(row.payload.cases) ? row.payload.cases.length : 0;
+    const remoteTime = row.updated_at || '';
+    const localTime = state.lastSaved || '';
+
+    if(localCases > 0 && remoteCases === 0){
+      await uploadSupabaseState(true);
+      setSupabaseMessage('雲端資料為空，已上傳本機資料','ok');
+      return;
+    }
+
+    if(localCases === 0 && remoteCases > 0){
+      await applySupabasePayload(row, cfg, '已收到雲端資料。');
+      return;
+    }
+
+    if(remoteTime && localTime && new Date(remoteTime).getTime() > new Date(localTime).getTime() + 1000){
+      await applySupabasePayload(row, cfg, '已收到另一台電腦的最新更新。');
+      return;
+    }
+
+    await uploadSupabaseState(true);
+    setSupabaseMessage('已完成立即同步','ok');
+  }catch(err){
+    console.error(err);
+    setSupabaseStatus('已連線','warn');
+    setSupabaseMessage('立即同步失敗','bad');
+    alert('立即同步失敗：\n' + (err.message || err));
+  }
+}
+async function checkSupabaseRemoteUpdates(){
+  const cfg = loadSupabaseConfig();
+  if(!cfg.connected || !cfg.url || !cfg.key) return;
+
+  try{
+    const row = await fetchSupabaseRemote(cfg);
+    if(!row || !row.payload || !row.updated_at) return;
+
+    const localCases = Array.isArray(state.cases) ? state.cases.length : 0;
+    const remoteCases = Array.isArray(row.payload.cases) ? row.payload.cases.length : 0;
+    if(localCases > 0 && remoteCases === 0){
+      setLastRemoteTime(cfg, row.updated_at);
+      return;
+    }
+
+    const lastSeen = getLastRemoteTime(cfg);
+    const remoteMs = new Date(row.updated_at).getTime();
+    const lastMs = lastSeen ? new Date(lastSeen).getTime() : 0;
+
+    if(remoteMs > lastMs + 1000){
+      const localMs = state.lastSaved ? new Date(state.lastSaved).getTime() : 0;
+      if(remoteMs > localMs + 1000){
+        await applySupabasePayload(row, cfg, '已收到另一台電腦的最新更新。');
+      }else{
+        setLastRemoteTime(cfg, row.updated_at);
+      }
+    }
+  }catch(err){
+    console.warn('remote polling failed', err);
+  }
+}
+let sbPollTimer = null;
+function startSupabasePolling(){
+  clearInterval(sbPollTimer);
+  sbPollTimer = setInterval(checkSupabaseRemoteUpdates, 8000);
+}
+function queueSupabaseAutoSync(){
+  if(sbSuppressAuto) return;
+  const cfg = loadSupabaseConfig();
+  if(!cfg.connected || !cfg.url || !cfg.key) return;
+  clearTimeout(sbAutoTimer);
+  sbAutoTimer = setTimeout(()=>uploadSupabaseState(true), 1400);
+}
+
+function init(){
+  loadState();
+  state.cases.forEach(ensureCaseTasks);
+  initSupabasePanel();
+  setupDateBlur();
+  const mask = document.getElementById('editModalMask');
+  if(mask){ mask.addEventListener('mousedown', function(e){ if(e.target === mask) closeEditModal(); }); }
+  tickClock();
+  renderAll();
+  if(!state.lastSaved) saveState();
+}
+init();
+</script>
+</body>
+</html>
