@@ -3232,7 +3232,8 @@ function updateEditModalTitle(c){
   if(!title || !c) return;
   const caseName = c.caseName || '新增案件';
   const contract = c.contractNo || '—';
-  title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleContract">契約編號：${esc(contract)}</span>`;
+  const mainContract = c.mainContractNo || '';
+  title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleContract">契約編號：${esc(contract)}　跟隨主約：${esc(mainContract)}</span>`;
 }
 function openEditModal(id){
   currentCaseId = id;
