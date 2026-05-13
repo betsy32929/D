@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>D夾｜單機版_V9_修正版30_基本資料平均左側填滿</title>
+  <title>D夾｜取消動作_三按鈕完成版</title>
   <style>
     :root{
       --bg:#f4f8ff;
@@ -2757,6 +2757,27 @@
       }
     }
 
+
+    /* V31：取消動作 V/X，固定三個完成按鈕，項目設定簡化 */
+    #assistantSettings{display:none!important;}
+    #filterOpenAction,
+    #filterDoneAction{min-width:118px!important;}
+    .taskTableWrap .assistantBtns button.noneBtn{
+      background:#f8fafc!important;
+      color:#334155!important;
+      border-color:#cbd5e1!important;
+    }
+    .taskTableWrap .assistantBtns button.noneBtn.active{
+      background:linear-gradient(90deg,#64748b,#334155)!important;
+      color:#fff!important;
+      border-color:#475569!important;
+      box-shadow:0 4px 12px rgba(51,65,85,.20)!important;
+    }
+    .taskTableWrap .taskNamePlain{text-align:left!important;}
+    .settingTable .simpleOrderCol{width:120px!important;}
+    .settingTable .simpleNameCol{width:auto!important;}
+    .settingTable .simpleOpsCol{width:100px!important;}
+
 </style>
 </head>
 <body>
@@ -2805,7 +2826,7 @@
       <div class="panelBody">
         <div class="filterLine filterLineStack">
           <div class="filterGrid filterGridMaking">
-            <label>動作未做<select id="filterOpenAction" onchange="renderAll()"><option value="">全部</option><option value="__ANY__">任何動作</option></select></label>
+            <label>項目未做<select id="filterOpenAction" onchange="renderAll()"><option value="">全部</option><option value="__ANY__">任何未做項目</option></select></label>
             <label>單據日期<input id="filterReceiptDate" placeholder="單據日期" oninput="renderAll()"></label>
             <label>單據號碼<input id="filterReceiptNo" placeholder="單據號碼" oninput="renderAll()"></label>
             <label>處理日期<input id="filterProcessDate" placeholder="處理日期" oninput="renderAll()"></label>
@@ -2827,7 +2848,7 @@
       <div class="panelBody">
         <div class="filterLine filterLineStack">
           <div class="filterGrid filterGridCompleted">
-            <label>動作<select id="filterDoneAction" onchange="renderAll()"><option value="">全部</option><option value="__ANY__">任何動作</option></select></label>
+            <label>項目<select id="filterDoneAction" onchange="renderAll()"><option value="">全部</option><option value="__ANY__">任何項目</option></select></label>
             <label>單據日期<input id="filterDoneReceiptDate" placeholder="單據日期" oninput="renderAll()"></label>
             <label>單據號碼<input id="filterDoneReceiptNo" placeholder="單據號碼" oninput="renderAll()"></label>
             <label>處理日期<input id="filterDoneProcessDate" placeholder="處理日期" oninput="renderAll()"></label>
@@ -2867,7 +2888,7 @@
           </div>
           <div class="inline">
             <button class="btn btnGreen btnMini" onclick="saveRulesFromUI()">儲存項目設定</button>
-            <button class="btn btnRed btnMini" onclick="resetDefaultRules()">恢復預設 V/X</button>
+            <button class="btn btnRed btnMini" onclick="resetDefaultRules()">恢復預設項目</button>
           </div>
         </div>
         <div class="rulesWrap" id="rulesTable"></div>
@@ -3232,8 +3253,7 @@ function updateEditModalTitle(c){
   if(!title || !c) return;
   const caseName = c.caseName || '新增案件';
   const contract = c.contractNo || '—';
-  const mainContract = c.mainContractNo || '';
-  title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleContract">契約編號：${esc(contract)}　跟隨主約：${esc(mainContract)}</span>`;
+  title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleContract">契約編號：${esc(contract)}</span>`;
 }
 function openEditModal(id){
   currentCaseId = id;
@@ -4987,8 +5007,317 @@ function queueSupabaseAutoSync(){
   sbAutoTimer = setTimeout(()=>uploadSupabaseState(true), 1400);
 }
 
+
+// ===== V31：取消動作 V/X；項目由麗卉／紹薇／無判斷完成 =====
+const FIXED_TASK_ASSISTANTS_V31 = ['麗卉','紹薇','無'];
+function fixedTaskAssistants(){
+  return FIXED_TASK_ASSISTANTS_V31.map((name, idx)=>({id:'fixed'+idx, name, active:true}));
+}
+function activeAssistants(){
+  return fixedTaskAssistants();
+}
+function ensureFixedAssistantsV31(){
+  state.assistants = fixedTaskAssistants();
+}
+function isTaskDoneV31(task){
+  if(!task) return false;
+  return !!(task.done || (task.assistant && String(task.assistant).trim()));
+}
+function migrateState(){
+  ensureFixedAssistantsV31();
+  if(!Array.isArray(state.rules) || !state.rules.length) state.rules = cloneRules(DEFAULT_RULES);
+  state.rules = state.rules
+    .filter(r=>r && (r.name || r.id))
+    .map((r,i)=>({
+      id:r.id || (DEFAULT_RULES[i] && DEFAULT_RULES[i].id) || uid('r'),
+      name:String(r.name || (DEFAULT_RULES[i] && DEFAULT_RULES[i].name) || '未命名項目').trim() || '未命名項目'
+    }));
+  if(!Array.isArray(state.cases)) state.cases = [];
+  state.cases.forEach(c=>{
+    if(c.followMain && !c.mainContractNo) c.mainContractNo = '';
+    delete c.followMain;
+    if(typeof c.business !== 'string') c.business = '';
+    if(!c.tasks || typeof c.tasks !== 'object') c.tasks = {};
+    state.rules.forEach(rule=>{
+      if(c.tasks[rule.name] && !c.tasks[rule.id]) c.tasks[rule.id] = c.tasks[rule.name];
+    });
+    ensureCaseTasks(c);
+  });
+}
+function ensureCaseTasks(c){
+  if(!c.tasks || typeof c.tasks !== 'object') c.tasks = {};
+  state.rules.forEach(rule=>{
+    if(c.tasks[rule.name] && !c.tasks[rule.id]) c.tasks[rule.id] = c.tasks[rule.name];
+    if(!c.tasks[rule.id]) c.tasks[rule.id] = {override:'required', done:false, assistant:'', note:'', updatedAt:''};
+    if(!('done' in c.tasks[rule.id])) c.tasks[rule.id].done = false;
+    if(!('assistant' in c.tasks[rule.id])) c.tasks[rule.id].assistant = '';
+    if(!('note' in c.tasks[rule.id])) c.tasks[rule.id].note = '';
+    if(!('updatedAt' in c.tasks[rule.id])) c.tasks[rule.id].updatedAt = '';
+    c.tasks[rule.id].override = 'required';
+  });
+}
+function taskInfo(c, rule){
+  ensureCaseTasks(c);
+  const t = c.tasks[rule.id] || {override:'required', done:false, assistant:'', note:'', updatedAt:''};
+  return {systemRequired:true, finalRequired:true, triggers:[], task:t};
+}
+function caseStats(c){
+  ensureCaseTasks(c);
+  let required = 0, done = 0, pending = 0, x = 0, touched = 0;
+  state.rules.forEach(rule=>{
+    const t = c.tasks[rule.id];
+    required++;
+    if(isTaskDoneV31(t)) done++; else pending++;
+    if(t && t.updatedAt) touched++;
+  });
+  const complete = required > 0 && done >= required;
+  const pct = required ? Math.round((done / required) * 100) : 0;
+  return {required, done, pending, x, touched, complete, pct};
+}
+function setTaskFilter(f){
+  currentTaskFilter = (f === 'done' || f === 'pending') ? f : 'all';
+  renderTaskTable();
+}
+function taskFilterActiveClass(f){
+  return currentTaskFilter === f ? 'active' : '';
+}
+function shouldShowTaskByFilter(status){
+  if(currentTaskFilter === 'pending') return status === '未做';
+  if(currentTaskFilter === 'done') return status === '完成';
+  return true;
+}
+function selectTaskAssistant(ruleId, encodedName){
+  const c = getCase(currentCaseId); if(!c) return;
+  const name = decodeURIComponent(encodedName);
+  ensureCaseTasks(c);
+  const t = c.tasks[ruleId];
+  if(!t) return;
+  if(t.assistant === name){
+    t.assistant = '';
+    t.done = false;
+  }else{
+    t.assistant = name;
+    t.done = true;
+    t.override = 'required';
+  }
+  touchTask(c,t); saveState(); renderTaskTable(); renderAll(false);
+}
+function setTaskStatus(ruleId, status){
+  const c = getCase(currentCaseId); if(!c) return;
+  ensureCaseTasks(c);
+  const t = c.tasks[ruleId];
+  if(!t) return;
+  if(status === 'done'){
+    t.done = true;
+    if(!t.assistant) t.assistant = '無';
+  }else{
+    t.done = false;
+    t.assistant = '';
+  }
+  t.override = 'required';
+  touchTask(c,t); saveState(); renderTaskTable(); renderAll(false);
+}
+function toggleTaskAction(ruleId){
+  // 動作 V/X 已取消，保留空函式避免舊資料或舊按鈕呼叫出錯。
+  return false;
+}
+function setTaskOverride(ruleId, value){
+  const c = getCase(currentCaseId); if(!c) return;
+  ensureCaseTasks(c);
+  const t = c.tasks[ruleId];
+  if(!t) return;
+  t.override = 'required';
+  touchTask(c,t); saveState(); renderTaskTable(); renderAll(false);
+}
+function setTaskDone(ruleId, checked){
+  const c = getCase(currentCaseId); if(!c) return;
+  ensureCaseTasks(c);
+  const t = c.tasks[ruleId];
+  if(!t) return;
+  t.done = !!checked;
+  if(t.done && !t.assistant) t.assistant = '無';
+  if(!t.done) t.assistant = '';
+  touchTask(c,t); saveState(); renderTaskTable(); renderAll(false);
+}
+function taskAssistantButtonsHtml(ruleId, t){
+  return fixedTaskAssistants().map(a=>{
+    const active = t.assistant === a.name;
+    const cls = (active ? 'active ' : '') + (a.name === '無' ? 'noneBtn' : '');
+    return `<button type="button" class="${cls.trim()}" onclick="selectTaskAssistant('${ruleId}','${encodeURIComponent(a.name)}')">${esc(a.name)}</button>`;
+  }).join('');
+}
+function renderTaskTable(){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+  ensureCaseTasks(c);
+  const stats = caseStats(c);
+  const progressEl = document.getElementById('editProgressText');
+  if(progressEl) progressEl.textContent = `狀態：未做 ${stats.pending}｜完成 ${stats.done}｜總項目 ${stats.required}`;
+  const rows = state.rules.map(rule=>{
+    const t = c.tasks[rule.id];
+    const done = isTaskDoneV31(t);
+    const status = done ? '完成' : '未做';
+    if(!shouldShowTaskByFilter(status)) return '';
+    const rowClass = done ? 'taskRowDone' : '';
+    const assistantButtons = taskAssistantButtonsHtml(rule.id, t);
+    return `<tr class="${rowClass}">
+      <td style="width:24%;"><div class="taskNamePlain">${esc(rule.name)}</div></td>
+      <td style="width:22%;"><div class="assistantBtns">${assistantButtons}</div></td>
+      <td style="width:32%;"><input class="taskNoteInput" value="${esc(t.note || '')}" placeholder="備註" oninput="setTaskNote('${rule.id}', this.value)"></td>
+      <td style="width:10%;"><span class="statusPill ${done?'done':'pending'}">${status}</span></td>
+      <td style="width:12%;" class="nowrap small muted">${esc(formatSavedTime(t.updatedAt))}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('taskTable').innerHTML = `
+    <div class="conditionSummaryBar">${conditionSummaryHtml(c)}</div>
+    <div class="taskFilterBar">
+      <button type="button" class="${taskFilterActiveClass('all')}" onclick="setTaskFilter('all')">全部</button>
+      <button type="button" class="${taskFilterActiveClass('pending')}" onclick="setTaskFilter('pending')">未做</button>
+      <button type="button" class="${taskFilterActiveClass('done')}" onclick="setTaskFilter('done')">完成</button>
+    </div>
+    <table>
+      <thead><tr><th>項目</th><th>操作人員</th><th>備註</th><th>狀態</th><th>最後更新時間</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" class="empty">沒有符合的項目</td></tr>'}</tbody>
+    </table>`;
+  requestAnimationFrame(updateStickyOffsets);
+  setTimeout(updateStickyOffsets, 60);
+}
+function optionListForActionSelect(labelAny){
+  return ['<option value="">全部</option>', `<option value="__ANY__">${labelAny || '任何項目'}</option>`]
+    .concat(state.rules.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`));
+}
+function updateActionFilterOptions(){
+  const configs = [
+    {id:'filterOpenAction', any:'任何未做項目'},
+    {id:'filterDoneAction', any:'任何項目'}
+  ];
+  configs.forEach(cfg=>{
+    const sel = document.getElementById(cfg.id);
+    if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = optionListForActionSelect(cfg.any).join('');
+    if([...sel.options].some(o=>o.value === current)) sel.value = current;
+  });
+}
+function caseHasOpenAction(c, ruleId){
+  ensureCaseTasks(c);
+  if(ruleId === '__ANY__') return state.rules.some(rule=>!isTaskDoneV31(c.tasks[rule.id]));
+  const rule = state.rules.find(r=>r.id === ruleId);
+  if(!rule) return true;
+  return !isTaskDoneV31(c.tasks[rule.id]);
+}
+function caseHasAction(c, ruleId){
+  ensureCaseTasks(c);
+  if(ruleId === '__ANY__') return state.rules.some(rule=>isTaskDoneV31(c.tasks[rule.id]));
+  const rule = state.rules.find(r=>r.id === ruleId);
+  if(!rule) return true;
+  return isTaskDoneV31(c.tasks[rule.id]);
+}
+function matchMakingFilters(c){
+  const receiptDate = getInputValue('filterReceiptDate');
+  const receiptNo = getInputValue('filterReceiptNo');
+  const processDate = getInputValue('filterProcessDate');
+  const contractNo = getInputValue('filterContractNo');
+  const business = getInputValue('filterBusiness');
+  const caseName = getInputValue('filterCaseName');
+  const action = (document.getElementById('filterOpenAction') && document.getElementById('filterOpenAction').value) || '';
+  return matchFieldContains(c,'receiptDate',receiptDate)
+    && matchFieldContains(c,'receiptNo',receiptNo)
+    && matchFieldContains(c,'processDate',processDate)
+    && matchFieldContains(c,'contractNo',contractNo)
+    && matchFieldContains(c,'business',business)
+    && matchFieldContains(c,'caseName',caseName)
+    && (!action || caseHasOpenAction(c, action));
+}
+function matchDoneFilters(c){
+  const receiptDate = getInputValue('filterDoneReceiptDate');
+  const receiptNo = getInputValue('filterDoneReceiptNo');
+  const processDate = getInputValue('filterDoneProcessDate');
+  const contractNo = getInputValue('filterDoneContractNo');
+  const business = getInputValue('filterDoneBusiness');
+  const caseName = getInputValue('filterDoneCaseName');
+  const action = (document.getElementById('filterDoneAction') && document.getElementById('filterDoneAction').value) || '';
+  return matchFieldContains(c,'receiptDate',receiptDate)
+    && matchFieldContains(c,'receiptNo',receiptNo)
+    && matchFieldContains(c,'processDate',processDate)
+    && matchFieldContains(c,'contractNo',contractNo)
+    && matchFieldContains(c,'business',business)
+    && matchFieldContains(c,'caseName',caseName)
+    && (!action || caseHasAction(c, action));
+}
+function renderAssistantsSettings(){
+  const el = document.getElementById('assistantsTable');
+  if(el) el.innerHTML = '<div class="empty">操作人員固定為：麗卉、紹薇、無</div>';
+}
+function addAssistant(){ alert('這版操作人員固定為：麗卉、紹薇、無'); }
+function toggleAssistant(){ return false; }
+function renderRulesSettings(){
+  const body = (state.rules || []).map((r,idx)=>`<tr>
+    <td><div class="orderBtns"><button type="button" onclick="moveRule(${idx},-1)">▲</button><button type="button" onclick="moveRule(${idx},1)">▼</button></div></td>
+    <td><input value="${esc(r.name)}" onblur="renameRule('${r.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"></td>
+    <td><button class="btn btnRed btnTiny" type="button" onclick="deleteRuleItem('${r.id}')">刪除</button></td>
+  </tr>`).join('') || '<tr><td colspan="3" class="empty">尚未設定項目</td></tr>';
+  document.getElementById('rulesTable').innerHTML = `<table class="settingTable">
+    <colgroup><col class="simpleOrderCol"><col class="simpleNameCol"><col class="simpleOpsCol"></colgroup>
+    <thead><tr><th>排序</th><th>項目名稱</th><th>操作</th></tr></thead>
+    <tbody>${body}</tbody>
+  </table>`;
+}
+function addRuleItem(){
+  const el = document.getElementById('newRuleName');
+  const name = el ? el.value.trim() : '';
+  if(!name) return;
+  if(state.rules.some(r=>r.name === name)){ alert('已有相同項目名稱'); return; }
+  const item = {id:uid('r'), name};
+  state.rules.push(item);
+  state.cases.forEach(ensureCaseTasks);
+  if(el) el.value = '';
+  saveState(); renderRulesSettings(); updateActionFilterOptions(); if(currentCaseId) renderTaskTable(); renderAll(false);
+}
+function renameRule(ruleId, name){
+  const r = state.rules.find(x=>x.id===ruleId); if(!r) return;
+  name = String(name || '').trim();
+  if(!name){ renderRulesSettings(); return; }
+  if(state.rules.some(x=>x.id !== ruleId && x.name === name)){ alert('已有相同項目名稱'); renderRulesSettings(); return; }
+  r.name = name;
+  saveState(); renderRulesSettings(); updateActionFilterOptions(); if(currentCaseId) renderTaskTable(); renderAll(false);
+}
+function moveRule(idx, delta){
+  const next = idx + delta;
+  if(next < 0 || next >= state.rules.length) return;
+  const tmp = state.rules[idx]; state.rules[idx] = state.rules[next]; state.rules[next] = tmp;
+  saveState(); renderRulesSettings(); updateActionFilterOptions(); if(currentCaseId) renderTaskTable(); renderAll(false);
+}
+function toggleRuleVX(){
+  // 項目設定已不使用 V/X。
+  return false;
+}
+function deleteRuleItem(ruleId){
+  const r = state.rules.find(x=>x.id===ruleId); if(!r) return;
+  if(!confirm('確定刪除項目：「' + r.name + '」？')) return;
+  state.rules = state.rules.filter(x=>x.id!==ruleId);
+  state.cases.forEach(c=>{ if(c.tasks) delete c.tasks[ruleId]; });
+  saveState(); renderRulesSettings(); updateActionFilterOptions(); if(currentCaseId) renderTaskTable(); renderAll(false);
+}
+function saveRulesFromUI(){
+  state.cases.forEach(ensureCaseTasks);
+  saveState(); renderAll(); if(currentCaseId) renderTaskTable(); alert('項目設定已儲存');
+}
+function resetDefaultRules(){
+  if(!confirm('確定要恢復預設項目？')) return;
+  state.rules = DEFAULT_RULES.map(r=>({id:r.id, name:r.name}));
+  state.cases.forEach(ensureCaseTasks);
+  saveState(); renderAll(); if(currentCaseId) renderTaskTable();
+}
+function initTaskModeV31(){
+  ensureFixedAssistantsV31();
+  const assistantSettings = document.getElementById('assistantSettings');
+  if(assistantSettings) assistantSettings.style.display = 'none';
+}
+
 function init(){
   loadState();
+  initTaskModeV31();
   state.cases.forEach(ensureCaseTasks);
   initSupabasePanel();
   setupDateBlur();
