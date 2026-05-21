@@ -2778,6 +2778,154 @@
     .settingTable .simpleNameCol{width:auto!important;}
     .settingTable .simpleOpsCol{width:100px!important;}
 
+
+
+    /* V38：製作中列表缺少項目顯示 */
+    .missingCell{
+      text-align:left!important;
+      line-height:1.28!important;
+      max-height:42px;
+      overflow:hidden;
+    }
+    .missingChip{
+      display:inline-flex;
+      align-items:center;
+      max-width:100%;
+      margin:1px 2px;
+      padding:2px 6px;
+      border-radius:999px;
+      background:#fff7ed;
+      color:#c2410c;
+      border:1px solid #fed7aa;
+      font-size:11.5px;
+      font-weight:900;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      vertical-align:middle;
+    }
+    .missingMore{
+      background:#f1f5f9!important;
+      color:#475569!important;
+      border-color:#cbd5e1!important;
+    }
+    .missingNone{
+      color:#16a34a;
+      font-weight:1000;
+      white-space:nowrap;
+    }
+
+
+
+    /* V39：製作中列表欄寬與換行優化 */
+    #makingList table,
+    #allList table{table-layout:fixed!important;width:100%!important;}
+    #makingList th,
+    #makingList td,
+    #allList th,
+    #allList td{vertical-align:middle!important;}
+    #makingList tbody tr td{
+      min-height:58px!important;
+      padding-top:8px!important;
+      padding-bottom:8px!important;
+    }
+    #makingList .dateTiny,
+    #makingList .receiptNoTiny,
+    #makingList .processDateTiny{
+      font-size:10.5px!important;
+      line-height:1.14!important;
+      letter-spacing:-.02em;
+      white-space:normal!important;
+      word-break:break-all!important;
+    }
+    #makingList th:nth-child(1),
+    #makingList th:nth-child(2),
+    #makingList th:nth-child(3){
+      font-size:10.8px!important;
+      line-height:1.1!important;
+      padding-left:2px!important;
+      padding-right:2px!important;
+    }
+    .caseNameClamp{
+      display:-webkit-box;
+      -webkit-line-clamp:4;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      text-align:left!important;
+      line-height:1.28!important;
+      font-weight:1000;
+      word-break:break-word;
+    }
+    #makingList .caseNameCell{text-align:left!important;}
+    .specialTermsClamp{
+      display:-webkit-box;
+      -webkit-line-clamp:4;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      text-align:left!important;
+      line-height:1.25!important;
+      word-break:break-word;
+    }
+    #makingList .missingCell{
+      max-height:78px!important;
+      line-height:1.26!important;
+      text-align:left!important;
+      overflow:hidden!important;
+    }
+    #makingList .missingChip{
+      font-size:10.8px!important;
+      line-height:1.15!important;
+      padding:2px 5px!important;
+      margin:1px 1px!important;
+      max-width:100%!important;
+    }
+    .updateCompact{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:1px;
+      white-space:nowrap;
+      line-height:1.05!important;
+      font-size:10.8px!important;
+      color:#64748b;
+      font-weight:800;
+    }
+    .updateCompact .uTime{font-size:10.2px!important;color:#475569;}
+    #makingList .progressPct{width:58px!important;height:21px!important;}
+    #makingList .progressPctText{font-size:10.8px!important;}
+
+
+    /* V40：製作中列表前三欄表頭不換行，改用更小字體 */
+    #makingList th:nth-child(1),
+    #makingList th:nth-child(2),
+    #makingList th:nth-child(3),
+    #allList th:nth-child(1),
+    #allList th:nth-child(2),
+    #allList th:nth-child(3){
+      font-size:9.2px!important;
+      line-height:1.05!important;
+      white-space:nowrap!important;
+      word-break:keep-all!important;
+      overflow:hidden!important;
+      text-overflow:clip!important;
+      padding-left:1px!important;
+      padding-right:1px!important;
+      letter-spacing:-.06em!important;
+    }
+
+
+    /* V41：列表日期顯示 5/20，避免欄位被 115/ 擠寬 */
+    #makingList .dateTiny,
+    #makingList .processDateTiny,
+    #allList .dateTiny,
+    #allList .processDateTiny{
+      white-space:nowrap!important;
+      word-break:normal!important;
+      font-size:11px!important;
+      letter-spacing:0!important;
+      text-align:center!important;
+    }
 </style>
 </head>
 <body>
@@ -2938,9 +3086,9 @@
             <div class="condCard condDate">
               <label>委託時間</label>
               <div class="condBody">
-                <span class="miniLabel">原</span>
+                <span class="miniLabel">從</span>
                 <span class="dateWrap"><input class="roc-date editField condField dateInput" data-key="contractEndOld" placeholder="115/4/30"></span>
-                <span class="miniLabel">改</span>
+                <span class="miniLabel">到</span>
                 <span class="dateWrap"><input class="roc-date editField condField dateInput" data-key="contractEndNew" placeholder="3/31"></span>
               </div>
             </div>
@@ -3681,7 +3829,7 @@ function resetDefaultRules(){
 }
 function exportData(){
   saveState();
-  const headers = ['狀態','單據日期','單據號碼','處理日期','契約編號','跟隨主約','案名','業務','開價原','開價改','底價原','底價改','委託原','委託改','重新上架','換約原','換約改','KEY','特約條款','完成率','最後更新'];
+  const headers = ['狀態','單據日期','單據號碼','處理日期','契約編號','跟隨主約','案名','業務','開價原','開價改','底價原','底價改','委託從','委託到','重新上架','換約原','換約改','KEY','特約條款','完成率','最後更新'];
   const rows = state.cases.map(c=>{
     const s = caseStats(c);
     const pct = s.required ? Math.round((s.done / s.required) * 100) + '%' : '0%';
@@ -3844,8 +3992,8 @@ function validateVisibleDateFields(showWarning=true){
     if(oldHas !== newHas){
       ok = false;
       if(showWarning){
-        if(!oldHas) setDateWarning(oldEl, '委託原日期必填');
-        if(!newHas) setDateWarning(newEl, '委託延長日期必填');
+        if(!oldHas) setDateWarning(oldEl, '委託起日必填');
+        if(!newHas) setDateWarning(newEl, '委託到期日必填');
       }
     }else if(oldHas && newHas){
       if(!oldEl.classList.contains('dateInvalid')) setDateWarning(oldEl,'');
@@ -4303,8 +4451,8 @@ function validateVisibleDateFields(showWarning=true){
         if(oldNum >= newNum){
           ok = false;
           if(showWarning){
-            setDateWarning(oldEl, '原時間需早於改時間');
-            setDateWarning(newEl, '改時間需晚於原時間');
+            setDateWarning(oldEl, '從日期需早於到日期');
+            setDateWarning(newEl, '到日期需晚於從日期');
           }
         }else{
           if(!oldEl.classList.contains('dateInvalid')) setDateWarning(oldEl,'');
@@ -4321,7 +4469,7 @@ function saveCurrentCase(render=true){
   const c = getCase(currentCaseId);
   if(!c) return;
 
-  // 若委託時間不符合：原時間必須早於改時間，先不存這兩格
+  // 若委託時間不符合：從日期必須早於到日期，先不存這兩格
   const oldEl = document.querySelector('#editModalMask .editField[data-key="contractEndOld"]');
   const newEl = document.querySelector('#editModalMask .editField[data-key="contractEndNew"]');
   const blockContractSave = oldEl && newEl && oldEl.value.trim() && newEl.value.trim()
@@ -5649,6 +5797,107 @@ function importData(event){
   reader.readAsText(file, 'utf-8');
 }
 
+
+// ===== V38：委託時間從/到＋製作中列表顯示缺少項目 =====
+function pendingRuleNamesV38(c){
+  ensureCaseTasks(c);
+  return (state.rules || [])
+    .filter(rule=>!isTaskDoneV31(c.tasks && c.tasks[rule.id]))
+    .map(rule=>rule.name || '未命名項目');
+}
+function missingItemsHtmlV38(c, maxShow=5){
+  const names = pendingRuleNamesV38(c);
+  if(!names.length) return '<span class="missingNone">已完成</span>';
+  const shown = names.slice(0, maxShow).map(n=>`<span class="missingChip">${esc(n)}</span>`).join('');
+  const more = names.length > maxShow ? `<span class="missingChip missingMore">還有${names.length - maxShow}項</span>` : '';
+  return `<div class="missingCell" title="${esc(names.join('、'))}">${shown}${more}</div>`;
+}
+function renderCaseLists(){
+  updateActionFilterOptions();
+  const making = state.cases.filter(c=>!caseStats(c).complete).filter(matchMakingFilters);
+  const completed = state.cases.filter(c=>caseStats(c).complete).filter(matchDoneFilters);
+  document.getElementById('makingCount').textContent = `${making.length} 筆`;
+  document.getElementById('allCount').textContent = `${completed.length} 筆`;
+  document.getElementById('makingList').innerHTML = renderCaseTableV38(making, true);
+  document.getElementById('allList').innerHTML = renderCaseTableV38(completed, false);
+}
+function renderCaseTable(list){
+  return renderCaseTableV38(list, false);
+}
+function listUpdateHtmlV39(iso){
+  const text = formatSavedTime(iso);
+  if(!text || text === '—') return '<div class="updateCompact">—</div>';
+  const parts = String(text).split(/\s+/);
+  const date = parts[0] || text;
+  const time = parts.slice(1).join(' ') || '';
+  return `<div class="updateCompact" title="${esc(text)}"><span>${esc(date)}</span>${time ? `<span class="uTime">${esc(time)}</span>` : ''}</div>`;
+}
+
+// ===== V41：列表日期短顯示，只在列表顯示 M/D，不影響實際資料 =====
+function listShortDateV41(v){
+  const raw = String(v || '').trim();
+  if(!raw) return '';
+  const normalized = raw.replace(/[年月.-]/g,'/').replace(/日/g,'').replace(/\/+/g,'/');
+  const parts = normalized.split('/').filter(Boolean);
+  if(parts.length >= 3){
+    return `${Number(parts[1]) || parts[1]}/${Number(parts[2]) || parts[2]}`;
+  }
+  if(parts.length === 2){
+    return `${Number(parts[0]) || parts[0]}/${Number(parts[1]) || parts[1]}`;
+  }
+  return raw;
+}
+
+function renderCaseTableV38(list, showMissing){
+  if(!list.length) return `<div class="empty">目前沒有資料</div>`;
+  const rows = list.map(c=>{
+    const s = caseStats(c);
+    const progress = progressPctHtml(s);
+    const missingTd = showMissing ? `<td>${missingItemsHtmlV38(c, 5)}</td>` : '';
+    const termsText = String(c.specialTerms || '').trim();
+    const termsHtml = termsText ? `<div class="specialTermsClamp" title="${esc(termsText)}">${esc(termsText)}</div>` : '<span class="condEmpty">—</span>';
+    const caseTitle = c.caseName || '未命名案件';
+    return `<tr class="rowClick" onclick="openEditModal('${c.id}')">
+      <td class="dateTiny" title="${esc(c.receiptDate)}">${esc(showMissing ? listShortDateV41(c.receiptDate) : c.receiptDate)}</td>
+      <td class="receiptNoTiny">${esc(c.receiptNo)}</td>
+      <td class="processDateTiny" title="${esc(c.processDate)}">${esc(showMissing ? listShortDateV41(c.processDate) : c.processDate)}</td>
+      <td class="nowrap colTight">${esc(c.contractNo)}${c.mainContractNo ? '<br><span class="small muted">跟隨'+esc(c.mainContractNo)+'</span>' : ''}</td>
+      <td class="caseNameCell"><div class="caseNameClamp" title="${esc(caseTitle)}">${esc(caseTitle)}</div></td>
+      <td class="nowrap colTight">${esc(c.business || '')}</td>
+      <td class="condCell">${condPair(c.priceOld,c.priceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.bottomPriceOld,c.bottomPriceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.contractEndOld,c.contractEndNew,'')}</td>
+      <td class="condCell">${c.relistType ? esc(c.relistType) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${(c.contractTypeOld || c.contractTypeNew) ? `${esc(c.contractTypeOld||'—')} → <b>${esc(c.contractTypeNew||'—')}</b>` : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${c.keyText ? esc(shortText(c.keyText,16)) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell termsCol">${termsHtml}</td>
+      ${missingTd}
+      <td>${progress}</td>
+      <td>${listUpdateHtmlV39(c.updatedAt)}</td>
+    </tr>`;
+  }).join('');
+
+  const makingCols = `
+      <col style="width:2.8%"><col style="width:2.8%"><col style="width:2.8%"><col style="width:5.2%">
+      <col style="width:14.0%"><col style="width:4.0%"><col style="width:4.0%"><col style="width:4.0%">
+      <col style="width:5.2%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:3.5%">
+      <col style="width:13.0%"><col style="width:17.0%"><col style="width:5.0%"><col style="width:7.7%">`;
+  const normalCols = `
+      <col style="width:3.5%"><col style="width:3.5%"><col style="width:3.5%"><col style="width:5.7%">
+      <col style="width:18.0%"><col style="width:4.8%"><col style="width:4.8%"><col style="width:4.8%">
+      <col style="width:5.9%"><col style="width:5.3%"><col style="width:5.3%"><col style="width:4.3%">
+      <col style="width:14.8%"><col style="width:6.0%"><col style="width:5.8%">`;
+  const missingHead = showMissing ? '<th>缺少項目</th>' : '';
+  return `<table>
+    <colgroup>${showMissing ? makingCols : normalCols}
+    </colgroup>
+    <thead><tr>
+      <th>單據日期</th><th>單據號碼</th><th>處理日期</th><th>契約編號</th>
+      <th>案名</th><th>業務</th><th>開價</th><th>底價</th><th>委託時間</th>
+      <th>重新上架</th><th>換約</th><th>KEY</th><th>特約條款</th>
+      ${missingHead}<th>完成率</th><th>最後更新</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
 
 function init(){
   loadState();
