@@ -5899,6 +5899,113 @@ function renderCaseTableV38(list, showMissing){
     </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+
+
+// ===== V43：刪除案件防回復（刪除墓碑同步到雲端，避免雲端舊資料又合併回來） =====
+function ensureDeletedCasesV43(s){
+  if(!s) return {};
+  if(!s.deletedCases || typeof s.deletedCases !== 'object' || Array.isArray(s.deletedCases)) s.deletedCases = {};
+  return s.deletedCases;
+}
+function defaultStateV37(){
+  return {
+    version:'43.0',
+    systemName:'D夾',
+    assistants:fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'紹薇',active:true},{id:'fixed2',name:'無',active:true}],
+    rules:cloneRules(DEFAULT_RULES),
+    cases:[],
+    deletedCases:{},
+    lastSaved:''
+  };
+}
+function mergeDeletedCasesV43(localDeleted, remoteDeleted){
+  const out = {};
+  [remoteDeleted, localDeleted].forEach(map=>{
+    if(!map || typeof map !== 'object') return;
+    Object.keys(map).forEach(id=>{
+      const t = map[id];
+      if(!t) return;
+      if(!out[id] || parseTimeMsV37(t) > parseTimeMsV37(out[id])) out[id] = t;
+    });
+  });
+  return out;
+}
+function pruneDeletedCasesV43(map){
+  const out = {};
+  const now = Date.now();
+  const keepMs = 1000 * 60 * 60 * 24 * 180; // 保留 180 天，讓久未開的電腦也能收到刪除紀錄
+  Object.keys(map || {}).forEach(id=>{
+    const ms = parseTimeMsV37(map[id]);
+    if(ms && now - ms < keepMs) out[id] = map[id];
+  });
+  return out;
+}
+function shouldSkipDeletedCaseV43(id, localCase, remoteCase, deletedCases){
+  const delMs = parseTimeMsV37(deletedCases && deletedCases[id]);
+  if(!delMs) return false;
+  const localMs = caseDeepTimeV37(localCase);
+  const remoteMs = caseDeepTimeV37(remoteCase);
+  const caseMs = Math.max(localMs, remoteMs);
+  // 刪除時間晚於案件最後異動時間，就代表這筆應該被刪掉，不能再被雲端舊資料合併回來。
+  return delMs >= caseMs - 1000;
+}
+function mergeStatesV37(localState, remoteState){
+  const local = clonePlainV37(localState || {});
+  const remote = clonePlainV37(remoteState || {});
+  const deletedCases = pruneDeletedCasesV43(mergeDeletedCasesV43(local.deletedCases, remote.deletedCases));
+  const out = Object.assign(defaultStateV37(), remote, local);
+  out.version = '43.0';
+  out.systemName = 'D夾';
+  out.assistants = fixedTaskAssistants();
+  out.rules = mergeRulesV37(local.rules, remote.rules);
+  out.deletedCases = deletedCases;
+
+  const byId = new Map();
+  (Array.isArray(remote.cases) ? remote.cases : []).forEach(c=>{ if(c && c.id) byId.set(c.id, {remote:c}); });
+  (Array.isArray(local.cases) ? local.cases : []).forEach(c=>{
+    if(!c || !c.id) return;
+    const item = byId.get(c.id) || {};
+    item.local = c;
+    byId.set(c.id, item);
+  });
+  const mergedCases = [];
+  byId.forEach((item, id)=>{
+    if(shouldSkipDeletedCaseV43(id, item.local, item.remote, deletedCases)) return;
+    mergedCases.push(mergeCaseV37(item.local, item.remote));
+  });
+  mergedCases.sort((a,b)=>caseDeepTimeV37(b)-caseDeepTimeV37(a));
+  out.cases = mergedCases;
+  out.lastSaved = maxTimeTextV37([local.lastSaved, remote.lastSaved, ...mergedCases.map(c=>c.updatedAt), ...Object.values(deletedCases)]) || nowISO();
+  return out;
+}
+function deleteCurrentCase(){
+  const id = currentCaseId;
+  const c = getCase(id);
+  if(!c) return;
+  if(!confirm('確定要刪除這筆 D夾案件？')) return;
+  safeBackupV37('DCLIP_BACKUP_BEFORE_DELETE_CASE', state);
+  ensureDeletedCasesV43(state)[id] = nowISO();
+  state.cases = (state.cases || []).filter(x=>x.id !== id);
+  state.lastSaved = nowISO();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  updateSaveStatus();
+  const mask = document.getElementById('editModalMask');
+  if(mask) mask.classList.remove('show');
+  currentCaseId = null;
+  renderAll();
+  const cfg = loadSupabaseConfig();
+  if(cfg.connected && cfg.url && cfg.key){
+    setSupabaseMessage('已刪除案件，正在同步雲端刪除紀錄...','warn');
+    uploadSupabaseState(true).then(()=>{
+      setSupabaseMessage('案件已刪除，雲端也已更新。','ok');
+    }).catch(()=>{
+      setSupabaseMessage('案件已在本機刪除；雲端稍後會再自動同步。','warn');
+    });
+  }else{
+    queueSupabaseAutoSync();
+  }
+}
+
 function init(){
   loadState();
   initTaskModeV31();
