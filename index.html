@@ -2926,6 +2926,12 @@
       letter-spacing:0!important;
       text-align:center!important;
     }
+
+
+    /* V41：確保首頁功能按鈕不被其他區塊蓋住 */
+    .hero,.toolbarMain{position:relative!important;z-index:20!important;}
+    .toolbarMain .btn{position:relative!important;z-index:21!important;pointer-events:auto!important;}
+
 </style>
 </head>
 <body>
@@ -2936,10 +2942,10 @@
         <h1>D夾</h1>
       </div>
       <div class="toolbar toolbarMain">
-        <button class="btn btnPrimary addObjectBtn" onclick="createBlankCaseAndOpen()">＋ 新增物件</button>
-        <button class="btn btnBlue" onclick="exportData()">匯出EXCEL</button>
-        <button class="btn btnPurple" onclick="exportJsonData()">匯出JSON</button>
-        <button class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
+        <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
+        <button type="button" class="btn btnBlue" onclick="safeRunTopButton(exportData, '匯出EXCEL')">匯出EXCEL</button>
+        <button type="button" class="btn btnPurple" onclick="safeRunTopButton(exportJsonData, '匯出JSON')">匯出JSON</button>
+        <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
         <span class="statusChip" id="saveStatus">已自動存檔</span>
         <div class="clock" id="headerLastUpdate">最後更新時間：—</div>
         <input id="importFile" class="hiddenFile" type="file" accept="application/json,.json" onchange="importData(event)">
@@ -3364,11 +3370,30 @@ function loadState(){
   }catch(e){ alert('讀取本機資料失敗，已改用空白資料。'); migrateState(); }
 }
 function saveState(){
-  state.version = '13.0';
-  state.lastSaved = nowISO();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  updateSaveStatus();
-  queueSupabaseAutoSync();
+  try{
+    state.version = '13.0';
+    state.lastSaved = nowISO();
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(storageErr){
+      console.warn('本機自動存檔暫時略過，但畫面資料仍保留。', storageErr);
+    }
+    try{
+      updateSaveStatus();
+    }catch(statusErr){
+      console.warn('更新存檔狀態文字失敗，已略過。', statusErr);
+    }
+    try{
+      if(typeof queueSupabaseAutoSync === 'function') queueSupabaseAutoSync();
+    }catch(syncErr){
+      console.warn('Supabase 自動同步已略過，不影響新增/匯出按鈕。', syncErr);
+      try{
+        if(typeof setSupabaseMessage === 'function') setSupabaseMessage('本機已存檔；雲端自動同步暫時略過。','warn');
+      }catch(_e){}
+    }
+  }catch(err){
+    console.error('saveState 發生錯誤，但不阻擋目前操作。', err);
+  }
 }
 function scheduleSave(){
   clearTimeout(saveTimer);
@@ -3385,6 +3410,17 @@ function updateSaveStatus(){
   if(old) old.textContent = text;
 }
 function tickClock(){ updateSaveStatus(); }
+
+// ===== V41：首頁按鈕保護，避免單一錯誤造成新增/匯出完全無反應 =====
+function safeRunTopButton(fn, label){
+  try{
+    if(typeof fn === 'function') return fn();
+    throw new Error(label + ' 功能尚未載入完成');
+  }catch(err){
+    console.error(label + ' 失敗', err);
+    alert(label + '無法執行：\n' + (err && err.message ? err.message : err));
+  }
+}
 
 function createBlankCaseAndOpen(){
   const item = makeBlankCase();
