@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>D夾｜V60新增物件不被清理版</title>
+  <title>D夾｜V62成交式持續同步版</title>
   <style>
     :root{
       --bg:#f4f8ff;
@@ -7308,7 +7308,7 @@ init();
 <script>
 /* ===== V60：新增物件直接綁定＋防空白清理 ===== */
 (function(){
-  const V60 = 'V60新增物件不被清理版';
+  const V60 = 'V62成交式持續同步版';
   let running = false;
   function iso(){ try{ return (typeof nowISO === 'function') ? nowISO() : new Date().toISOString(); }catch(_e){ return new Date().toISOString(); } }
   function genId(){ try{ return (typeof uid === 'function') ? uid('dclip') : ('dclip_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8)); }catch(_e){ return 'dclip_' + Date.now().toString(36); } }
@@ -7390,5 +7390,281 @@ init();
 })();
 </script>
 
+<script>
+/* ===== V62：成交式持續同步＋關閉保護（最後載入，覆蓋前面舊函式） =====
+   參考「成交進度」：
+   - 有輸入/修改：本機先存檔驗證 → 排程自動同步。
+   - 沒輸入：仍每 8 秒檢查雲端，另一台有新資料會自動套用。
+   - 若本機比雲端新或有待同步：自動上傳，不用手動按立即同步。
+   - 上傳前仍會先讀雲端並合併，避免舊電腦覆蓋新資料。
+   - 雲端未完成同步時，關閉/重新整理會跳提醒；下次打開續傳。
+*/
+(function(){
+  const V62 = 'V62成交式持續同步版';
+  const SAVE_KEY = 'DCLIP_APP_STATE_V1';
+  const PENDING_KEY = 'DCLIP_PENDING_CLOUD_SYNC_V62';
+  const OLD_PENDING_KEYS = ['DCLIP_PENDING_CLOUD_SYNC_V61'];
+  const guard = window.__DCLIP_V62_GUARD = window.__DCLIP_V62_GUARD || {
+    syncing:false,
+    pending:false,
+    timer:null,
+    pollTimer:null,
+    lastEditAt:0,
+    lastCloudAt:0,
+    lastRoundAt:0,
+    lastMessage:''
+  };
+
+  function now(){ return Date.now(); }
+  function fmt(ts){
+    if(!ts) return '—';
+    const d = new Date(ts);
+    if(Number.isNaN(d.getTime())) return '—';
+    const p = n => String(n).padStart(2,'0');
+    return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+  }
+  function cfg(){ try{ return (typeof loadSupabaseConfig === 'function') ? loadSupabaseConfig() : {}; }catch(_e){ return {}; } }
+  function connected(){ const c=cfg(); return !!(c && c.connected && c.url && c.key); }
+  function localMs(){
+    try{
+      if(typeof localTimeMsV53 === 'function') return localTimeMsV53() || 0;
+      if(typeof state !== 'undefined' && state && state.lastSaved) return Date.parse(state.lastSaved) || 0;
+      const raw = localStorage.getItem(SAVE_KEY);
+      if(raw){ const obj = JSON.parse(raw); return Date.parse(obj.lastSaved || obj.updatedAt || '') || 0; }
+    }catch(_e){}
+    return 0;
+  }
+  function remoteMs(row){
+    try{ if(typeof remoteTimeMsV53 === 'function') return remoteTimeMsV53(row) || 0; }catch(_e){}
+    return Date.parse(row && row.updated_at || '') || 0;
+  }
+  function hasPending(){
+    try{
+      if(localStorage.getItem(PENDING_KEY)) return true;
+      return OLD_PENDING_KEYS.some(function(k){ return !!localStorage.getItem(k); });
+    }catch(_e){ return !!guard.pending; }
+  }
+  function markPending(reason){
+    guard.pending = true;
+    guard.lastEditAt = now();
+    try{ localStorage.setItem(PENDING_KEY, JSON.stringify({at:now(), reason:reason||'', lastSaved:(typeof state !== 'undefined' && state && state.lastSaved)||''})); }catch(_e){}
+    status('☁ 待同步雲端', 'warn');
+  }
+  function clearPending(){
+    guard.pending = false;
+    try{ localStorage.removeItem(PENDING_KEY); OLD_PENDING_KEYS.forEach(function(k){ localStorage.removeItem(k); }); }catch(_e){}
+  }
+  function makeBadge(){
+    let el = document.getElementById('dclipV62SyncStatus');
+    if(!el){
+      el = document.createElement('span');
+      el.id = 'dclipV62SyncStatus';
+      el.className = 'statusChip';
+      const save = document.getElementById('saveStatus');
+      if(save && save.parentNode) save.parentNode.insertBefore(el, save.nextSibling);
+      else {
+        const tb = document.querySelector('.toolbar') || document.body;
+        tb.appendChild(el);
+      }
+    }
+    return el;
+  }
+  function status(text, mode){
+    guard.lastMessage = text;
+    try{
+      const el = makeBadge();
+      el.textContent = text;
+      const map = {
+        ok:'background:#dcfce7;color:#15803d;border-color:#86efac;font-weight:1000;',
+        warn:'background:#fff7ed;color:#c2410c;border-color:#fed7aa;font-weight:1000;',
+        bad:'background:#fee2e2;color:#b91c1c;border-color:#fecaca;font-weight:1000;',
+        off:'background:#eef2ff;color:#334155;border-color:#cbd5e1;font-weight:1000;'
+      };
+      el.style.cssText = map[mode||'off'] || map.off;
+    }catch(_e){}
+    try{ if(typeof setSupabaseMessage === 'function') setSupabaseMessage(text.replace(/^☁\s*/,''), mode==='bad'?'bad':mode==='warn'?'warn':'ok'); }catch(_e){}
+  }
+  function updateIdleStatus(){
+    if(window.__DCLIP_LOCAL_SAVE_ERROR){ status('⚠ 本機未存成功', 'bad'); return; }
+    if(guard.syncing){ status('☁ 同步中，請勿關閉', 'warn'); return; }
+    if(!connected()){
+      if(hasPending() || guard.pending) status('本機已存｜雲端未連線', 'warn');
+      else status('本機自動存檔', 'off');
+      return;
+    }
+    if(hasPending() || guard.pending){ status('☁ 待同步雲端', 'warn'); return; }
+    if(guard.lastCloudAt) status('☁ 雲端已同步 '+fmt(guard.lastCloudAt), 'ok');
+    else status('☁ 已連線，持續同步中', 'ok');
+  }
+
+  async function applyRemote(row, message){
+    if(!row || !row.payload) return false;
+    try{
+      let payload = row.payload;
+      try{ if(typeof sanitizeStateV52 === 'function') payload = sanitizeStateV52(payload).state; }catch(_e){}
+      row.payload = payload;
+      if(typeof applySupabasePayload === 'function') await applySupabasePayload(row, cfg(), message || '已收到另一台電腦的最新更新。');
+      else {
+        state = Object.assign(state || {}, payload);
+        if(typeof migrateState === 'function') migrateState();
+        try{ if(typeof persistStateToLocalV44 === 'function') persistStateToLocalV44(); else localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(_e){}
+        if(typeof renderAll === 'function') renderAll(false);
+      }
+      guard.lastCloudAt = now();
+      clearPending();
+      status(message || '☁ 已套用雲端最新資料', 'ok');
+      return true;
+    }catch(err){
+      console.warn('V62 apply remote failed', err);
+      status('☁ 套用雲端失敗', 'bad');
+      return false;
+    }
+  }
+
+  async function cloudRoundTrip(reason){
+    if(guard.syncing) return false;
+    if(!connected()){ updateIdleStatus(); return false; }
+    guard.syncing = true;
+    guard.lastRoundAt = now();
+    status(reason === 'poll' ? '☁ 檢查雲端中…' : '☁ 同步中，請勿關閉', 'warn');
+    try{
+      let row = null;
+      try{ row = (typeof fetchSupabaseRemote === 'function') ? await fetchSupabaseRemote(cfg()) : null; }catch(e){ throw e; }
+      const lms = localMs();
+      const rms = row ? remoteMs(row) : 0;
+      const pending = hasPending() || guard.pending;
+
+      // 雲端比較新且本機沒有待同步：先套用雲端，避免本機舊資料覆蓋另一台。
+      if(row && row.payload && rms > lms + 1000 && !pending){
+        await applyRemote(row, '已收到另一台電腦的最新更新。');
+        return true;
+      }
+
+      // 本機有待同步、本機較新、雲端沒有資料：上傳；uploadSupabaseState 本身會再讀雲端合併。
+      if(pending || !row || !row.payload || lms > rms + 1000){
+        const ok = (typeof uploadSupabaseState === 'function') ? await uploadSupabaseState(true) : false;
+        if(ok !== false){
+          clearPending();
+          guard.lastCloudAt = now();
+          status('☁ 雲端已同步 '+fmt(guard.lastCloudAt), 'ok');
+          return true;
+        }
+        markPending('upload_failed');
+        return false;
+      }
+
+      // 兩邊一樣新：只更新顯示，不上傳。
+      guard.lastCloudAt = now();
+      clearPending();
+      status(reason === 'poll' ? '☁ 已連線，持續同步中' : '☁ 本機與雲端已是最新', 'ok');
+      return true;
+    }catch(err){
+      console.warn('V62 cloud round trip failed', err);
+      if(hasPending() || guard.pending) status('☁ 同步失敗，稍後自動重試', 'bad');
+      else status('☁ 雲端檢查暫時失敗', 'warn');
+      return false;
+    }finally{
+      guard.syncing = false;
+      updateIdleStatus();
+    }
+  }
+
+  function schedule(reason, delay){
+    if(!connected()){ updateIdleStatus(); return; }
+    clearTimeout(guard.timer);
+    guard.timer = setTimeout(function(){ cloudRoundTrip(reason || 'auto'); }, delay == null ? 900 : delay);
+  }
+  function startPolling(){
+    try{ if(typeof sbPollTimer !== 'undefined' && sbPollTimer) clearInterval(sbPollTimer); }catch(_e){}
+    if(guard.pollTimer) clearInterval(guard.pollTimer);
+    guard.pollTimer = setInterval(function(){ if(document.visibilityState === 'visible') cloudRoundTrip('poll'); }, 8000);
+    if(connected()) setTimeout(function(){ cloudRoundTrip(hasPending()?'resume':'poll'); }, 800);
+  }
+
+  // 重要：最後載入後再覆蓋，避免前面重複函式把保護蓋掉。
+  try{
+    const oldSaveState = saveState;
+    saveState = function(){
+      const ret = oldSaveState.apply(this, arguments);
+      try{
+        if(!window.__DCLIP_LOCAL_SAVE_ERROR && !(typeof dclipBootingV53 !== 'undefined' && dclipBootingV53)){
+          markPending('saveState');
+          schedule('auto', 900);
+        }else updateIdleStatus();
+      }catch(e){ console.warn('V62 save hook failed', e); }
+      return ret;
+    };
+  }catch(e){ console.warn('V62 saveState override failed', e); }
+
+  try{
+    queueSupabaseAutoSync = function(){
+      try{
+        if(typeof sbSuppressAuto !== 'undefined' && sbSuppressAuto) return;
+        if(typeof dclipBootingV53 !== 'undefined' && dclipBootingV53) return;
+        markPending('queue');
+        schedule('auto', 900);
+      }catch(e){ console.warn('V62 queue failed', e); }
+    };
+  }catch(e){ console.warn('V62 queue override failed', e); }
+
+  try{
+    const oldConnect = connectSupabase;
+    connectSupabase = async function(){
+      const r = await oldConnect.apply(this, arguments);
+      try{ startPolling(); await cloudRoundTrip('connect'); }catch(_e){}
+      return r;
+    };
+  }catch(e){ console.warn('V62 connect override failed', e); }
+
+  try{
+    const oldInitPanel = initSupabasePanel;
+    initSupabasePanel = function(){
+      const r = oldInitPanel.apply(this, arguments);
+      try{ if(connected()) startPolling(); }catch(_e){}
+      return r;
+    };
+  }catch(e){ console.warn('V62 init panel override failed', e); }
+
+  try{ syncSupabaseNow = async function(){ return cloudRoundTrip('manual'); }; }catch(e){ console.warn('V62 syncNow override failed', e); }
+  try{ startSupabasePolling = startPolling; }catch(e){ console.warn('V62 polling override failed', e); }
+
+  window.addEventListener('focus', function(){ if(connected()) cloudRoundTrip('focus'); });
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible' && connected()) cloudRoundTrip('visible');
+    if(document.visibilityState === 'hidden' && connected() && (hasPending() || guard.pending)) cloudRoundTrip('hidden');
+  });
+  window.addEventListener('pagehide', function(){ if(connected() && (hasPending() || guard.pending)) cloudRoundTrip('pagehide'); });
+  window.addEventListener('beforeunload', function(e){
+    if(!connected()) return;
+    if(guard.syncing || hasPending() || guard.pending || (guard.lastEditAt && !guard.lastCloudAt)){
+      e.preventDefault();
+      e.returnValue = '資料尚未完成雲端同步，建議等到顯示「雲端已同步」再關閉。';
+      return e.returnValue;
+    }
+  });
+
+  function markVersion(){
+    try{
+      document.title = 'D夾｜' + V62;
+      const h = document.querySelector('.titleWrap h1');
+      if(h && !document.getElementById('dclipV62LoadedBadge')){
+        const b = document.createElement('span');
+        b.id = 'dclipV62LoadedBadge';
+        b.textContent = ' V62持續同步已載入';
+        b.style.cssText = 'font-size:12px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:middle;';
+        h.appendChild(b);
+      }
+      if(hasPending()) guard.pending = true;
+      updateIdleStatus();
+      if(connected()) startPolling();
+    }catch(_e){}
+  }
+  markVersion();
+  document.addEventListener('DOMContentLoaded', markVersion);
+  setTimeout(markVersion, 800);
+  setTimeout(function(){ if(connected()) cloudRoundTrip(hasPending()?'resume':'poll'); }, 1800);
+})();
+
+</script>
 </body>
 </html>
