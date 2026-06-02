@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>D夾｜V37安全自動同步版</title>
+  <title>D夾｜V45存檔防呆版</title>
   <style>
     :root{
       --bg:#f4f8ff;
@@ -2947,6 +2947,7 @@
         <button type="button" class="btn btnPurple" onclick="safeRunTopButton(exportJsonData, '匯出JSON')">匯出JSON</button>
         <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
         <span class="statusChip" id="saveStatus">已自動存檔</span>
+        <button type="button" class="btn btnGray btnMini" onclick="runStorageSelfTestV45(true)">存檔檢查</button>
         <div class="clock" id="headerLastUpdate">最後更新時間：—</div>
         <input id="importFile" class="hiddenFile" type="file" accept="application/json,.json" onchange="importData(event)">
       </div>
@@ -2957,7 +2958,7 @@
     <details class="settings syncTopBlock syncLikeProject" id="supabaseSettings">
       <summary>雲端同步設定（設定隱藏）</summary>
       <div class="settingsBody">
-        <div class="syncHintLine">這版改成安全雙向同步：開啟後先比對雲端與本機，再合併，不讓舊電腦直接覆蓋新資料。</div>
+        <div class="syncHintLine">V45存檔防呆：先驗證單機存檔，再同步雲端；重要操作前保留備份，不讓舊電腦或空雲端覆蓋新資料。</div>
         <div class="syncProjectRow">
           <input id="sbUrl" placeholder="🔗 URL">
           <input id="sbKey" placeholder="🔑 Key">
@@ -3403,14 +3404,104 @@ function showLocalSaveErrorV44(err){
     alert(msg + '\n\n錯誤：' + (err && err.message ? err.message : err));
   }
 }
+
+// ===== V45：存檔防呆保護，不要在後續改版移除 =====
+const DCLIP_GUARD_VERSION = '45.0';
+const DCLIP_BACKUP_RING_KEY_V45 = 'DCLIP_AUTO_BACKUPS_V45';
+const DCLIP_SELF_TEST_KEY_V45 = 'DCLIP_SELF_TEST_V45';
+let dclipLastAutoBackupMsV45 = 0;
+
+function estimateStateBytesV45(){
+  try{ return new Blob([JSON.stringify(state)]).size; }catch(e){ return 0; }
+}
+function getCaseCountV45(){
+  return Array.isArray(state && state.cases) ? state.cases.length : 0;
+}
+function setGuardMessageV45(msg, type='ok'){
+  const sbMsg = document.getElementById('sbMessage');
+  if(sbMsg){
+    sbMsg.textContent = msg;
+    sbMsg.classList.remove('ok','warn','bad');
+    sbMsg.classList.add(type);
+  }
+}
+function storageSelfTestCoreV45(){
+  const sample = JSON.stringify({time:nowISO(), test:'DCLIP_SAVE_GUARD_V45'});
+  localStorage.setItem(DCLIP_SELF_TEST_KEY_V45, sample);
+  const got = localStorage.getItem(DCLIP_SELF_TEST_KEY_V45);
+  localStorage.removeItem(DCLIP_SELF_TEST_KEY_V45);
+  if(got !== sample) throw new Error('localStorage 測試寫入後讀回不一致');
+  if(Array.isArray(state.cases)){
+    const current = localStorage.getItem(STORAGE_KEY);
+    if(current){
+      const parsed = JSON.parse(current);
+      if(!parsed || !Array.isArray(parsed.cases)) throw new Error('目前本機資料格式異常');
+    }
+  }
+  return true;
+}
+function runStorageSelfTestV45(showAlert=false){
+  try{
+    storageSelfTestCoreV45();
+    window.__DCLIP_LOCAL_SAVE_ERROR = false;
+    updateSaveStatus();
+    const msg = '本機存檔檢查OK：可寫入、可讀回，目前案件 ' + getCaseCountV45() + ' 筆。';
+    setGuardMessageV45(msg, 'ok');
+    if(showAlert) alert(msg);
+    return true;
+  }catch(err){
+    showLocalSaveErrorV44(err);
+    if(showAlert) alert('本機存檔檢查失敗：請先匯出 JSON。\n\n' + (err && err.message ? err.message : err));
+    return false;
+  }
+}
+function writeBackupSnapshotV45(reason='自動備份'){
+  try{
+    const payloadText = JSON.stringify(state);
+    const item = {
+      time: nowISO(),
+      reason,
+      guardVersion: DCLIP_GUARD_VERSION,
+      caseCount: getCaseCountV45(),
+      byteSize: payloadText.length,
+      payload: state
+    };
+    let list = [];
+    try{ list = JSON.parse(localStorage.getItem(DCLIP_BACKUP_RING_KEY_V45) || '[]'); }catch(e){ list = []; }
+    if(!Array.isArray(list)) list = [];
+    list.unshift(item);
+    list = list.slice(0, 5);
+    try{
+      localStorage.setItem(DCLIP_BACKUP_RING_KEY_V45, JSON.stringify(list));
+    }catch(fullErr){
+      list = list.slice(0, 2);
+      localStorage.setItem(DCLIP_BACKUP_RING_KEY_V45, JSON.stringify(list));
+    }
+    return true;
+  }catch(err){
+    console.warn('V45備份快照失敗，主存檔不受影響。', err);
+    return false;
+  }
+}
+function autoBackupSnapshotV45(reason='自動備份'){
+  const now = Date.now();
+  if(reason === '自動備份' && now - dclipLastAutoBackupMsV45 < 10 * 60 * 1000) return;
+  if(writeBackupSnapshotV45(reason)) dclipLastAutoBackupMsV45 = now;
+}
+function guardBeforeDangerActionV45(reason){
+  try{ writeBackupSnapshotV45(reason || '重要操作前備份'); }catch(e){}
+  try{ persistStateToLocalV44(); }catch(e){ showLocalSaveErrorV44(e); }
+}
+
 function saveState(){
   try{
-    state.version = '44.0';
+    state.version = '45.0';
     state.lastSaved = nowISO();
     let localSaved = false;
     try{
       persistStateToLocalV44();
       localSaved = true;
+      autoBackupSnapshotV45('自動備份');
     }catch(storageErr){
       showLocalSaveErrorV44(storageErr);
     }
@@ -6067,6 +6158,7 @@ function deleteCurrentCase(){
   const c = getCase(id);
   if(!c) return;
   if(!confirm('確定要刪除這筆 D夾案件？')) return;
+  guardBeforeDangerActionV45('刪除案件前備份');
   safeBackupV37('DCLIP_BACKUP_BEFORE_DELETE_CASE', state);
   ensureDeletedCasesV43(state)[id] = nowISO();
   state.cases = (state.cases || []).filter(x=>x.id !== id);
@@ -6100,6 +6192,7 @@ function init(){
   if(mask){ mask.addEventListener('mousedown', function(e){ if(e.target === mask) closeEditModal(); }); }
   tickClock();
   renderAll();
+  setTimeout(()=>runStorageSelfTestV45(false), 180);
   if(!state.lastSaved) saveState();
 }
 init();
