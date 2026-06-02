@@ -2948,6 +2948,7 @@
         <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
         <span class="statusChip" id="saveStatus">已自動存檔</span>
         <button type="button" class="btn btnGray btnMini" onclick="runStorageSelfTestV45(true)">存檔檢查</button>
+        <button type="button" class="btn btnOrange btnMini" onclick="manualCleanupStorageV46(true)">清除舊備份</button>
         <div class="clock" id="headerLastUpdate">最後更新時間：—</div>
         <input id="importFile" class="hiddenFile" type="file" accept="application/json,.json" onchange="importData(event)">
       </div>
@@ -3374,10 +3375,27 @@ function loadState(){
 }
 function persistStateToLocalV44(){
   const text = JSON.stringify(state);
-  localStorage.setItem(STORAGE_KEY, text);
-  const check = localStorage.getItem(STORAGE_KEY);
-  if(check !== text){
-    throw new Error('本機儲存驗證失敗，讀回資料與寫入資料不一致。');
+  function writeAndVerify(){
+    localStorage.setItem(STORAGE_KEY, text);
+    const check = localStorage.getItem(STORAGE_KEY);
+    if(check !== text){
+      throw new Error('本機儲存驗證失敗，讀回資料與寫入資料不一致。');
+    }
+  }
+  try{
+    writeAndVerify();
+  }catch(err){
+    if(isQuotaExceededV46(err)){
+      const removed = cleanupStoragePressureV46();
+      try{
+        writeAndVerify();
+        setGuardMessageV45('本機空間已滿，已自動清除舊備份 ' + removed + ' 筆後完成存檔。', 'warn');
+      }catch(err2){
+        throw err2;
+      }
+    }else{
+      throw err;
+    }
   }
   window.__DCLIP_LOCAL_SAVE_ERROR = false;
   return text.length;
@@ -3406,10 +3424,70 @@ function showLocalSaveErrorV44(err){
 }
 
 // ===== V45：存檔防呆保護，不要在後續改版移除 =====
-const DCLIP_GUARD_VERSION = '45.0';
+const DCLIP_GUARD_VERSION = '46.0';
 const DCLIP_BACKUP_RING_KEY_V45 = 'DCLIP_AUTO_BACKUPS_V45';
 const DCLIP_SELF_TEST_KEY_V45 = 'DCLIP_SELF_TEST_V45';
+const DCLIP_QUOTA_CLEANED_FLAG_V46 = 'DCLIP_QUOTA_CLEANED_V46';
 let dclipLastAutoBackupMsV45 = 0;
+
+// ===== V46：容量保護，不再把多份完整資料塞進 localStorage =====
+function isQuotaExceededV46(err){
+  const name = err && (err.name || '');
+  const msg = err && (err.message || '');
+  return name === 'QuotaExceededError' || name === 'NS_ERROR_DOM_QUOTA_REACHED' || /quota|exceeded/i.test(msg);
+}
+function cleanupStoragePressureV46(){
+  const removed = [];
+  try{
+    const prefixes = [
+      'DCLIP_BACKUP_',
+      'DCLIP_AUTO_BACKUPS_',
+      'DCLIP_BACKUP_BEFORE_',
+      'DCLIP_BACKUP_REMOTE_',
+      'DCLIP_BACKUP_BEFORE_CLOUD_',
+      'DCLIP_SELF_TEST_'
+    ];
+    for(let i = localStorage.length - 1; i >= 0; i--){
+      const key = localStorage.key(i);
+      if(!key || key === STORAGE_KEY || key === DCLIP_QUOTA_CLEANED_FLAG_V46) continue;
+      if(prefixes.some(p=>key.startsWith(p))){
+        localStorage.removeItem(key);
+        removed.push(key);
+      }
+    }
+    try{ localStorage.setItem(DCLIP_QUOTA_CLEANED_FLAG_V46, nowISO()); }catch(_e){}
+  }catch(e){
+    console.warn('清除舊備份釋放空間失敗', e);
+  }
+  return removed.length;
+}
+function downloadSafetyBackupV46(reason){
+  try{
+    const payload = JSON.stringify(state, null, 2);
+    const blob = new Blob([payload], {type:'application/json;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeReason = String(reason || '重要操作前備份').replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,30);
+    a.href = url;
+    a.download = 'D夾_安全備份_' + safeReason + '_' + rocFileTime(new Date()) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return true;
+  }catch(e){
+    console.warn('下載安全備份失敗', e);
+    return false;
+  }
+}
+function manualCleanupStorageV46(showAlert=true){
+  const n = cleanupStoragePressureV46();
+  try{ persistStateToLocalV44(); }catch(e){ showLocalSaveErrorV44(e); }
+  const msg = '已清除舊備份 ' + n + ' 筆，並重新檢查目前資料存檔。';
+  setGuardMessageV45(msg, 'ok');
+  if(showAlert) alert(msg);
+  return n;
+}
 
 function estimateStateBytesV45(){
   try{ return new Blob([JSON.stringify(state)]).size; }catch(e){ return 0; }
@@ -3426,6 +3504,7 @@ function setGuardMessageV45(msg, type='ok'){
   }
 }
 function storageSelfTestCoreV45(){
+  cleanupStoragePressureV46();
   const sample = JSON.stringify({time:nowISO(), test:'DCLIP_SAVE_GUARD_V45'});
   localStorage.setItem(DCLIP_SELF_TEST_KEY_V45, sample);
   const got = localStorage.getItem(DCLIP_SELF_TEST_KEY_V45);
@@ -3445,7 +3524,7 @@ function runStorageSelfTestV45(showAlert=false){
     storageSelfTestCoreV45();
     window.__DCLIP_LOCAL_SAVE_ERROR = false;
     updateSaveStatus();
-    const msg = '本機存檔檢查OK：可寫入、可讀回，目前案件 ' + getCaseCountV45() + ' 筆。';
+    const msg = '本機存檔檢查OK：已清除舊備份、可寫入、可讀回，目前案件 ' + getCaseCountV45() + ' 筆。';
     setGuardMessageV45(msg, 'ok');
     if(showAlert) alert(msg);
     return true;
@@ -3456,30 +3535,19 @@ function runStorageSelfTestV45(showAlert=false){
   }
 }
 function writeBackupSnapshotV45(reason='自動備份'){
+  // V46：不再把完整備份寫進 localStorage，避免容量被備份塞滿。
+  // 自動備份只記錄狀態；重要操作前會下載 JSON 安全備份。
   try{
-    const payloadText = JSON.stringify(state);
-    const item = {
+    window.__DCLIP_LAST_MEMORY_BACKUP_V46 = {
       time: nowISO(),
       reason,
       guardVersion: DCLIP_GUARD_VERSION,
       caseCount: getCaseCountV45(),
-      byteSize: payloadText.length,
-      payload: state
+      byteSize: estimateStateBytesV45()
     };
-    let list = [];
-    try{ list = JSON.parse(localStorage.getItem(DCLIP_BACKUP_RING_KEY_V45) || '[]'); }catch(e){ list = []; }
-    if(!Array.isArray(list)) list = [];
-    list.unshift(item);
-    list = list.slice(0, 5);
-    try{
-      localStorage.setItem(DCLIP_BACKUP_RING_KEY_V45, JSON.stringify(list));
-    }catch(fullErr){
-      list = list.slice(0, 2);
-      localStorage.setItem(DCLIP_BACKUP_RING_KEY_V45, JSON.stringify(list));
-    }
     return true;
   }catch(err){
-    console.warn('V45備份快照失敗，主存檔不受影響。', err);
+    console.warn('V46備份狀態記錄失敗，主存檔不受影響。', err);
     return false;
   }
 }
@@ -3489,13 +3557,15 @@ function autoBackupSnapshotV45(reason='自動備份'){
   if(writeBackupSnapshotV45(reason)) dclipLastAutoBackupMsV45 = now;
 }
 function guardBeforeDangerActionV45(reason){
-  try{ writeBackupSnapshotV45(reason || '重要操作前備份'); }catch(e){}
+  const why = reason || '重要操作前備份';
+  try{ writeBackupSnapshotV45(why); }catch(e){}
+  try{ downloadSafetyBackupV46(why); }catch(e){}
   try{ persistStateToLocalV44(); }catch(e){ showLocalSaveErrorV44(e); }
 }
 
 function saveState(){
   try{
-    state.version = '45.0';
+    state.version = '46.0';
     state.lastSaved = nowISO();
     let localSaved = false;
     try{
@@ -5221,9 +5291,7 @@ async function applySupabasePayload(row, cfg, message='已收到另一台電腦�
     return false;
   }
 
-  try{
-    localStorage.setItem('DCLIP_BACKUP_BEFORE_CLOUD_' + Date.now(), JSON.stringify(state));
-  }catch(e){}
+  try{ safeBackupV37('DCLIP_BACKUP_BEFORE_CLOUD', state); }catch(e){}
 
   sbSuppressAuto = true;
   state = Object.assign(
@@ -5671,8 +5739,16 @@ function normalizeStateForCompareV37(s){
   return JSON.stringify(copy);
 }
 function safeBackupV37(name, data){
+  // V46：舊版這裡會一直累積完整備份，容易塞爆 localStorage。
+  // 改為只保留記憶體標記，不再佔用本機儲存空間。
   try{
-    localStorage.setItem(name + '_' + Date.now(), JSON.stringify(data));
+    window.__DCLIP_LAST_MEMORY_BACKUP_V46 = {
+      time: nowISO(),
+      reason: name || '安全備份',
+      guardVersion: DCLIP_GUARD_VERSION,
+      caseCount: data && Array.isArray(data.cases) ? data.cases.length : getCaseCountV45(),
+      byteSize: new Blob([JSON.stringify(data || {})]).size
+    };
   }catch(e){}
 }
 function defaultStateV37(){
