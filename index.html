@@ -2957,7 +2957,7 @@
     <details class="settings syncTopBlock syncLikeProject" id="supabaseSettings">
       <summary>雲端同步設定（設定隱藏）</summary>
       <div class="settingsBody">
-        <div class="syncHintLine">V49自動防呆：存檔檢查、容量清理、空白未命名整理都改為自動處理；日常只需新增、匯入、匯出。</div>
+        <div class="syncHintLine">V50自動防呆：匯入會先清除這個網站舊暫存，再用JSON覆蓋本機與雲端；不用手動按存檔檢查或清備份。</div>
         <div class="syncProjectRow">
           <input id="sbUrl" placeholder="🔗 URL">
           <input id="sbKey" placeholder="🔑 Key">
@@ -6132,8 +6132,7 @@ function cleanupBlankUnnamedCasesV47(showAlert=false){
   if(showAlert){
     let msg = removed ? '已清除完全空白未命名案件 ' + removed + ' 筆。' : '沒有找到「完全空白」的未命名案件。';
     if(keptUnnamed){
-      msg += '
-另有 ' + keptUnnamed + ' 筆案名空白但有契約/單據/金額資料，為避免誤刪已保留。';
+      msg += '\n另有 ' + keptUnnamed + ' 筆案名空白但有契約/單據/金額資料，為避免誤刪已保留。';
     }
     alert(msg);
   }
@@ -6182,14 +6181,11 @@ Supabase URL/Key 會保留；你的 JSON 檔不會被刪除。
     setSupabaseMessage('已清除網站暫存；請先匯入正確 JSON，再連線或立即同步。','warn');
     updateSaveStatus();
     renderAll();
-    if(showAlert) alert('已清除網站暫存 ' + removed.length + ' 筆。
-
-下一步：匯入正確 JSON。匯入成功後，再連線 Supabase 或按立即同步。');
+    if(showAlert) alert('已清除網站暫存 ' + removed.length + ' 筆。\n\n下一步：匯入正確 JSON。匯入成功後，再連線 Supabase 或按立即同步。');
     return true;
   }catch(err){
     console.error(err);
-    alert('清除網站暫存失敗：
-' + (err && err.message ? err.message : err));
+    alert('清除網站暫存失敗：\n' + (err && err.message ? err.message : err));
     return false;
   }finally{
     sbSuppressAuto = false;
@@ -6444,6 +6440,178 @@ function deleteCurrentCase(){
   }else{
     setSupabaseMessage('案件已在本機刪除；目前未連線 Supabase。','warn');
   }
+}
+
+
+
+// ===== V50：穩定自動防呆修正 =====
+// 1) 匯入 JSON 前自動清除這個網站的舊 D夾暫存，避免 Chrome 舊資料又合進來。
+// 2) 案名空白但有契約/單據資料時，不再顯示一堆「未命名案件」，改顯示可辨識的資訊。
+// 3) 完全空白的新案件自動整理，不需要使用者手動按清除。
+function clearDclipLocalBeforeImportV50(){
+  try{
+    const keepCfg = localStorage.getItem(SUPABASE_CFG_KEY);
+    const removeKeys = [];
+    for(let i = localStorage.length - 1; i >= 0; i--){
+      const k = localStorage.key(i);
+      if(!k) continue;
+      if(k === SUPABASE_CFG_KEY) continue;
+      if(k === STORAGE_KEY || k.indexOf('DCLIP_') === 0){ removeKeys.push(k); }
+    }
+    removeKeys.forEach(k=>{ try{ localStorage.removeItem(k); }catch(_e){} });
+    if(keepCfg !== null){ try{ localStorage.setItem(SUPABASE_CFG_KEY, keepCfg); }catch(_e){} }
+    return removeKeys.length;
+  }catch(e){
+    console.warn('V50 清除舊暫存略過', e);
+    return 0;
+  }
+}
+function caseHasMeaningfulDataV50(c){
+  if(!c || typeof c !== 'object') return false;
+  const keys = ['receiptDate','receiptNo','processDate','contractNo','mainContractNo','business','caseName','priceOld','priceNew','bottomPriceOld','bottomPriceNew','contractEndOld','contractEndNew','relistType','contractTypeOld','contractTypeNew','keyText','specialTerms','note'];
+  if(keys.some(k=>String(c[k] || '').trim())) return true;
+  const tasks = c.tasks && typeof c.tasks === 'object' ? c.tasks : {};
+  return Object.values(tasks).some(t=>{
+    if(!t || typeof t !== 'object') return false;
+    if(t.done === true) return true;
+    if(String(t.assistant || '').trim()) return true;
+    if(String(t.note || '').trim()) return true;
+    const ov = String(t.override || '').trim();
+    return !!(ov && ov !== 'required' && ov !== 'auto');
+  });
+}
+function displayCaseTitleV50(c){
+  const name = String(c && c.caseName || '').trim();
+  if(name) return name;
+  if(caseHasMeaningfulDataV50(c)){
+    const parts = [];
+    if(String(c.contractNo || '').trim()) parts.push('契約' + String(c.contractNo).trim());
+    if(String(c.receiptNo || '').trim()) parts.push('單據' + String(c.receiptNo).trim());
+    if(String(c.mainContractNo || '').trim()) parts.push('跟隨' + String(c.mainContractNo).trim());
+    if(String(c.priceNew || '').trim()) parts.push('開價' + String(c.priceNew).trim());
+    return '案名未填' + (parts.length ? '｜' + parts.slice(0,3).join('｜') : '');
+  }
+  return '未命名案件';
+}
+function renderCaseTableV38(list, showMissing){
+  if(!list.length) return `<div class="empty">目前沒有資料</div>`;
+  const rows = list.map(c=>{
+    const s = caseStats(c);
+    const progress = progressPctHtml(s);
+    const missingTd = showMissing ? `<td>${missingItemsHtmlV38(c, 5)}</td>` : '';
+    const termsText = String(c.specialTerms || '').trim();
+    const termsHtml = termsText ? `<div class="specialTermsClamp" title="${esc(termsText)}">${esc(termsText)}</div>` : '<span class="condEmpty">—</span>';
+    const caseTitle = displayCaseTitleV50(c);
+    return `<tr class="rowClick" onclick="openEditModal('${c.id}')">
+      <td class="dateTiny" title="${esc(c.receiptDate)}">${esc(showMissing ? listShortDateV41(c.receiptDate) : c.receiptDate)}</td>
+      <td class="receiptNoTiny">${esc(c.receiptNo)}</td>
+      <td class="processDateTiny" title="${esc(c.processDate)}">${esc(showMissing ? listShortDateV41(c.processDate) : c.processDate)}</td>
+      <td class="nowrap colTight">${esc(c.contractNo)}${c.mainContractNo ? '<br><span class="small muted">跟隨'+esc(c.mainContractNo)+'</span>' : ''}</td>
+      <td class="caseNameCell"><div class="caseNameClamp" title="${esc(caseTitle)}">${esc(caseTitle)}</div></td>
+      <td class="nowrap colTight">${esc(c.business || '')}</td>
+      <td class="condCell">${condPair(c.priceOld,c.priceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.bottomPriceOld,c.bottomPriceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.contractEndOld,c.contractEndNew,'')}</td>
+      <td class="condCell">${c.relistType ? esc(c.relistType) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${(c.contractTypeOld || c.contractTypeNew) ? `${esc(c.contractTypeOld||'—')} → <b>${esc(c.contractTypeNew||'—')}</b>` : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${c.keyText ? esc(shortText(c.keyText,16)) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell termsCol">${termsHtml}</td>
+      ${missingTd}
+      <td>${progress}</td>
+      <td>${listUpdateHtmlV39(c.updatedAt)}</td>
+    </tr>`;
+  }).join('');
+
+  const makingCols = `
+      <col style="width:2.8%"><col style="width:2.8%"><col style="width:2.8%"><col style="width:5.2%">
+      <col style="width:14.0%"><col style="width:4.0%"><col style="width:4.0%"><col style="width:4.0%">
+      <col style="width:5.2%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:3.5%">
+      <col style="width:13.0%"><col style="width:17.0%"><col style="width:5.0%"><col style="width:7.7%">`;
+  const normalCols = `
+      <col style="width:3.5%"><col style="width:3.5%"><col style="width:3.5%"><col style="width:5.7%">
+      <col style="width:18.0%"><col style="width:4.8%"><col style="width:4.8%"><col style="width:4.8%">
+      <col style="width:5.9%"><col style="width:5.3%"><col style="width:5.3%"><col style="width:4.3%">
+      <col style="width:14.8%"><col style="width:6.0%"><col style="width:5.8%">`;
+  const missingHead = showMissing ? '<th>缺少項目</th>' : '';
+  return `<table>
+    <colgroup>${showMissing ? makingCols : normalCols}
+    </colgroup>
+    <thead><tr>
+      <th>單據日期</th><th>單據號碼</th><th>處理日期</th><th>契約編號</th>
+      <th>案名</th><th>業務</th><th>開價</th><th>底價</th><th>委託時間</th>
+      <th>重新上架</th><th>換約</th><th>KEY</th><th>特約條款</th>
+      ${missingHead}<th>完成率</th><th>最後更新</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+function renderCaseLists(){
+  updateActionFilterOptions();
+  if(!Array.isArray(state.cases)) state.cases = [];
+  const making = state.cases.filter(c=>!caseStats(c).complete).filter(matchMakingFilters);
+  const completed = state.cases.filter(c=>caseStats(c).complete).filter(matchDoneFilters);
+  const makingCount = document.getElementById('makingCount');
+  const allCount = document.getElementById('allCount');
+  const makingList = document.getElementById('makingList');
+  const allList = document.getElementById('allList');
+  if(makingCount) makingCount.textContent = `${making.length} 筆`;
+  if(allCount) allCount.textContent = `${completed.length} 筆`;
+  if(makingList) makingList.innerHTML = renderCaseTableV38(making, true);
+  if(allList) allList.innerHTML = renderCaseTableV38(completed, false);
+}
+function autoMaintenanceV49(){
+  try{ cleanupOldDclipStorageV46 && cleanupOldDclipStorageV46(); }catch(e){}
+  try{
+    if(state && Array.isArray(state.cases)){
+      const cleaned = cleanupImportedStateV47 ? cleanupImportedStateV47(state) : {state:state, removedBlank:0};
+      if(cleaned && cleaned.state && cleaned.removedBlank){
+        state = cleaned.state;
+        migrateState();
+        state.version = '50.0';
+        state.lastSaved = nowISO();
+        persistStateToLocalV44();
+        renderAll(false);
+        console.info('V50 自動移除完全空白未命名案件：', cleaned.removedBlank);
+      }
+    }
+  }catch(e){ console.warn('V50 自動整理空白未命名略過', e); }
+  try{ runStorageSelfTestV45 && runStorageSelfTestV45(false); }catch(e){}
+}
+function importData(event){
+  const file = event.target.files[0]; event.target.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(){
+    try{
+      const imported = JSON.parse(reader.result);
+      if(!confirm('匯入會用這份 JSON 覆蓋目前 D夾資料；如果 Supabase 已連線，也會直接覆蓋雲端。確定匯入？')) return;
+      try{ clearInterval(sbPollTimer); sbPollTimer = null; clearTimeout(sbAutoTimer); sbAutoTimer = null; }catch(_e){}
+      sbSuppressAuto = true;
+      const removedLocalKeys = clearDclipLocalBeforeImportV50();
+      const picked = pickImportedPayloadV47(imported);
+      const cleaned = cleanupImportedStateV47(picked);
+      state = cleaned.state;
+      migrateState();
+      state.version = '50.0';
+      state.lastSaved = nowISO();
+      persistStateToLocalV44();
+      updateSaveStatus();
+      renderAll();
+      sbSuppressAuto = false;
+      const uploaded = await forceUploadSupabaseStateV47('匯入完成，已用這份資料覆蓋雲端。','匯入完成但雲端覆蓋失敗，請確認 Supabase 連線後按立即同步。');
+      const cfg = loadSupabaseConfig();
+      if(cfg.connected && cfg.url && cfg.key) startSupabasePolling();
+      let extra = '';
+      if(removedLocalKeys) extra += `\n已自動清除舊暫存 ${removedLocalKeys} 筆。`;
+      if(cleaned.removedBlank) extra += `\n已自動移除完全空白未命名 ${cleaned.removedBlank} 筆。`;
+      if(cleaned.keptUnnamed) extra += `\n另有案名空白但有契約/單據資料 ${cleaned.keptUnnamed} 筆，已保留並改用「案名未填｜契約/單據」顯示。`;
+      alert((uploaded ? '匯入完成，並已覆蓋同步到雲端。' : '匯入完成；目前未連線 Supabase 或雲端覆蓋失敗。') + extra);
+    }catch(e){
+      console.error(e);
+      alert('匯入失敗，請確認檔案格式。');
+    }finally{
+      sbSuppressAuto = false;
+    }
+  };
+  reader.readAsText(file, 'utf-8');
 }
 
 function init(){
