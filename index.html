@@ -3563,7 +3563,7 @@ function guardBeforeDangerActionV45(reason){
 
 function saveState(){
   try{
-    state.version = '49.0';
+    state.version = '51.0';
     state.lastSaved = nowISO();
     let localSaved = false;
     try{
@@ -6081,7 +6081,7 @@ function cleanupImportedStateV47(nextState){
   result.state.cases = cleaned;
   result.keptUnnamed = cleaned.filter(c=>!String(c.caseName || '').trim()).length;
   if(!result.state.deletedCases || typeof result.state.deletedCases !== 'object' || Array.isArray(result.state.deletedCases)) result.state.deletedCases = {};
-  result.state.version = '49.0';
+  result.state.version = '51.0';
   result.state.systemName = 'D夾';
   result.state.assistants = fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'紹薇',active:true},{id:'fixed2',name:'無',active:true}];
   return result;
@@ -6119,7 +6119,7 @@ function cleanupBlankUnnamedCasesV47(showAlert=false){
   const keptUnnamed = state.cases.filter(c=>!String(c.caseName || '').trim() && !isBlankCaseV47(c)).length;
   state.cases = state.cases.filter(c=>!isBlankCaseV47(c));
   const removed = before - state.cases.length;
-  state.version = '49.0';
+  state.version = '51.0';
   state.lastSaved = nowISO();
   try{
     persistStateToLocalV44();
@@ -6141,11 +6141,7 @@ function cleanupBlankUnnamedCasesV47(showAlert=false){
 
 // V48：清除目前網站在這台瀏覽器內的 D夾暫存，保留 Supabase URL/Key，但先中斷連線避免舊雲端立即合併回來。
 function clearSiteLocalStateV48(showAlert=true){
-  if(showAlert && !confirm('這會清除「這台瀏覽器、這個網站」的 D夾本機暫存資料，並暫時中斷 Supabase 連線。
-
-Supabase URL/Key 會保留；你的 JSON 檔不會被刪除。
-
-清除後請立刻匯入正確 JSON，再按連線或立即同步。確定清除？')) return false;
+  if(showAlert && !confirm('這會清除「這台瀏覽器、這個網站」的 D夾本機暫存資料，並暫時中斷 Supabase 連線。\n\nSupabase URL/Key 會保留；你的 JSON 檔不會被刪除。\n\n清除後請立刻匯入正確 JSON，再按連線或立即同步。確定清除？')) return false;
   const cfg = loadSupabaseConfig ? loadSupabaseConfig() : {};
   try{
     clearInterval(sbPollTimer);
@@ -6206,7 +6202,7 @@ function importData(event){
       sbSuppressAuto = true;
       state = cleaned.state;
       migrateState();
-      state.version = '49.0';
+      state.version = '51.0';
       state.lastSaved = nowISO();
       persistStateToLocalV44();
       updateSaveStatus();
@@ -6421,7 +6417,7 @@ function deleteCurrentCase(){
   safeBackupV37('DCLIP_BACKUP_BEFORE_DELETE_CASE', state);
   ensureDeletedCasesV43(state)[id] = nowISO();
   state.cases = (state.cases || []).filter(x=>x.id !== id);
-  state.version = '49.0';
+  state.version = '51.0';
   state.lastSaved = nowISO();
   try{
     persistStateToLocalV44();
