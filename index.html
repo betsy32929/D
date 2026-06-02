@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>D夾｜V45存檔防呆版</title>
+  <title>D夾｜V60新增物件不被清理版</title>
   <style>
     :root{
       --bg:#f4f8ff;
@@ -2939,10 +2939,10 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾</h1>
+        <h1>D夾 <span style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V60</span></h1>
       </div>
       <div class="toolbar toolbarMain">
-        <button type="button" class="btn btnPrimary addObjectBtn" onclick="dclipV55CreateBlankCaseSafe()">＋ 新增物件</button>
+        <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
         <button type="button" class="btn btnBlue" onclick="safeRunTopButton(exportData, '匯出EXCEL')">匯出EXCEL</button>
         <button type="button" class="btn btnPurple" onclick="safeRunTopButton(exportJsonData, '匯出JSON')">匯出JSON</button>
         <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
@@ -2957,7 +2957,7 @@
     <details class="settings syncTopBlock syncLikeProject" id="supabaseSettings">
       <summary>雲端同步設定（設定隱藏）</summary>
       <div class="settingsBody">
-        <div class="syncHintLine">V54自動同步防覆蓋版：輸入後先存本機並驗證，再自動同步雲端；同步前會合併較新的雲端資料，避免舊電腦覆蓋。</div>
+        <div class="syncHintLine">V53同步安全版：開啟網頁/自動連線只接收較新的雲端資料，不會自動把本機舊資料上傳覆蓋。匯入JSON才會覆蓋雲端。</div>
         <div class="syncProjectRow">
           <input id="sbUrl" placeholder="🔗 URL">
           <input id="sbKey" placeholder="🔑 Key">
@@ -3630,12 +3630,49 @@ function safeRunTopButton(fn, label){
 }
 
 function createBlankCaseAndOpen(){
-  const item = makeBlankCase();
-  ensureCaseTasks(item);
-  state.cases.unshift(item);
-  saveState();
-  renderAll();
-  openEditModal(item.id);
+  /* V58：新增物件獨立穩定流程
+     新增當下是空白案件，不能呼叫會清理空白案件的 saveState()，
+     否則剛新增就可能被清掉，看起來像「按了沒反應」。
+     這裡只做：建立案件 → 補任務 → 直接本機存檔驗證 → 重整 → 開啟視窗。
+     使用者輸入任一欄位後，saveCurrentCase() 會再呼叫 saveState() 並自動同步雲端。 */
+  try{
+    if(!state || typeof state !== 'object') state = defaultStateV37 ? defaultStateV37() : {version:'58.0',systemName:'D夾',assistants:[],rules:cloneRules(DEFAULT_RULES),cases:[],lastSaved:''};
+    if(!Array.isArray(state.cases)) state.cases = [];
+    if(!Array.isArray(state.rules) || !state.rules.length) state.rules = cloneRules(DEFAULT_RULES);
+
+    const item = makeBlankCase();
+    item.id = item.id || uid('dclip');
+    item.createdAt = item.createdAt || nowISO();
+    item.updatedAt = nowISO();
+    item.__justCreated = true;
+    ensureCaseTasks(item);
+    state.cases.unshift(item);
+    state.version = '60.0';
+    state.lastSaved = nowISO();
+
+    try{
+      persistStateToLocalV44();
+      window.__DCLIP_LOCAL_SAVE_ERROR = false;
+    }catch(storageErr){
+      showLocalSaveErrorV44(storageErr);
+      alert('新增物件已建立，但本機存檔失敗，請先匯出 JSON。\n\n' + (storageErr && storageErr.message ? storageErr.message : storageErr));
+      return;
+    }
+
+    try{ updateSaveStatus(); }catch(_e){}
+    try{ renderAll(false); }catch(renderErr){ console.warn('新增後列表重整略過', renderErr); }
+    setTimeout(function(){
+      try{ openEditModal(item.id); }
+      catch(openErr){
+        console.error('新增後開啟輸入視窗失敗', openErr);
+        alert('物件已新增並存檔，但輸入視窗開啟失敗，請重新整理後點選列表。\n\n' + (openErr && openErr.message ? openErr.message : openErr));
+      }
+    }, 30);
+    try{ if(typeof setSupabaseMessage === 'function') setSupabaseMessage('新增物件已建立；輸入內容後會自動同步雲端。','ok'); }catch(_e){}
+  }catch(err){
+    console.error('新增物件失敗', err);
+    alert('新增物件無法執行：\n' + (err && err.message ? err.message : err));
+  }
 }
 function getCase(id){ return state.cases.find(c=>c.id===id); }
 function activeAssistants(){ return (state.assistants || []).filter(a=>a.active !== false); }
@@ -6641,6 +6678,8 @@ function caseHasDataV52(c){
   return Object.values(tasks).some(taskMeaningfulV52);
 }
 function isBlankAutoCaseV52(c){
+  // V60：剛按「＋新增物件」產生的空白案件，先保留讓輸入視窗能開啟。
+  if(c && c.__justCreated) return false;
   return !caseHasDataV52(c);
 }
 function caseSignatureV52(c){
@@ -7027,7 +7066,7 @@ function remoteTimeMsV53(row){
 }
 function prepareStateForLocalSaveV53(){
   try{ cleanupStateInPlaceV52(false); }catch(_e){}
-  state.version = '53.0';
+  state.version = '60.0';
   if(!state.systemName) state.systemName = 'D夾';
 }
 function prepareStateForCloudV53(){
@@ -7112,17 +7151,37 @@ function queueSupabaseAutoSync(){
 }
 
 async function uploadSupabaseState(silent=false){
+  /* V58：自動上傳前先讀雲端，避免 A/B/C 電腦輪流使用時，
+     舊本機資料直接覆蓋另一台已上傳的新資料。 */
   const cfg = saveSupabaseConfig({connected:true});
   if(!supabaseReady(cfg)) return false;
   if(sbSyncBusyV37) return false;
   sbSyncBusyV37 = true;
   try{
-    if(!silent) setSupabaseMessage('上傳本機資料到雲端中...','warn');
-    const payload = prepareStateForCloudV53();
-    const remoteTime = await rawUploadSupabaseStateV37(payload, true);
+    if(!silent) setSupabaseMessage('同步前檢查雲端資料中...','warn');
+    let payload = prepareStateForCloudV53();
+    try{
+      const row = await fetchSupabaseRemote(cfg);
+      if(row && row.payload){
+        const remote = sanitizeStateV52(row.payload).state;
+        const remoteMs = remoteTimeMsV53(row);
+        const localMs = localTimeMsV53();
+        if(remoteMs > localMs + 1000){
+          payload = sanitizeStateV52(mergeStatesV37(payload, remote)).state;
+          state = payload;
+          state.version = '60.0';
+          state.lastSaved = nowISO();
+          try{ persistStateToLocalV44(); }catch(_e){}
+          try{ renderAll(false); }catch(_e){}
+        }
+      }
+    }catch(checkErr){
+      console.warn('同步前讀取雲端失敗，改以本機資料嘗試同步', checkErr);
+    }
+    await rawUploadSupabaseStateV37(payload, true);
     sbInitialSyncDoneV37 = true;
     setSupabaseStatus('已連線','ok');
-    setSupabaseMessage('已同步到雲端。','ok');
+    setSupabaseMessage('已自動同步到雲端。','ok');
     return true;
   }catch(err){
     console.error(err);
@@ -7220,271 +7279,15 @@ function autoMaintenanceV49(){
     const oldLastSaved = state && state.lastSaved ? state.lastSaved : '';
     const result = cleanupStateInPlaceV52(false);
     if(result.removedBlank || result.removedDup){
-      state.version = '53.0';
+      state.version = '60.0';
       state.lastSaved = oldLastSaved || state.lastSaved || '';
       try{ persistStateToLocalV44(); }catch(err){ showLocalSaveErrorV44(err); }
-      console.info('V53 自動整理：空白', result.removedBlank, '重複', result.removedDup);
+      console.info('V58 自動整理：空白', result.removedBlank, '重複', result.removedDup);
       renderAll(false);
     }
-  }catch(e){ console.warn('V53 自動整理略過', e); }
+  }catch(e){ console.warn('V58 自動整理略過', e); }
   try{ runStorageSelfTestV45 && runStorageSelfTestV45(false); }catch(e){}
 }
-
-
-/* ===== V54：自動同步防覆蓋版 =====
-   重點：
-   1. 輸入後不用手動按立即同步：本機驗證成功後自動排程上傳。
-   2. 自動上傳前會先讀取 Supabase；若另一台電腦已經有新資料，先用 mergeStatesV37 合併，再上傳。
-   3. 開啟網頁仍不自動上傳本機舊資料；只檢查/套用較新的雲端。
-   4. 離開頁面前若仍有待同步資料，盡量補送一次；但主要保護仍是平常輸入後自動同步。
-*/
-let dclipBootingV54 = true;
-let dclipPendingRemoteSaveV54 = false;
-let dclipLastLocalEditMsV54 = 0;
-let dclipRemoteSaveTimerV54 = null;
-setTimeout(()=>{ dclipBootingV54 = false; }, 2200);
-
-function prepareStateForLocalSaveV54(){
-  try{ cleanupStateInPlaceV52(false); }catch(_e){}
-  state.version = '54.0';
-  if(!state.systemName) state.systemName = 'D夾';
-}
-function prepareStateForCloudV54(){
-  prepareStateForLocalSaveV54();
-  return cloneStateV53(state);
-}
-function applyMergedStateV54(nextState, message){
-  sbSuppressAuto = true;
-  state = Object.assign(defaultStateV37(), cloneStateV53(nextState || {}));
-  migrateState();
-  prepareStateForLocalSaveV54();
-  if(!state.lastSaved) state.lastSaved = nowISO();
-  persistStateToLocalV44();
-  updateSaveStatus();
-  sbSuppressAuto = false;
-  renderAll(false);
-  if(currentCaseId && getCase(currentCaseId)) renderTaskTable();
-  if(message) setSupabaseMessage(message, 'ok');
-}
-
-function saveState(){
-  try{
-    prepareStateForLocalSaveV54();
-    state.lastSaved = nowISO();
-    dclipLastLocalEditMsV54 = Date.now();
-    let localSaved = false;
-    try{
-      persistStateToLocalV44();
-      localSaved = true;
-      window.__DCLIP_LOCAL_SAVE_ERROR = false;
-    }catch(storageErr){
-      showLocalSaveErrorV44(storageErr);
-    }
-    try{ updateSaveStatus(); }catch(statusErr){ console.warn('更新存檔狀態文字失敗，已略過。', statusErr); }
-    try{
-      if(localSaved && !dclipBootingV54 && typeof queueSupabaseAutoSync === 'function') queueSupabaseAutoSync();
-      if(!localSaved && typeof setSupabaseMessage === 'function') setSupabaseMessage('本機存檔失敗，已停止雲端上傳，請先匯出 JSON。','bad');
-    }catch(syncErr){
-      console.warn('Supabase 自動同步已略過，不影響新增/匯出按鈕。', syncErr);
-      try{ if(typeof setSupabaseMessage === 'function') setSupabaseMessage(localSaved ? '本機已存檔；雲端自動同步暫時略過。' : '本機存檔失敗；雲端自動同步也暫時略過。','warn'); }catch(_e){}
-    }
-  }catch(err){
-    console.error('saveState 發生錯誤，但不阻擋目前操作。', err);
-  }
-}
-
-function queueSupabaseAutoSync(){
-  if(sbSuppressAuto || dclipBootingV54) return;
-  const cfg = loadSupabaseConfig();
-  if(!cfg.connected || !cfg.url || !cfg.key) return;
-  if(window.__DCLIP_LOCAL_SAVE_ERROR){
-    setSupabaseMessage('本機尚未確認存檔，暫停雲端同步。','bad');
-    return;
-  }
-  dclipPendingRemoteSaveV54 = true;
-  clearTimeout(dclipRemoteSaveTimerV54 || sbAutoTimer);
-  clearTimeout(sbAutoTimer);
-  try{ setSupabaseMessage('本機已存檔，準備自動同步雲端...','warn'); }catch(_e){}
-  dclipRemoteSaveTimerV54 = sbAutoTimer = setTimeout(()=>uploadSupabaseState(true), 450);
-}
-
-async function uploadSupabaseState(silent=false){
-  const cfg = saveSupabaseConfig({connected:true});
-  if(!supabaseReady(cfg)) return false;
-  if(sbSyncBusyV37) return false;
-  if(window.__DCLIP_LOCAL_SAVE_ERROR){
-    setSupabaseStatus('已連線','warn');
-    setSupabaseMessage('本機存檔未通過驗證，已停止上傳，避免把不完整資料送到雲端。','bad');
-    return false;
-  }
-  sbSyncBusyV37 = true;
-  try{
-    if(!silent) setSupabaseMessage('自動同步檢查中...','warn');
-    prepareStateForLocalSaveV54();
-    let payload = prepareStateForCloudV54();
-
-    let row = null;
-    try{ row = await fetchSupabaseRemote(cfg); }catch(fetchErr){
-      // 讀不到遠端時不直接覆蓋，避免網路/RLS 異常造成誤判。
-      throw fetchErr;
-    }
-
-    if(row && row.payload){
-      const remoteClean = sanitizeStateV52(row.payload).state;
-      const lastSeen = getLastRemoteTime(cfg);
-      const lastSeenMs = lastSeen ? (Date.parse(lastSeen) || 0) : 0;
-      const remoteMs = remoteTimeMsV53(row);
-      const localText = normalizeStateForCompareV37(payload);
-      const remoteText = normalizeStateForCompareV37(remoteClean);
-
-      if(remoteMs > lastSeenMs + 1000 && remoteText !== localText){
-        const merged = sanitizeStateV52(mergeStatesV37(payload, remoteClean)).state;
-        const mergedText = normalizeStateForCompareV37(merged);
-        if(mergedText !== localText){
-          applyMergedStateV54(merged, '已先合併另一台電腦的新資料，再自動同步雲端。');
-          payload = prepareStateForCloudV54();
-        }else{
-          payload = merged;
-        }
-      }
-    }
-
-    const remoteTime = await rawUploadSupabaseStateV37(payload, true);
-    sbInitialSyncDoneV37 = true;
-    dclipPendingRemoteSaveV54 = false;
-    setSupabaseStatus('已連線','ok');
-    setSupabaseMessage('已自動同步到雲端。','ok');
-    try{ startSupabasePolling(); }catch(_e){}
-    return true;
-  }catch(err){
-    console.error(err);
-    dclipPendingRemoteSaveV54 = true;
-    setSupabaseStatus('已連線','warn');
-    setSupabaseMessage('雲端同步失敗，資料仍保留在本機；下次修改會再自動同步。','bad');
-    if(!silent) alert('上傳 Supabase 失敗：\n' + (err.message || err));
-    return false;
-  }finally{
-    sbSyncBusyV37 = false;
-  }
-}
-
-async function syncSupabaseNow(fromConnect=false){
-  const cfg = saveSupabaseConfig({connected:true});
-  if(!supabaseReady(cfg)) return;
-  prepareStateForLocalSaveV54();
-  setSupabaseStatus('已連線','ok');
-  setSupabaseMessage('立即同步檢查中...','warn');
-  try{
-    const row = await fetchSupabaseRemote(cfg);
-    const localValid = validCaseCountV53(state);
-    if(!row || !row.payload){
-      await uploadSupabaseState(true);
-      setSupabaseMessage('雲端無資料，已上傳本機資料。','ok');
-      return;
-    }
-    const remote = sanitizeStateV52(row.payload);
-    const remoteValid = validCaseCountV53(remote.state);
-    const remoteMs = remoteTimeMsV53(row);
-    const localMs = localTimeMsV53();
-
-    if(localValid === 0 && remoteValid > 0){
-      row.payload = remote.state;
-      await applySupabasePayload(row, cfg, '本機沒有有效資料，已套用雲端資料。');
-      return;
-    }
-    if(remoteValid === 0 && localValid > 0){
-      await uploadSupabaseState(true);
-      setSupabaseMessage('雲端清理後無有效資料，已用本機上傳雲端。','ok');
-      return;
-    }
-
-    const lastSeen = getLastRemoteTime(cfg);
-    const lastSeenMs = lastSeen ? (Date.parse(lastSeen) || 0) : 0;
-    if(remoteMs > lastSeenMs + 1000){
-      const merged = sanitizeStateV52(mergeStatesV37(state, remote.state)).state;
-      applyMergedStateV54(merged, '已合併雲端與本機資料。');
-      await uploadSupabaseState(true);
-      setSupabaseMessage('已合併後同步完成。','ok');
-      return;
-    }
-    if(remoteMs > localMs + 1000){
-      row.payload = remote.state;
-      await applySupabasePayload(row, cfg, '雲端資料較新，已先套用雲端，未用本機覆蓋。');
-      return;
-    }
-    await uploadSupabaseState(true);
-    setSupabaseMessage('本機資料較新或相同，已上傳雲端。','ok');
-  }catch(err){
-    console.error(err);
-    setSupabaseStatus('已連線','warn');
-    setSupabaseMessage('立即同步失敗','bad');
-    if(!fromConnect) alert('立即同步失敗：\n' + (err.message || err));
-  }
-}
-
-async function checkSupabaseRemoteUpdates(){
-  const cfg = loadSupabaseConfig();
-  if(!cfg.connected || !cfg.url || !cfg.key) return;
-  if(sbSyncBusyV37) return;
-  try{
-    const row = await fetchSupabaseRemote(cfg);
-    if(!row || !row.payload || !row.updated_at) return;
-    const lastSeen = getLastRemoteTime(cfg);
-    const remoteMs = remoteTimeMsV53(row);
-    const lastMs = lastSeen ? (Date.parse(lastSeen) || 0) : 0;
-    if(remoteMs <= lastMs + 1000) return;
-
-    const remote = sanitizeStateV52(row.payload);
-    const editingNow = Date.now() - dclipLastLocalEditMsV54 < 1600;
-    if(editingNow || dclipPendingRemoteSaveV54){
-      setSupabaseMessage('另一台電腦有更新，等你這邊停下後會自動合併同步。','warn');
-      clearTimeout(dclipRemoteSaveTimerV54 || sbAutoTimer);
-      dclipRemoteSaveTimerV54 = sbAutoTimer = setTimeout(()=>uploadSupabaseState(true), 650);
-      return;
-    }
-    const merged = sanitizeStateV52(mergeStatesV37(state, remote.state)).state;
-    const before = normalizeStateForCompareV37(state);
-    const after = normalizeStateForCompareV37(merged);
-    if(after !== before){
-      applyMergedStateV54(merged, '已收到另一台電腦的最新更新。');
-    }else{
-      setLastRemoteTime(cfg, row.updated_at);
-    }
-  }catch(err){
-    console.warn('remote polling failed', err);
-    try{
-      setSupabaseStatus('已連線','warn');
-      setSupabaseMessage('同步監看暫時失敗，稍後會再檢查','warn');
-    }catch(_e){}
-  }
-}
-
-function autoMaintenanceV49(){
-  try{ cleanupOldDclipStorageV46 && cleanupOldDclipStorageV46(); }catch(e){}
-  try{
-    const oldLastSaved = state && state.lastSaved ? state.lastSaved : '';
-    const result = cleanupStateInPlaceV52(false);
-    if(result.removedBlank || result.removedDup){
-      state.version = '54.0';
-      state.lastSaved = oldLastSaved || state.lastSaved || '';
-      try{ persistStateToLocalV44(); }catch(err){ showLocalSaveErrorV44(err); }
-      console.info('V54 自動整理：空白', result.removedBlank, '重複', result.removedDup);
-      renderAll(false);
-    }
-  }catch(e){ console.warn('V54 自動整理略過', e); }
-  try{ runStorageSelfTestV45 && runStorageSelfTestV45(false); }catch(e){}
-}
-
-window.addEventListener('visibilitychange', function(){
-  if(document.visibilityState === 'hidden' && dclipPendingRemoteSaveV54){
-    try{ uploadSupabaseState(true); }catch(_e){}
-  }
-});
-window.addEventListener('beforeunload', function(){
-  if(dclipPendingRemoteSaveV54){
-    try{ uploadSupabaseState(true); }catch(_e){}
-  }
-});
 
 function init(){
   loadState();
@@ -7500,79 +7303,92 @@ function init(){
   if(!state.lastSaved) saveState();
 }
 init();
-
-
-/* ===== V55：新增物件保護修正 =====
-   目的：避免自動同步/列表整理的任何錯誤，讓「＋新增物件」按鈕失效。
-   新增流程固定：建立案件 → 補齊任務 → 本機存檔驗證 → 重新整理畫面 → 開啟輸入視窗。
-*/
-function dclipV55CreateBlankCaseSafe(){
-  let item = null;
-  try{
-    if(typeof state === 'undefined' || !state){
-      throw new Error('資料狀態尚未載入完成，請重新整理後再試。');
-    }
-    if(!Array.isArray(state.cases)) state.cases = [];
-
-    if(typeof makeBlankCase === 'function'){
-      item = makeBlankCase();
-    }else{
-      const id = (typeof uid === 'function') ? uid('dclip') : ('dclip_' + Date.now() + '_' + Math.random().toString(36).slice(2,8));
-      const t = (typeof nowISO === 'function') ? nowISO() : new Date().toISOString();
-      item = {
-        id, receiptDate:'', receiptNo:'', processDate:'', contractNo:'', mainContractNo:'', business:'', caseName:'',
-        priceOld:'', priceNew:'', bottomPriceOld:'', bottomPriceNew:'', contractEndOld:'', contractEndNew:'', relistType:'',
-        contractTypeOld:'', contractTypeNew:'', keyText:'', specialTerms:'', note:'', tasks:{}, createdAt:t, updatedAt:t
-      };
-    }
-
-    if(!item.id) item.id = (typeof uid === 'function') ? uid('dclip') : ('dclip_' + Date.now());
-    item.createdAt = item.createdAt || new Date().toISOString();
-    item.updatedAt = new Date().toISOString();
-    if(!item.tasks || typeof item.tasks !== 'object') item.tasks = {};
-    if(typeof ensureCaseTasks === 'function') ensureCaseTasks(item);
-
-    state.cases.unshift(item);
-    state.lastSaved = new Date().toISOString();
-
-    // 本機存檔一定先做；若雲端同步有問題，不阻擋新增案件。
-    try{
-      if(typeof saveState === 'function') saveState();
-      else if(typeof persistStateToLocalV44 === 'function') persistStateToLocalV44();
-    }catch(saveErr){
-      console.error('V55 新增後本機存檔失敗', saveErr);
-      try{ if(typeof showLocalSaveErrorV44 === 'function') showLocalSaveErrorV44(saveErr); }catch(_e){}
-      alert('新增物件已建立，但本機存檔失敗：\n' + (saveErr.message || saveErr));
-      return;
-    }
-
-    try{
-      if(typeof renderAll === 'function') renderAll(false);
-    }catch(renderErr){
-      console.warn('V55 新增後列表重整失敗，已略過，不影響新增資料。', renderErr);
-      try{ if(typeof renderCaseLists === 'function') renderCaseLists(); }catch(_e){}
-    }
-
-    setTimeout(function(){
-      try{
-        if(typeof openEditModal === 'function') openEditModal(item.id);
-        else if(window.openEditModal) window.openEditModal(item.id);
-      }catch(openErr){
-        console.error('V55 新增後開啟輸入視窗失敗', openErr);
-        alert('物件已新增並存檔，但輸入視窗開啟失敗。請重新整理後在列表點選該物件。\n' + (openErr.message || openErr));
-      }
-    }, 30);
-
-  }catch(err){
-    console.error('V55 新增物件失敗', err);
-    alert('新增物件無法執行：\n' + (err && err.message ? err.message : err));
-  }
-}
-try{
-  window.dclipV55CreateBlankCaseSafe = dclipV55CreateBlankCaseSafe;
-  window.createBlankCaseAndOpen = dclipV55CreateBlankCaseSafe;
-}catch(_e){}
-
 </script>
+
+<script>
+/* ===== V60：新增物件直接綁定＋防空白清理 ===== */
+(function(){
+  const V60 = 'V60新增物件不被清理版';
+  let running = false;
+  function iso(){ try{ return (typeof nowISO === 'function') ? nowISO() : new Date().toISOString(); }catch(_e){ return new Date().toISOString(); } }
+  function genId(){ try{ return (typeof uid === 'function') ? uid('dclip') : ('dclip_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8)); }catch(_e){ return 'dclip_' + Date.now().toString(36); } }
+  function fallbackCase(){ const t=iso(); return {id:genId(),receiptDate:'',receiptNo:'',processDate:'',contractNo:'',mainContractNo:'',business:'',caseName:'',priceOld:'',priceNew:'',bottomPriceOld:'',bottomPriceNew:'',contractEndOld:'',contractEndNew:'',relistType:'',contractTypeOld:'',contractTypeNew:'',keyText:'',specialTerms:'',note:'',tasks:{},createdAt:t,updatedAt:t,__justCreated:true}; }
+  function localSave(){
+    try{
+      if(typeof persistStateToLocalV44 === 'function') persistStateToLocalV44();
+      else localStorage.setItem('DCLIP_APP_STATE_V1', JSON.stringify(state));
+      try{ window.__DCLIP_LOCAL_SAVE_ERROR = false; }catch(_e){}
+      return {ok:true};
+    }catch(err){
+      try{ if(typeof showLocalSaveErrorV44 === 'function') showLocalSaveErrorV44(err); }catch(_e){}
+      return {ok:false, err};
+    }
+  }
+  function openCase(id){
+    setTimeout(function(){
+      try{ if(typeof openEditModal === 'function'){ openEditModal(id); return; } }catch(err){ console.error('V60 openEditModal failed', err); }
+      try{ currentCaseId = id; }catch(_e){}
+      const mask = document.getElementById('editModalMask');
+      if(mask) mask.classList.add('show');
+    }, 30);
+  }
+  function addCase(){
+    if(running) return;
+    running = true;
+    try{
+      if(typeof state === 'undefined'){
+        alert('新增物件無法執行：主程式尚未載入。請確認頁面左上角有 V60，並重新整理。');
+        return;
+      }
+      if(!state || typeof state !== 'object') state = {version:'60.0',systemName:'D夾',assistants:[],rules:(typeof DEFAULT_RULES !== 'undefined' && typeof cloneRules === 'function') ? cloneRules(DEFAULT_RULES) : [],cases:[],lastSaved:''};
+      if(!Array.isArray(state.cases)) state.cases = [];
+      if((!Array.isArray(state.rules) || !state.rules.length) && typeof DEFAULT_RULES !== 'undefined' && typeof cloneRules === 'function') state.rules = cloneRules(DEFAULT_RULES);
+      let item;
+      try{ item = (typeof makeBlankCase === 'function') ? makeBlankCase() : fallbackCase(); }catch(_e){ item = fallbackCase(); }
+      item.id = item.id || genId();
+      item.createdAt = item.createdAt || iso();
+      item.updatedAt = iso();
+      item.__justCreated = true;
+      try{ if(typeof ensureCaseTasks === 'function') ensureCaseTasks(item); }catch(e){ console.warn('V60 ensure tasks skipped', e); }
+      state.cases.unshift(item);
+      state.version = '60.0';
+      state.lastSaved = iso();
+      const saved = localSave();
+      try{ if(typeof updateSaveStatus === 'function') updateSaveStatus(); }catch(_e){}
+      // V60：這裡可以重整，因 isBlankAutoCaseV52 已保留 __justCreated，不會再刪掉剛新增案件。
+      try{ if(typeof renderAll === 'function') renderAll(false); }catch(e){ console.warn('V60 render skipped', e); }
+      openCase(item.id);
+      try{ if(typeof setSupabaseMessage === 'function') setSupabaseMessage(saved.ok ? '新增物件已建立；輸入內容後會自動同步雲端。' : '新增物件已開啟，但本機存檔失敗，請先匯出 JSON。', saved.ok ? 'ok' : 'bad'); }catch(_e){}
+      if(!saved.ok) alert('新增物件已開啟，但本機存檔失敗，請先匯出 JSON。\n\n錯誤：' + (saved.err && saved.err.message ? saved.err.message : saved.err));
+    }catch(err){
+      console.error('V60 新增物件失敗', err);
+      alert('新增物件無法執行：\n' + (err && err.message ? err.message : err));
+    }finally{ setTimeout(function(){ running=false; }, 300); }
+  }
+  window.createBlankCaseAndOpenV60 = addCase;
+  function bind(){
+    try{
+      document.querySelectorAll('.addObjectBtn').forEach(function(btn){
+        if(btn.dataset.v60Bound === '1') return;
+        btn.dataset.v60Bound = '1';
+        btn.title = V60;
+        btn.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopImmediatePropagation(); addCase(); }, true);
+      });
+      const h = document.querySelector('.titleWrap h1');
+      if(h && !document.getElementById('dclipV60LoadedBadge')){
+        const b = document.createElement('span');
+        b.id = 'dclipV60LoadedBadge';
+        b.textContent = ' 新增已載入';
+        b.style.cssText = 'font-size:12px;letter-spacing:0;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:middle;';
+        h.appendChild(b);
+      }
+    }catch(e){ console.warn('V60 bind failed', e); }
+  }
+  bind();
+  document.addEventListener('DOMContentLoaded', bind);
+  setTimeout(bind,200); setTimeout(bind,1000);
+})();
+</script>
+
 </body>
 </html>
