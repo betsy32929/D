@@ -2957,7 +2957,7 @@
     <details class="settings syncTopBlock syncLikeProject" id="supabaseSettings">
       <summary>雲端同步設定（設定隱藏）</summary>
       <div class="settingsBody">
-        <div class="syncHintLine">V50自動防呆：匯入會先清除這個網站舊暫存，再用JSON覆蓋本機與雲端；不用手動按存檔檢查或清備份。</div>
+        <div class="syncHintLine">V52穩定版：匯入會先清掉完全空白案件，再用JSON覆蓋本機與雲端；不需要手動清暫存或存檔檢查。</div>
         <div class="syncProjectRow">
           <input id="sbUrl" placeholder="🔗 URL">
           <input id="sbKey" placeholder="🔑 Key">
@@ -6608,6 +6608,398 @@ function importData(event){
     }
   };
   reader.readAsText(file, 'utf-8');
+}
+
+
+// ===== V52：最後統一版｜阻止空白未命名自動增生＋匯入/同步一律清理後覆蓋 =====
+// 說明：前面版本因多次改版累積了重複函式，這裡放在 init() 前，讓瀏覽器最後只採用這套邏輯。
+const DCLIP_VERSION_V52 = '52.0';
+let dclipCleaningV52 = false;
+
+function clonePlainV52(obj){
+  try{ return JSON.parse(JSON.stringify(obj || {})); }catch(e){ return {}; }
+}
+function textV52(v){ return String(v == null ? '' : v).trim(); }
+const CASE_DATA_KEYS_V52 = [
+  'receiptDate','receiptNo','processDate','contractNo','mainContractNo','business','caseName',
+  'priceOld','priceNew','bottomPriceOld','bottomPriceNew','contractEndOld','contractEndNew','relistType',
+  'contractTypeOld','contractTypeNew','keyText','specialTerms','note'
+];
+function taskMeaningfulV52(t){
+  if(!t || typeof t !== 'object') return false;
+  if(t.done === true) return true;
+  if(textV52(t.assistant)) return true;
+  if(textV52(t.note)) return true;
+  const ov = textV52(t.override);
+  if(ov && ov !== 'required' && ov !== 'auto') return true;
+  return false;
+}
+function caseHasDataV52(c){
+  if(!c || typeof c !== 'object') return false;
+  if(CASE_DATA_KEYS_V52.some(k=>textV52(c[k]))) return true;
+  const tasks = c.tasks && typeof c.tasks === 'object' ? c.tasks : {};
+  return Object.values(tasks).some(taskMeaningfulV52);
+}
+function isBlankAutoCaseV52(c){
+  return !caseHasDataV52(c);
+}
+function caseSignatureV52(c){
+  const sigKeys = ['contractNo','receiptNo','mainContractNo','receiptDate','caseName','business','priceNew','priceOld'];
+  const parts = sigKeys.map(k=>textV52(c && c[k]));
+  if(parts.every(x=>!x)) return '';
+  return parts.join('|').toLowerCase();
+}
+function caseTimeV52(c){
+  if(typeof caseDeepTimeV37 === 'function') return caseDeepTimeV37(c);
+  const vals = [c && c.updatedAt, c && c.createdAt].map(v=>Date.parse(v || '') || 0);
+  return Math.max.apply(null, vals);
+}
+function normalizeOneCaseV52(raw){
+  const c = Object.assign(makeBlankCase ? makeBlankCase() : {}, clonePlainV52(raw));
+  if(!textV52(c.id)) c.id = uid ? uid('dclip') : ('dclip_' + Date.now() + '_' + Math.random().toString(36).slice(2,8));
+  if(!c.tasks || typeof c.tasks !== 'object' || Array.isArray(c.tasks)) c.tasks = {};
+  if(!textV52(c.createdAt)) c.createdAt = nowISO();
+  if(!textV52(c.updatedAt)) c.updatedAt = c.createdAt || nowISO();
+  CASE_DATA_KEYS_V52.forEach(k=>{ if(c[k] == null) c[k] = ''; });
+  return c;
+}
+function defaultStateV52(){
+  return {
+    version:DCLIP_VERSION_V52,
+    systemName:'D夾',
+    assistants:(typeof fixedTaskAssistants === 'function' ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'紹薇',active:true},{id:'fixed2',name:'無',active:true}]),
+    rules:cloneRules(DEFAULT_RULES),
+    cases:[],
+    deletedCases:{},
+    lastSaved:''
+  };
+}
+function pickPayloadV52(imported){
+  if(typeof pickImportedPayloadV47 === 'function') return pickImportedPayloadV47(imported);
+  if(imported && imported.payload && Array.isArray(imported.payload.cases)) return imported.payload;
+  if(imported && Array.isArray(imported.cases)) return imported;
+  if(Array.isArray(imported)) return {cases: imported};
+  throw new Error('JSON格式不是D夾資料');
+}
+function sanitizeStateV52(input){
+  const base = defaultStateV52();
+  const src = clonePlainV52(input || {});
+  const out = Object.assign(base, src);
+  out.version = DCLIP_VERSION_V52;
+  out.systemName = 'D夾';
+  out.assistants = (typeof fixedTaskAssistants === 'function' ? fixedTaskAssistants() : (Array.isArray(out.assistants) ? out.assistants : base.assistants));
+  out.rules = Array.isArray(out.rules) && out.rules.length ? out.rules : cloneRules(DEFAULT_RULES);
+  if(!out.deletedCases || typeof out.deletedCases !== 'object' || Array.isArray(out.deletedCases)) out.deletedCases = {};
+
+  const inputCases = Array.isArray(out.cases) ? out.cases : [];
+  let removedBlank = 0;
+  let keptUnnamed = 0;
+  let removedDup = 0;
+  const byKey = new Map();
+
+  inputCases.forEach(raw=>{
+    if(!raw || typeof raw !== 'object') return;
+    const c = normalizeOneCaseV52(raw);
+    if(isBlankAutoCaseV52(c)){
+      removedBlank++;
+      return;
+    }
+    if(!textV52(c.caseName)) keptUnnamed++;
+    const sig = caseSignatureV52(c);
+    const key = c.id ? ('id:' + c.id) : (sig ? ('sig:' + sig) : ('rand:' + Math.random()));
+    const old = byKey.get(key);
+    if(old){
+      removedDup++;
+      if(caseTimeV52(c) >= caseTimeV52(old)) byKey.set(key, c);
+    }else{
+      byKey.set(key, c);
+    }
+  });
+
+  // 第二層：不同 id 但契約/單據等內容完全相同，也只保留最後更新的一筆。
+  const bySig = new Map();
+  Array.from(byKey.values()).forEach(c=>{
+    const sig = caseSignatureV52(c);
+    if(!sig){ bySig.set('id:' + c.id, c); return; }
+    const old = bySig.get(sig);
+    if(old){
+      removedDup++;
+      if(caseTimeV52(c) >= caseTimeV52(old)) bySig.set(sig, c);
+    }else{
+      bySig.set(sig, c);
+    }
+  });
+
+  out.cases = Array.from(bySig.values()).sort((a,b)=>caseTimeV52(b)-caseTimeV52(a));
+  out.lastSaved = textV52(out.lastSaved) || nowISO();
+  return {state:out, removedBlank, keptUnnamed, removedDup};
+}
+function cleanupStateInPlaceV52(saveAfter=false){
+  if(dclipCleaningV52) return {removedBlank:0, keptUnnamed:0, removedDup:0};
+  dclipCleaningV52 = true;
+  try{
+    const beforeText = JSON.stringify(state || {});
+    const result = sanitizeStateV52(state || {});
+    state = result.state;
+    try{ migrateState(); }catch(_e){}
+    const changed = beforeText !== JSON.stringify(state || {});
+    if(changed && saveAfter){
+      state.version = DCLIP_VERSION_V52;
+      state.lastSaved = nowISO();
+      try{ persistStateToLocalV44(); }catch(err){ showLocalSaveErrorV44(err); }
+    }
+    return result;
+  }finally{
+    dclipCleaningV52 = false;
+  }
+}
+function displayCaseTitleV52(c){
+  const name = textV52(c && c.caseName);
+  if(name) return name;
+  if(caseHasDataV52(c)){
+    const parts = [];
+    if(textV52(c.contractNo)) parts.push('契約' + textV52(c.contractNo));
+    if(textV52(c.receiptNo)) parts.push('單據' + textV52(c.receiptNo));
+    if(textV52(c.mainContractNo)) parts.push('跟隨' + textV52(c.mainContractNo));
+    if(textV52(c.priceNew)) parts.push('開價' + textV52(c.priceNew));
+    return '案名未填' + (parts.length ? '｜' + parts.slice(0,3).join('｜') : '');
+  }
+  return '未命名案件';
+}
+
+// 覆蓋顯示：製作中列表不再顯示完全空白未命名；有資料但案名空白則用契約/單據辨識。
+function renderCaseTableV38(list, showMissing){
+  const safeList = (Array.isArray(list) ? list : []).filter(c=>!isBlankAutoCaseV52(c));
+  if(!safeList.length) return `<div class="empty">目前沒有資料</div>`;
+  const rows = safeList.map(c=>{
+    const s = caseStats(c);
+    const progress = progressPctHtml(s);
+    const missingTd = showMissing ? `<td>${missingItemsHtmlV38(c, 5)}</td>` : '';
+    const termsText = textV52(c.specialTerms);
+    const termsHtml = termsText ? `<div class="specialTermsClamp" title="${esc(termsText)}">${esc(termsText)}</div>` : '<span class="condEmpty">—</span>';
+    const caseTitle = displayCaseTitleV52(c);
+    return `<tr class="rowClick" onclick="openEditModal('${c.id}')">
+      <td class="dateTiny" title="${esc(c.receiptDate)}">${esc(showMissing ? listShortDateV41(c.receiptDate) : c.receiptDate)}</td>
+      <td class="receiptNoTiny">${esc(c.receiptNo)}</td>
+      <td class="processDateTiny" title="${esc(c.processDate)}">${esc(showMissing ? listShortDateV41(c.processDate) : c.processDate)}</td>
+      <td class="nowrap colTight">${esc(c.contractNo)}${c.mainContractNo ? '<br><span class="small muted">跟隨'+esc(c.mainContractNo)+'</span>' : ''}</td>
+      <td class="caseNameCell"><div class="caseNameClamp" title="${esc(caseTitle)}">${esc(caseTitle)}</div></td>
+      <td class="nowrap colTight">${esc(c.business || '')}</td>
+      <td class="condCell">${condPair(c.priceOld,c.priceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.bottomPriceOld,c.bottomPriceNew,'萬')}</td>
+      <td class="condCell">${condPair(c.contractEndOld,c.contractEndNew,'')}</td>
+      <td class="condCell">${c.relistType ? esc(c.relistType) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${(c.contractTypeOld || c.contractTypeNew) ? `${esc(c.contractTypeOld||'—')} → <b>${esc(c.contractTypeNew||'—')}</b>` : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell">${c.keyText ? esc(shortText(c.keyText,16)) : '<span class="condEmpty">—</span>'}</td>
+      <td class="condCell termsCol">${termsHtml}</td>
+      ${missingTd}<td>${progress}</td><td>${listUpdateHtmlV39(c.updatedAt)}</td>
+    </tr>`;
+  }).join('');
+  const makingCols = `
+      <col style="width:2.8%"><col style="width:2.8%"><col style="width:2.8%"><col style="width:5.2%">
+      <col style="width:14.0%"><col style="width:4.0%"><col style="width:4.0%"><col style="width:4.0%">
+      <col style="width:5.2%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:3.5%">
+      <col style="width:13.0%"><col style="width:17.0%"><col style="width:5.0%"><col style="width:7.7%">`;
+  const normalCols = `
+      <col style="width:3.5%"><col style="width:3.5%"><col style="width:3.5%"><col style="width:5.7%">
+      <col style="width:18.0%"><col style="width:4.8%"><col style="width:4.8%"><col style="width:4.8%">
+      <col style="width:5.9%"><col style="width:5.3%"><col style="width:5.3%"><col style="width:4.3%">
+      <col style="width:14.8%"><col style="width:6.0%"><col style="width:5.8%">`;
+  const missingHead = showMissing ? '<th>缺少項目</th>' : '';
+  return `<table><colgroup>${showMissing ? makingCols : normalCols}</colgroup><thead><tr>
+      <th>單據日期</th><th>單據號碼</th><th>處理日期</th><th>契約編號</th>
+      <th>案名</th><th>業務</th><th>開價</th><th>底價</th><th>委託時間</th>
+      <th>重新上架</th><th>換約</th><th>KEY</th><th>特約條款</th>
+      ${missingHead}<th>完成率</th><th>最後更新</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+function renderCaseLists(){
+  cleanupStateInPlaceV52(true);
+  updateActionFilterOptions();
+  if(!Array.isArray(state.cases)) state.cases = [];
+  const making = state.cases.filter(c=>!isBlankAutoCaseV52(c)).filter(c=>!caseStats(c).complete).filter(matchMakingFilters);
+  const completed = state.cases.filter(c=>!isBlankAutoCaseV52(c)).filter(c=>caseStats(c).complete).filter(matchDoneFilters);
+  const makingCount = document.getElementById('makingCount');
+  const allCount = document.getElementById('allCount');
+  const makingList = document.getElementById('makingList');
+  const allList = document.getElementById('allList');
+  if(makingCount) makingCount.textContent = `${making.length} 筆`;
+  if(allCount) allCount.textContent = `${completed.length} 筆`;
+  if(makingList) makingList.innerHTML = renderCaseTableV38(making, true);
+  if(allList) allList.innerHTML = renderCaseTableV38(completed, false);
+}
+
+// 覆蓋匯入：一律先清本機舊 D夾資料，再用 JSON 清理後直接覆蓋。避免舊 Chrome/Supabase 空白資料混回來。
+function clearDclipStorageBeforeImportV52(){
+  const removed = [];
+  try{
+    const keepCfg = localStorage.getItem(SUPABASE_CFG_KEY);
+    for(let i=localStorage.length-1;i>=0;i--){
+      const k = localStorage.key(i);
+      if(!k || k === SUPABASE_CFG_KEY) continue;
+      if(k === STORAGE_KEY || k.indexOf('DCLIP_') === 0){
+        try{ localStorage.removeItem(k); removed.push(k); }catch(_e){}
+      }
+    }
+    if(keepCfg !== null){ try{ localStorage.setItem(SUPABASE_CFG_KEY, keepCfg); }catch(_e){} }
+  }catch(e){ console.warn('V52 清本機舊資料略過', e); }
+  return removed.length;
+}
+function importData(event){
+  const file = event.target.files[0];
+  event.target.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(){
+    let result = null;
+    try{
+      const imported = JSON.parse(reader.result);
+      if(!confirm('匯入會用這份 JSON 覆蓋目前 D夾資料；若 Supabase 已連線，也會用這份覆蓋雲端。確定匯入？')) return;
+      try{ clearInterval(sbPollTimer); sbPollTimer = null; clearTimeout(sbAutoTimer); sbAutoTimer = null; }catch(_e){}
+      sbSuppressAuto = true;
+      const removedLocalKeys = clearDclipStorageBeforeImportV52();
+      const payload = pickPayloadV52(imported);
+      result = sanitizeStateV52(payload);
+      state = result.state;
+      migrateState();
+      cleanupStateInPlaceV52(false);
+      state.version = DCLIP_VERSION_V52;
+      state.lastSaved = nowISO();
+      persistStateToLocalV44();
+      updateSaveStatus();
+      renderAll();
+      const cfg = loadSupabaseConfig();
+      let uploaded = false;
+      if(cfg.connected && cfg.url && cfg.key){
+        uploaded = await forceUploadSupabaseStateV47('匯入完成，已用這份資料覆蓋雲端。','匯入完成但雲端覆蓋失敗，請確認 Supabase 連線後按立即同步。');
+      }
+      if(cfg.connected && cfg.url && cfg.key) startSupabasePolling();
+      let extra = '';
+      if(removedLocalKeys) extra += `\n已自動清除本機舊暫存 ${removedLocalKeys} 筆。`;
+      if(result.removedBlank) extra += `\n已自動移除完全空白未命名 ${result.removedBlank} 筆。`;
+      if(result.keptUnnamed) extra += `\n案名空白但有契約/單據資料 ${result.keptUnnamed} 筆已保留，畫面會用契約/單據顯示。`;
+      if(result.removedDup) extra += `\n已自動合併重複案件 ${result.removedDup} 筆。`;
+      alert((uploaded ? '匯入完成，並已覆蓋同步到雲端。' : '匯入完成。') + extra);
+    }catch(e){
+      console.error('V52 匯入失敗', e, result);
+      alert('匯入失敗：' + (e && e.message ? e.message : e));
+    }finally{
+      sbSuppressAuto = false;
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+// 覆蓋雲端套用：雲端資料進來前也先清完全空白，避免舊雲端未命名又回灌。
+async function applySupabasePayload(row, cfg, message='已收到另一台電腦的最新更新。'){
+  if(!row || !row.payload) return false;
+  const remote = sanitizeStateV52(row.payload);
+  const localValid = Array.isArray(state.cases) ? state.cases.filter(c=>!isBlankAutoCaseV52(c)).length : 0;
+  const remoteValid = Array.isArray(remote.state.cases) ? remote.state.cases.length : 0;
+  if(localValid > 0 && remoteValid === 0){
+    setLastRemoteTime(cfg, row.updated_at || nowISO());
+    setSupabaseStatus('已連線','warn');
+    setSupabaseMessage('雲端清理後沒有有效資料，已保留本機資料','warn');
+    return false;
+  }
+  try{ safeBackupV37('DCLIP_BACKUP_BEFORE_CLOUD', state); }catch(e){}
+  sbSuppressAuto = true;
+  state = remote.state;
+  migrateState();
+  cleanupStateInPlaceV52(false);
+  state.version = DCLIP_VERSION_V52;
+  state.lastSaved = row.updated_at || state.lastSaved || nowISO();
+  try{ persistStateToLocalV44(); }catch(err){ showLocalSaveErrorV44(err); }
+  sbSuppressAuto = false;
+  setLastRemoteTime(cfg, row.updated_at || nowISO());
+  renderAll();
+  if(currentCaseId && getCase(currentCaseId)) renderTaskTable();
+  setSupabaseStatus('已連線','ok');
+  let add = '';
+  if(remote.removedBlank) add += '（已清掉雲端空白未命名 ' + remote.removedBlank + ' 筆）';
+  setSupabaseMessage(message + add,'ok');
+  return true;
+}
+
+const uploadSupabaseState_beforeV52 = uploadSupabaseState;
+uploadSupabaseState = async function(silent=false){
+  cleanupStateInPlaceV52(false);
+  state.version = DCLIP_VERSION_V52;
+  return uploadSupabaseState_beforeV52(silent);
+};
+
+async function syncSupabaseNow(fromConnect=false){
+  const cfg = saveSupabaseConfig({connected:true});
+  if(!supabaseReady(cfg)) return;
+  cleanupStateInPlaceV52(true);
+  setSupabaseStatus('已連線','ok');
+  setSupabaseMessage('立即同步中...','warn');
+  try{
+    const row = await fetchSupabaseRemote(cfg);
+    const localValid = Array.isArray(state.cases) ? state.cases.filter(c=>!isBlankAutoCaseV52(c)).length : 0;
+    if(!row || !row.payload){
+      await uploadSupabaseState(true);
+      setSupabaseMessage('雲端無資料，已上傳本機資料','ok');
+      return;
+    }
+    const remote = sanitizeStateV52(row.payload);
+    const remoteValid = Array.isArray(remote.state.cases) ? remote.state.cases.length : 0;
+    if(localValid > 0 && remoteValid === 0){
+      await uploadSupabaseState(true);
+      setSupabaseMessage('雲端清理後無有效資料，已用本機覆蓋雲端','ok');
+      return;
+    }
+    if(localValid === 0 && remoteValid > 0){
+      row.payload = remote.state;
+      await applySupabasePayload(row, cfg, '已收到雲端資料。');
+      return;
+    }
+    const remoteMs = Date.parse(row.updated_at || '') || 0;
+    const localMs = Date.parse(state.lastSaved || '') || 0;
+    if(remoteMs > localMs + 1000){
+      row.payload = remote.state;
+      await applySupabasePayload(row, cfg, '已收到另一台電腦的最新更新。');
+      return;
+    }
+    await uploadSupabaseState(true);
+    setSupabaseMessage('已完成立即同步','ok');
+  }catch(err){
+    console.error(err);
+    setSupabaseStatus('已連線','warn');
+    setSupabaseMessage('立即同步失敗','bad');
+    alert('立即同步失敗：\n' + (err.message || err));
+  }
+}
+async function checkSupabaseRemoteUpdates(){
+  const cfg = loadSupabaseConfig();
+  if(!cfg.connected || !cfg.url || !cfg.key) return;
+  try{
+    const row = await fetchSupabaseRemote(cfg);
+    if(!row || !row.payload || !row.updated_at) return;
+    const lastSeen = getLastRemoteTime(cfg);
+    const remoteMs = Date.parse(row.updated_at || '') || 0;
+    const lastMs = lastSeen ? (Date.parse(lastSeen) || 0) : 0;
+    if(remoteMs > lastMs + 1000){
+      const localMs = Date.parse(state.lastSaved || '') || 0;
+      const remote = sanitizeStateV52(row.payload);
+      if(remoteMs > localMs + 1000){
+        row.payload = remote.state;
+        await applySupabasePayload(row, cfg, '已收到另一台電腦的最新更新。');
+      }else{
+        setLastRemoteTime(cfg, row.updated_at);
+      }
+    }
+  }catch(err){
+    console.warn('remote polling failed', err);
+  }
+}
+function autoMaintenanceV49(){
+  try{ cleanupOldDclipStorageV46 && cleanupOldDclipStorageV46(); }catch(e){}
+  const cleaned = cleanupStateInPlaceV52(true);
+  if(cleaned.removedBlank || cleaned.removedDup){
+    console.info('V52 自動整理：空白', cleaned.removedBlank, '重複', cleaned.removedDup);
+  }
+  try{ runStorageSelfTestV45 && runStorageSelfTestV45(false); }catch(e){}
 }
 
 function init(){
