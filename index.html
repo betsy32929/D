@@ -2947,9 +2947,6 @@
         <button type="button" class="btn btnPurple" onclick="safeRunTopButton(exportJsonData, '匯出JSON')">匯出JSON</button>
         <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
         <span class="statusChip" id="saveStatus">已自動存檔</span>
-        <button type="button" class="btn btnGray btnMini" onclick="runStorageSelfTestV45(true)">存檔檢查</button>
-        <button type="button" class="btn btnOrange btnMini" onclick="manualCleanupStorageV46(true)">清除舊備份</button>
-        <button type="button" class="btn btnRed btnMini" onclick="cleanupBlankUnnamedCasesV47(true)">清除空白未命名</button>
         <div class="clock" id="headerLastUpdate">最後更新時間：—</div>
         <input id="importFile" class="hiddenFile" type="file" accept="application/json,.json" onchange="importData(event)">
       </div>
@@ -2960,7 +2957,7 @@
     <details class="settings syncTopBlock syncLikeProject" id="supabaseSettings">
       <summary>雲端同步設定（設定隱藏）</summary>
       <div class="settingsBody">
-        <div class="syncHintLine">V45存檔防呆：先驗證單機存檔，再同步雲端；重要操作前保留備份，不讓舊電腦或空雲端覆蓋新資料。</div>
+        <div class="syncHintLine">V49自動防呆：存檔檢查、容量清理、空白未命名整理都改為自動處理；日常只需新增、匯入、匯出。</div>
         <div class="syncProjectRow">
           <input id="sbUrl" placeholder="🔗 URL">
           <input id="sbKey" placeholder="🔑 Key">
@@ -3425,7 +3422,7 @@ function showLocalSaveErrorV44(err){
 }
 
 // ===== V45：存檔防呆保護，不要在後續改版移除 =====
-const DCLIP_GUARD_VERSION = '46.0';
+const DCLIP_GUARD_VERSION = '48.0';
 const DCLIP_BACKUP_RING_KEY_V45 = 'DCLIP_AUTO_BACKUPS_V45';
 const DCLIP_SELF_TEST_KEY_V45 = 'DCLIP_SELF_TEST_V45';
 const DCLIP_QUOTA_CLEANED_FLAG_V46 = 'DCLIP_QUOTA_CLEANED_V46';
@@ -3566,7 +3563,7 @@ function guardBeforeDangerActionV45(reason){
 
 function saveState(){
   try{
-    state.version = '47.0';
+    state.version = '49.0';
     state.lastSaved = nowISO();
     let localSaved = false;
     try{
@@ -4101,6 +4098,25 @@ function exportData(){
   a.remove();
   URL.revokeObjectURL(url);
 }
+// ===== V49：自動防呆維護，不需要使用者手動按按鈕 =====
+function autoMaintenanceV49(){
+  try{ cleanupOldDclipStorageV46 && cleanupOldDclipStorageV46(); }catch(e){}
+  try{
+    if(state && Array.isArray(state.cases)){
+      const before = state.cases.length;
+      const cleaned = cleanupImportedStateV47 ? cleanupImportedStateV47(state) : {state:state, removedBlank:0};
+      if(cleaned && cleaned.state && cleaned.removedBlank){
+        state = cleaned.state;
+        migrateState();
+        persistStateToLocalV44();
+        console.info('V49 自動移除完全空白未命名案件：', before - state.cases.length);
+      }
+    }
+  }catch(e){ console.warn('V49 自動整理空白未命名略過', e); }
+  try{ runStorageSelfTestV45 && runStorageSelfTestV45(false); }catch(e){}
+}
+setTimeout(autoMaintenanceV49, 900);
+
 function importData(event){
   const file = event.target.files[0]; event.target.value = '';
   if(!file) return;
@@ -6029,15 +6045,23 @@ function isBlankCaseV47(c){
   ];
   const hasText = textKeys.some(k=>String(c[k] || '').trim());
   if(hasText) return false;
+
+  // V48：新增案件預設每個項目 override 都是 required。
+  // 舊版把「required」也當成有資料，導致完全空白的新案件無法被清除。
+  // 這裡只把真正做過的動作視為有資料：完成、指派助理、備註，或改成非預設狀態。
   const tasks = c.tasks && typeof c.tasks === 'object' ? c.tasks : {};
-  const hasTaskWork = Object.values(tasks).some(t=>{
+  const hasMeaningfulTaskWork = Object.values(tasks).some(t=>{
     if(!t || typeof t !== 'object') return false;
-    return t.done === true || t.override === 'required' || String(t.assistant || '').trim() || String(t.note || '').trim();
+    if(t.done === true) return true;
+    if(String(t.assistant || '').trim()) return true;
+    if(String(t.note || '').trim()) return true;
+    const ov = String(t.override || '').trim();
+    return !!(ov && ov !== 'required' && ov !== 'auto');
   });
-  return !hasTaskWork;
+  return !hasMeaningfulTaskWork;
 }
 function cleanupImportedStateV47(nextState){
-  const result = {state: Object.assign(defaultStateV37(), nextState || {}), removedBlank:0, fixedIds:0, removedDup:0};
+  const result = {state: Object.assign(defaultStateV37(), nextState || {}), removedBlank:0, fixedIds:0, removedDup:0, keptUnnamed:0};
   if(!Array.isArray(result.state.cases)) result.state.cases = [];
   const seen = new Map();
   const cleaned = [];
@@ -6055,8 +6079,9 @@ function cleanupImportedStateV47(nextState){
   seen.forEach(c=>cleaned.push(c));
   cleaned.sort((a,b)=>caseDeepTimeV37(b)-caseDeepTimeV37(a));
   result.state.cases = cleaned;
+  result.keptUnnamed = cleaned.filter(c=>!String(c.caseName || '').trim()).length;
   if(!result.state.deletedCases || typeof result.state.deletedCases !== 'object' || Array.isArray(result.state.deletedCases)) result.state.deletedCases = {};
-  result.state.version = '47.0';
+  result.state.version = '49.0';
   result.state.systemName = 'D夾';
   result.state.assistants = fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'紹薇',active:true},{id:'fixed2',name:'無',active:true}];
   return result;
@@ -6084,15 +6109,17 @@ async function forceUploadSupabaseStateV47(messageOk, messageFail){
     if(messageFail) setSupabaseMessage(messageFail, 'warn');
     return false;
   }finally{
-    sbSyncBusyV37 = wasBusy;
+    sbSyncBusyV37 = wasBusy && sbSyncBusyV37;
+    if(!wasBusy) sbSyncBusyV37 = false;
   }
 }
 function cleanupBlankUnnamedCasesV47(showAlert=false){
   if(!Array.isArray(state.cases)) state.cases = [];
   const before = state.cases.length;
+  const keptUnnamed = state.cases.filter(c=>!String(c.caseName || '').trim() && !isBlankCaseV47(c)).length;
   state.cases = state.cases.filter(c=>!isBlankCaseV47(c));
   const removed = before - state.cases.length;
-  state.version = '47.0';
+  state.version = '49.0';
   state.lastSaved = nowISO();
   try{
     persistStateToLocalV44();
@@ -6102,8 +6129,71 @@ function cleanupBlankUnnamedCasesV47(showAlert=false){
   }
   renderAll();
   forceUploadSupabaseStateV47('已清除空白未命名案件，雲端也已更新。','空白未命名案件已在本機清除；雲端稍後請再按立即同步。');
-  if(showAlert) alert(removed ? '已清除空白未命名案件 ' + removed + ' 筆。' : '沒有找到空白未命名案件。');
+  if(showAlert){
+    let msg = removed ? '已清除完全空白未命名案件 ' + removed + ' 筆。' : '沒有找到「完全空白」的未命名案件。';
+    if(keptUnnamed){
+      msg += '
+另有 ' + keptUnnamed + ' 筆案名空白但有契約/單據/金額資料，為避免誤刪已保留。';
+    }
+    alert(msg);
+  }
   return removed;
+}
+
+// V48：清除目前網站在這台瀏覽器內的 D夾暫存，保留 Supabase URL/Key，但先中斷連線避免舊雲端立即合併回來。
+function clearSiteLocalStateV48(showAlert=true){
+  if(showAlert && !confirm('這會清除「這台瀏覽器、這個網站」的 D夾本機暫存資料，並暫時中斷 Supabase 連線。
+
+Supabase URL/Key 會保留；你的 JSON 檔不會被刪除。
+
+清除後請立刻匯入正確 JSON，再按連線或立即同步。確定清除？')) return false;
+  const cfg = loadSupabaseConfig ? loadSupabaseConfig() : {};
+  try{
+    clearInterval(sbPollTimer);
+    sbPollTimer = null;
+    clearTimeout(sbAutoTimer);
+    sbAutoTimer = null;
+    sbInitialSyncDoneV37 = false;
+    sbSuppressAuto = true;
+  }catch(_e){}
+
+  try{
+    const keepCfg = Object.assign({}, cfg, {connected:false});
+    const removed = [];
+    for(let i = localStorage.length - 1; i >= 0; i--){
+      const key = localStorage.key(i);
+      if(!key) continue;
+      if(key === SUPABASE_CFG_KEY) continue;
+      if(key === STORAGE_KEY || key.startsWith('DCLIP_')){
+        localStorage.removeItem(key);
+        removed.push(key);
+      }
+    }
+    try{ localStorage.setItem(SUPABASE_CFG_KEY, JSON.stringify(keepCfg)); }catch(_e){}
+    state = defaultStateV37();
+    migrateState();
+    currentCaseId = null;
+    window.__DCLIP_LOCAL_SAVE_ERROR = false;
+    const url = document.getElementById('sbUrl');
+    const keyInput = document.getElementById('sbKey');
+    if(url) url.value = keepCfg.url || '';
+    if(keyInput) keyInput.value = keepCfg.key || '';
+    setSupabaseStatus('未連線','');
+    setSupabaseMessage('已清除網站暫存；請先匯入正確 JSON，再連線或立即同步。','warn');
+    updateSaveStatus();
+    renderAll();
+    if(showAlert) alert('已清除網站暫存 ' + removed.length + ' 筆。
+
+下一步：匯入正確 JSON。匯入成功後，再連線 Supabase 或按立即同步。');
+    return true;
+  }catch(err){
+    console.error(err);
+    alert('清除網站暫存失敗：
+' + (err && err.message ? err.message : err));
+    return false;
+  }finally{
+    sbSuppressAuto = false;
+  }
 }
 function importData(event){
   const file = event.target.files[0]; event.target.value = '';
@@ -6114,19 +6204,21 @@ function importData(event){
       const imported = JSON.parse(reader.result);
       if(!confirm('匯入會覆蓋目前本機 D夾資料；如果 Supabase 已連線，也會用這份匯入資料覆蓋雲端，不再跟舊雲端資料合併。確定匯入？')) return;
       safeBackupV37('DCLIP_BACKUP_BEFORE_JSON_IMPORT', state);
+      try{ cleanupOldDclipStorageV46 && cleanupOldDclipStorageV46(); }catch(_e){}
       const picked = pickImportedPayloadV47(imported);
       const cleaned = cleanupImportedStateV47(picked);
       sbSuppressAuto = true;
       state = cleaned.state;
       migrateState();
-      state.version = '47.0';
+      state.version = '49.0';
       state.lastSaved = nowISO();
       persistStateToLocalV44();
       updateSaveStatus();
       sbSuppressAuto = false;
       renderAll();
       const uploaded = await forceUploadSupabaseStateV47('匯入完成，已用這份資料覆蓋雲端。','匯入完成但雲端覆蓋失敗，請確認 Supabase 連線後按立即同步。');
-      const extra = cleaned.removedBlank ? '（已自動移除空白未命名 ' + cleaned.removedBlank + ' 筆）' : '';
+      let extra = cleaned.removedBlank ? '（已自動移除完全空白未命名 ' + cleaned.removedBlank + ' 筆）' : '';
+      if(cleaned.keptUnnamed){ extra += '（另有案名空白但有資料 ' + cleaned.keptUnnamed + ' 筆已保留）'; }
       if(uploaded){
         alert('匯入完成，並已覆蓋同步到雲端。' + extra);
       }else{
@@ -6333,7 +6425,7 @@ function deleteCurrentCase(){
   safeBackupV37('DCLIP_BACKUP_BEFORE_DELETE_CASE', state);
   ensureDeletedCasesV43(state)[id] = nowISO();
   state.cases = (state.cases || []).filter(x=>x.id !== id);
-  state.version = '47.0';
+  state.version = '49.0';
   state.lastSaved = nowISO();
   try{
     persistStateToLocalV44();
