@@ -3232,6 +3232,8 @@ let state = {
 let currentCaseId = null;
 let currentTaskFilter = 'all';
 let saveTimer = null;
+let localSaveWarningShownV44 = false;
+window.__DCLIP_LOCAL_SAVE_ERROR = false;
 
 function cloneRules(rules){ return JSON.parse(JSON.stringify(rules)); }
 function uid(prefix='dclip'){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
@@ -3369,14 +3371,48 @@ function loadState(){
     migrateState();
   }catch(e){ alert('讀取本機資料失敗，已改用空白資料。'); migrateState(); }
 }
+function persistStateToLocalV44(){
+  const text = JSON.stringify(state);
+  localStorage.setItem(STORAGE_KEY, text);
+  const check = localStorage.getItem(STORAGE_KEY);
+  if(check !== text){
+    throw new Error('本機儲存驗證失敗，讀回資料與寫入資料不一致。');
+  }
+  window.__DCLIP_LOCAL_SAVE_ERROR = false;
+  return text.length;
+}
+function showLocalSaveErrorV44(err){
+  window.__DCLIP_LOCAL_SAVE_ERROR = true;
+  const msg = '本機存檔失敗：請先匯出 JSON，避免資料遺失。';
+  const saveEl = document.getElementById('saveStatus');
+  if(saveEl){
+    saveEl.textContent = '⚠ 本機存檔失敗';
+    saveEl.style.background = '#fee2e2';
+    saveEl.style.color = '#b91c1c';
+    saveEl.style.borderColor = '#fecaca';
+  }
+  const sbMsg = document.getElementById('sbMessage');
+  if(sbMsg){
+    sbMsg.textContent = msg;
+    sbMsg.classList.remove('ok','warn','bad');
+    sbMsg.classList.add('bad');
+  }
+  console.error(msg, err);
+  if(!localSaveWarningShownV44){
+    localSaveWarningShownV44 = true;
+    alert(msg + '\n\n錯誤：' + (err && err.message ? err.message : err));
+  }
+}
 function saveState(){
   try{
-    state.version = '13.0';
+    state.version = '44.0';
     state.lastSaved = nowISO();
+    let localSaved = false;
     try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      persistStateToLocalV44();
+      localSaved = true;
     }catch(storageErr){
-      console.warn('本機自動存檔暫時略過，但畫面資料仍保留。', storageErr);
+      showLocalSaveErrorV44(storageErr);
     }
     try{
       updateSaveStatus();
@@ -3388,7 +3424,7 @@ function saveState(){
     }catch(syncErr){
       console.warn('Supabase 自動同步已略過，不影響新增/匯出按鈕。', syncErr);
       try{
-        if(typeof setSupabaseMessage === 'function') setSupabaseMessage('本機已存檔；雲端自動同步暫時略過。','warn');
+        if(typeof setSupabaseMessage === 'function') setSupabaseMessage(localSaved ? '本機已存檔；雲端自動同步暫時略過。' : '本機存檔失敗；雲端自動同步也暫時略過。','warn');
       }catch(_e){}
     }
   }catch(err){
@@ -3402,7 +3438,19 @@ function scheduleSave(){
 }
 function updateSaveStatus(){
   const saveEl = document.getElementById('saveStatus');
-  if(saveEl) saveEl.textContent = '已自動存檔';
+  if(saveEl){
+    if(window.__DCLIP_LOCAL_SAVE_ERROR){
+      saveEl.textContent = '⚠ 本機存檔失敗';
+      saveEl.style.background = '#fee2e2';
+      saveEl.style.color = '#b91c1c';
+      saveEl.style.borderColor = '#fecaca';
+    }else{
+      saveEl.textContent = '已自動存檔';
+      saveEl.style.background = '';
+      saveEl.style.color = '';
+      saveEl.style.borderColor = '';
+    }
+  }
   const text = '最後更新時間：' + (state.lastSaved ? formatHeaderSavedTime(state.lastSaved) : '—');
   const header = document.getElementById('headerLastUpdate');
   if(header) header.textContent = text;
@@ -5611,7 +5659,7 @@ function applyLocalStateV37(nextState, message){
   state = Object.assign(defaultStateV37(), clonePlainV37(nextState || {}));
   migrateState();
   if(!state.lastSaved) state.lastSaved = nowISO();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  persistStateToLocalV44();
   updateSaveStatus();
   sbSuppressAuto = false;
   renderAll();
@@ -5817,7 +5865,7 @@ function importData(event){
       state = Object.assign(defaultStateV37(), imported);
       migrateState();
       state.lastSaved = nowISO();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      persistStateToLocalV44();
       updateSaveStatus();
       sbSuppressAuto = false;
       renderAll();
@@ -6023,7 +6071,7 @@ function deleteCurrentCase(){
   ensureDeletedCasesV43(state)[id] = nowISO();
   state.cases = (state.cases || []).filter(x=>x.id !== id);
   state.lastSaved = nowISO();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  persistStateToLocalV44();
   updateSaveStatus();
   const mask = document.getElementById('editModalMask');
   if(mask) mask.classList.remove('show');
