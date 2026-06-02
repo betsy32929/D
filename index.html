@@ -2942,7 +2942,7 @@
         <h1>D夾</h1>
       </div>
       <div class="toolbar toolbarMain">
-        <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
+        <button type="button" class="btn btnPrimary addObjectBtn" onclick="dclipV55CreateBlankCaseSafe()">＋ 新增物件</button>
         <button type="button" class="btn btnBlue" onclick="safeRunTopButton(exportData, '匯出EXCEL')">匯出EXCEL</button>
         <button type="button" class="btn btnPurple" onclick="safeRunTopButton(exportJsonData, '匯出JSON')">匯出JSON</button>
         <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
@@ -7500,6 +7500,79 @@ function init(){
   if(!state.lastSaved) saveState();
 }
 init();
+
+
+/* ===== V55：新增物件保護修正 =====
+   目的：避免自動同步/列表整理的任何錯誤，讓「＋新增物件」按鈕失效。
+   新增流程固定：建立案件 → 補齊任務 → 本機存檔驗證 → 重新整理畫面 → 開啟輸入視窗。
+*/
+function dclipV55CreateBlankCaseSafe(){
+  let item = null;
+  try{
+    if(typeof state === 'undefined' || !state){
+      throw new Error('資料狀態尚未載入完成，請重新整理後再試。');
+    }
+    if(!Array.isArray(state.cases)) state.cases = [];
+
+    if(typeof makeBlankCase === 'function'){
+      item = makeBlankCase();
+    }else{
+      const id = (typeof uid === 'function') ? uid('dclip') : ('dclip_' + Date.now() + '_' + Math.random().toString(36).slice(2,8));
+      const t = (typeof nowISO === 'function') ? nowISO() : new Date().toISOString();
+      item = {
+        id, receiptDate:'', receiptNo:'', processDate:'', contractNo:'', mainContractNo:'', business:'', caseName:'',
+        priceOld:'', priceNew:'', bottomPriceOld:'', bottomPriceNew:'', contractEndOld:'', contractEndNew:'', relistType:'',
+        contractTypeOld:'', contractTypeNew:'', keyText:'', specialTerms:'', note:'', tasks:{}, createdAt:t, updatedAt:t
+      };
+    }
+
+    if(!item.id) item.id = (typeof uid === 'function') ? uid('dclip') : ('dclip_' + Date.now());
+    item.createdAt = item.createdAt || new Date().toISOString();
+    item.updatedAt = new Date().toISOString();
+    if(!item.tasks || typeof item.tasks !== 'object') item.tasks = {};
+    if(typeof ensureCaseTasks === 'function') ensureCaseTasks(item);
+
+    state.cases.unshift(item);
+    state.lastSaved = new Date().toISOString();
+
+    // 本機存檔一定先做；若雲端同步有問題，不阻擋新增案件。
+    try{
+      if(typeof saveState === 'function') saveState();
+      else if(typeof persistStateToLocalV44 === 'function') persistStateToLocalV44();
+    }catch(saveErr){
+      console.error('V55 新增後本機存檔失敗', saveErr);
+      try{ if(typeof showLocalSaveErrorV44 === 'function') showLocalSaveErrorV44(saveErr); }catch(_e){}
+      alert('新增物件已建立，但本機存檔失敗：\n' + (saveErr.message || saveErr));
+      return;
+    }
+
+    try{
+      if(typeof renderAll === 'function') renderAll(false);
+    }catch(renderErr){
+      console.warn('V55 新增後列表重整失敗，已略過，不影響新增資料。', renderErr);
+      try{ if(typeof renderCaseLists === 'function') renderCaseLists(); }catch(_e){}
+    }
+
+    setTimeout(function(){
+      try{
+        if(typeof openEditModal === 'function') openEditModal(item.id);
+        else if(window.openEditModal) window.openEditModal(item.id);
+      }catch(openErr){
+        console.error('V55 新增後開啟輸入視窗失敗', openErr);
+        alert('物件已新增並存檔，但輸入視窗開啟失敗。請重新整理後在列表點選該物件。\n' + (openErr.message || openErr));
+      }
+    }, 30);
+
+  }catch(err){
+    console.error('V55 新增物件失敗', err);
+    alert('新增物件無法執行：\n' + (err && err.message ? err.message : err));
+  }
+}
+try{
+  window.dclipV55CreateBlankCaseSafe = dclipV55CreateBlankCaseSafe;
+  window.createBlankCaseAndOpen = dclipV55CreateBlankCaseSafe;
+}catch(_e){}
+
 </script>
 </body>
 </html>
