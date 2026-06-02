@@ -1,82 +1,325 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>D夾｜純資料救援工具</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>D夾｜本機資料救援包</title>
 <style>
-  *{box-sizing:border-box} body{margin:0;background:#fff7ed;color:#172033;font-family:"Microsoft JhengHei","Noto Sans TC",Arial,sans-serif;} 
-  .hero{padding:18px 22px;background:linear-gradient(105deg,#ffedd5,#e0f2fe,#fff);border-bottom:1px solid #fed7aa;position:sticky;top:0;z-index:5;box-shadow:0 8px 22px rgba(249,115,22,.1)}
-  h1{margin:0;font-size:28px;color:#9a3412;letter-spacing:1px}.sub{margin-top:6px;color:#475569;font-weight:800;line-height:1.55}.wrap{padding:18px;max-width:1440px;margin:0 auto}.notice{background:#fff;border:1px solid #fed7aa;border-radius:16px;padding:12px 14px;line-height:1.7;font-weight:800;color:#9a3412;margin-bottom:14px}.bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.btn{border:0;border-radius:999px;padding:9px 14px;font-weight:1000;cursor:pointer;box-shadow:0 2px 9px rgba(15,23,42,.09);font-family:inherit}.orange{background:#fb923c;color:#fff}.blue{background:#dbeafe;color:#1d4ed8}.green{background:#dcfce7;color:#15803d}.gray{background:#e2e8f0;color:#334155}.red{background:#fee2e2;color:#b91c1c}.purple{background:#ede9fe;color:#6d28d9}.small{font-size:12px;color:#64748b}.card{background:#fff;border:1px solid #fed7aa;border-radius:18px;box-shadow:0 10px 26px rgba(249,115,22,.08);overflow:hidden;margin-bottom:16px}.card h2{margin:0;padding:12px 14px;background:linear-gradient(90deg,#fff7ed,#f0f9ff);border-bottom:1px solid #fed7aa;color:#9a3412;font-size:18px}.body{padding:14px}.tableWrap{overflow:auto;border:1px solid #f1e2d2;border-radius:14px}table{width:100%;border-collapse:separate;border-spacing:0;min-width:1120px}th,td{padding:8px 7px;border-bottom:1px solid #f1e2d2;text-align:center;vertical-align:middle;font-size:13px}th{background:#fff7ed;color:#9a3412;position:sticky;top:0;z-index:1}tbody tr:nth-child(even) td{background:#fffaf5}.key{text-align:left;word-break:break-all;color:#475569;font-size:12px}.strong{font-weight:1000}.ok{color:#15803d;font-weight:1000}.warn{color:#b91c1c;font-weight:1000}.preview{white-space:pre-wrap;max-height:320px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px;line-height:1.6;font-size:13px}.empty{padding:18px;text-align:center;color:#64748b;font-weight:900}.rowBtns{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}textarea{width:100%;min-height:160px;border:1px solid #cbd5e1;border-radius:12px;padding:10px;font-family:Consolas,"Microsoft JhengHei",monospace}.pill{display:inline-flex;border-radius:999px;padding:4px 9px;background:#f1f5f9;border:1px solid #e2e8f0;font-weight:900;font-size:12px;color:#334155;margin:2px}.fixedBottom{position:fixed;right:14px;bottom:14px;background:#fff;border:1px solid #fed7aa;border-radius:999px;padding:8px 12px;box-shadow:0 8px 24px rgba(15,23,42,.18);font-size:12px;font-weight:900;color:#9a3412}
+:root{--bg:#f6f8ff;--card:#fff;--text:#142033;--muted:#64748b;--line:#d7e0ef;--pri:#2563eb;--ok:#16a34a;--bad:#dc2626;--warn:#f97316;--soft:#eef7ff;--shadow:0 12px 30px rgba(30,64,175,.11)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:"Microsoft JhengHei","Noto Sans TC",Arial,sans-serif;color:var(--text);font-size:15px;line-height:1.55}.hero{padding:22px 18px;background:linear-gradient(105deg,#e6f4ff,#bfdefb 52%,#e4fbff);border-bottom:1px solid #c8dff4;box-shadow:var(--shadow)}.wrap{max-width:1180px;margin:0 auto;padding:16px}h1{margin:0;font-size:30px;letter-spacing:2px}.sub{color:#24435f;font-weight:800;margin-top:4px}.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);margin:14px 0;overflow:hidden}.head{padding:11px 14px;background:linear-gradient(90deg,#eaf6ff,#fff);font-weight:1000;color:#17446f;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}.body{padding:14px}.btn{border:0;border-radius:999px;padding:10px 15px;font-weight:1000;cursor:pointer;box-shadow:0 2px 8px rgba(15,23,42,.08);white-space:nowrap;margin:4px}.btn:hover{filter:brightness(.98);transform:translateY(-1px)}.primary{background:linear-gradient(90deg,#2563eb,#0891b2);color:#fff}.green{background:#dcfce7;color:#15803d}.orange{background:#ffedd5;color:#c2410c}.red{background:#fee2e2;color:#b91c1c}.gray{background:#e2e8f0;color:#334155}.purple{background:#ede9fe;color:#6d28d9}.line{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.hint{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:15px;padding:11px 12px;font-weight:900}.okbox{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:15px;padding:11px 12px;font-weight:900}.badbox{background:#fff1f2;border:1px solid #fecdd3;color:#be123c;border-radius:15px;padding:11px 12px;font-weight:900}.small{font-size:12px;color:var(--muted);font-weight:800}.muted{color:var(--muted)}table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}th,td{border-bottom:1px solid var(--line);padding:8px 7px;text-align:center;vertical-align:middle}th{background:#f3faff;color:#17446f;font-weight:1000;position:sticky;top:0}tbody tr:nth-child(even) td{background:#f8fbff}tbody tr:hover td{background:#edf7ff}.left{text-align:left}.tag{display:inline-flex;padding:3px 8px;border-radius:999px;font-weight:1000;font-size:12px;border:1px solid #cbd5e1;background:#fff;white-space:nowrap}.tag.ok{background:#dcfce7;color:#15803d;border-color:#86efac}.tag.warn{background:#ffedd5;color:#c2410c;border-color:#fed7aa}.tag.bad{background:#fee2e2;color:#b91c1c;border-color:#fecaca}.scroll{max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:14px}.mono,textarea{font-family:Consolas,"Courier New",monospace}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}textarea{width:100%;min-height:190px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:#fbfdff;font-size:12px;line-height:1.45}input[type="file"]{display:none}.step{display:flex;gap:10px;margin:8px 0}.num{flex:0 0 26px;height:26px;border-radius:999px;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:1000}.step b{color:#12335f}@media(max-width:800px){.grid2{grid-template-columns:1fr}.line{align-items:stretch}.btn{width:100%;}.head{display:block}h1{font-size:24px}}
 </style>
 </head>
 <body>
-<div class="hero">
-  <h1>D夾｜純資料救援工具</h1>
-  <div class="sub">這份只讀取瀏覽器本機資料與覆蓋前備份，不會連線同步、不會上傳、不會自動覆蓋雲端。</div>
-  <div class="bar">
-    <button class="btn orange" id="scanBtn">重新掃描本機資料</button>
-    <button class="btn blue" id="downloadAllBtn">下載全部救援包</button>
-    <button class="btn purple" id="fetchCloudBtn">只讀取雲端目前資料</button>
-  </div>
-</div>
+<div class="hero"><div class="wrap" style="padding:0"><h1>D夾｜本機資料救援包</h1><div class="sub">用途：從同一台電腦、同一個瀏覽器、同一個網址來源，找回 D夾 localStorage 資料。</div></div></div>
 <div class="wrap">
-  <div class="notice">
-    使用方式：先看「案件數」、「最後更新時間」、「5/12 後有更新案件」。看到可疑資料請先按「下載JSON」。確認後再按「還原這份」寫回本機 D夾資料。<br>
-    如果下面完全沒有資料，通常代表不是在原本輸入資料的同一台電腦／同一個瀏覽器／同一個網址開啟。若原本是在 GitHub Pages 使用，這份也要放到同一個 GitHub Pages 網址下再開。
-  </div>
-  <div class="card">
-    <h2>本機資料與覆蓋前備份</h2>
+  <div class="panel">
+    <div class="head"><span>先看這裡</span><span id="originText" class="small"></span></div>
     <div class="body">
-      <div id="summary" class="small"></div>
-      <div id="list" class="tableWrap"></div>
+      <div id="originWarn" class="hint"></div>
+      <div class="step"><div class="num">1</div><div><b>資料在那台電腦內：</b>請一定要用原本有資料的那台電腦、原本那個瀏覽器開啟。</div></div>
+      <div class="step"><div class="num">2</div><div><b>如果你平常用 GitHub Pages 網址：</b>這個救援包要放到同一個 GitHub Pages 網站打開，才能讀到同一份 localStorage。</div></div>
+      <div class="step"><div class="num">3</div><div><b>如果你平常是下載 HTML 後直接打開：</b>請先打開你原本那份 D夾 HTML，再用下方「Console 救援碼」救資料。</div></div>
     </div>
   </div>
-  <div class="card">
-    <h2>預覽 / 雲端只讀結果</h2>
-    <div class="body"><div id="preview" class="preview">打開後會自動掃描。</div></div>
-  </div>
-  <div class="card">
-    <h2>手動貼上 JSON 檢查</h2>
+
+  <div class="panel">
+    <div class="head"><span>一鍵掃描本機資料</span><span id="scanSummary" class="small">尚未掃描</span></div>
     <div class="body">
-      <textarea id="manualJson" placeholder="如果你有匯出的 D夾 JSON，可以貼在這裡檢查案件數與最後更新時間"></textarea>
-      <div class="bar"><button class="btn green" id="checkManualBtn">檢查貼上的JSON</button><button class="btn orange" id="restoreManualBtn">把貼上的JSON還原到本機</button></div>
+      <div class="line">
+        <button class="btn primary" type="button" onclick="scanNow()">掃描本機 localStorage</button>
+        <button class="btn green" type="button" onclick="downloadBest()">下載最可能的 D夾資料 JSON</button>
+        <button class="btn orange" type="button" onclick="downloadBundle()">下載完整救援包 JSON</button>
+        <button class="btn purple" type="button" onclick="applySelected()">把選取資料套回 D夾主資料</button>
+      </div>
+      <div id="statusBox" class="hint" style="margin-top:10px">請先按「掃描本機 localStorage」。</div>
+      <div class="scroll" style="margin-top:12px">
+        <table>
+          <thead><tr><th style="width:44px">選</th><th>localStorage 鍵名</th><th style="width:90px">案件數</th><th style="width:95px">規則數</th><th style="width:150px">最後更新</th><th style="width:110px">大小</th><th style="width:90px">判斷</th></tr></thead>
+          <tbody id="candidateRows"><tr><td colspan="7" class="muted">尚未掃描</td></tr></tbody>
+        </table>
+      </div>
+      <div class="small" style="margin-top:8px">「套回」會先備份目前主資料到 <span class="mono">DCLIP_RESCUE_BACKUP_BEFORE_APPLY_時間</span>，再把選取資料寫入 <span class="mono">DCLIP_APP_STATE_V1</span>。</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="head">選取資料預覽</div>
+      <div class="body"><textarea id="preview" readonly>尚未選取資料</textarea></div>
+    </div>
+    <div class="panel">
+      <div class="head">Console 救援碼</div>
+      <div class="body">
+        <div class="small">當這個救援包讀不到資料時：打開原本有資料的 D夾頁面 → 按 F12 → Console → 貼上這段 → Enter，會下載完整救援包。</div>
+        <textarea id="consoleCode" readonly></textarea>
+        <div class="line"><button class="btn gray" type="button" onclick="copyConsoleCode()">複製 Console 救援碼</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="head">匯入救援包檢查</div>
+    <div class="body">
+      <div class="line">
+        <button class="btn gray" type="button" onclick="document.getElementById('fileInput').click()">選擇 JSON 檢查</button>
+        <input id="fileInput" type="file" accept=".json,application/json" onchange="readImportFile(event)">
+      </div>
+      <div id="importResult" class="small" style="margin-top:8px">可用來檢查你剛下載的救援包裡有沒有案件資料。</div>
     </div>
   </div>
 </div>
-<div class="fixedBottom" id="status">尚未掃描</div>
+
 <script>
-(function(){
-'use strict';
-const MAIN_KEY='DCLIP_APP_STATE_V1';
-const BACKUP_PREFIX='DCLIP_BACKUP_BEFORE_CLOUD_';
-const SB_CFG_KEY='DCLIP_SUPABASE_CONFIG_V1';
-let items=[];
-const $=id=>document.getElementById(id);
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-function safeParse(raw){try{return JSON.parse(raw||'null');}catch(e){return null;}}
-function pad(n){return String(n).padStart(2,'0');}
-function fmt(v){if(!v)return '—'; const d=new Date(v); if(isNaN(d)) return String(v); return `${d.getFullYear()-1911}/${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;}
-function rocFileTime(){const d=new Date(); return `${d.getFullYear()-1911}年${d.getMonth()+1}月${d.getDate()}日_${pad(d.getHours())}點${pad(d.getMinutes())}分`;}
-function stateCases(st){return st&&Array.isArray(st.cases)?st.cases:[];}
-function allTimes(st){const out=[]; if(st&&st.lastSaved) out.push(st.lastSaved); stateCases(st).forEach(c=>{ if(c.updatedAt) out.push(c.updatedAt); if(c.tasks&&typeof c.tasks==='object') Object.values(c.tasks).forEach(t=>{if(t&&t.updatedAt) out.push(t.updatedAt)}); }); return out;}
-function maxTime(st){let max=0,val=''; allTimes(st).forEach(t=>{const ms=new Date(t).getTime(); if(!isNaN(ms)&&ms>max){max=ms;val=t;}}); return val || (st&&st.lastSaved) || '';}
-function afterMay12(st){const cutoff=new Date('2026-05-12T00:00:00+08:00').getTime(); let count=0; stateCases(st).forEach(c=>{let hit=false; if(c.updatedAt){const ms=new Date(c.updatedAt).getTime(); if(!isNaN(ms)&&ms>=cutoff) hit=true;} if(c.tasks&&typeof c.tasks==='object') Object.values(c.tasks).forEach(t=>{const ms=new Date((t&&t.updatedAt)||'').getTime(); if(!isNaN(ms)&&ms>=cutoff) hit=true;}); if(hit) count++;}); return count;}
-function backupTime(key){if(!key.startsWith(BACKUP_PREFIX)) return ''; const n=Number(key.slice(BACKUP_PREFIX.length)); return n?new Date(n).toISOString():'';}
-function describe(raw,key,type){const st=safeParse(raw); const cases=stateCases(st); return {key,type,raw,state:st,valid:!!(st&&Array.isArray(st.cases)),cases:cases.length,rules:st&&Array.isArray(st.rules)?st.rules.length:0,lastSaved:st&&st.lastSaved?st.lastSaved:'',maxTime:maxTime(st),backupTime:backupTime(key),after:afterMay12(st)};}
-function scan(){items=[]; let err=''; try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i); if(key===MAIN_KEY || key.startsWith(BACKUP_PREFIX)){items.push(describe(localStorage.getItem(key)||'',key,key===MAIN_KEY?'目前本機資料':'雲端覆蓋前備份'));}}}catch(e){err=e.message||String(e);} items.sort((a,b)=>{if(b.cases!==a.cases)return b.cases-a.cases; const bm=new Date(b.maxTime||b.backupTime||0).getTime()||0; const am=new Date(a.maxTime||a.backupTime||0).getTime()||0; return bm-am;}); render(err);}
-function render(err){$('status').textContent=`已掃描：${items.length} 份`; $('summary').innerHTML=`<span class="pill">找到 ${items.length} 份</span><span class="pill">主資料鍵：${MAIN_KEY}</span><span class="pill">備份鍵：${BACKUP_PREFIX}*</span>`+(err?` <span class="pill warn">localStorage讀取錯誤：${esc(err)}</span>`:''); if(!items.length){$('list').innerHTML='<div class="empty">目前找不到 D夾本機資料或覆蓋前備份。請確認開啟位置是否和原本操作資料的位置相同。</div>'; return;} const rows=items.map((it,i)=>`<tr><td class="strong">${i+1}</td><td>${esc(it.type)}</td><td class="key">${esc(it.key)}</td><td class="strong">${it.cases}</td><td>${it.rules}</td><td>${fmt(it.lastSaved)}</td><td>${fmt(it.maxTime||it.backupTime)}</td><td class="${it.after?'ok':'warn'}">${it.after}</td><td><div class="rowBtns"><button class="btn blue" data-act="download" data-i="${i}">下載JSON</button><button class="btn green" data-act="preview" data-i="${i}">預覽</button><button class="btn orange" data-act="restore" data-i="${i}">還原這份</button></div></td></tr>`).join(''); $('list').innerHTML=`<table><thead><tr><th>#</th><th>類型</th><th>儲存鍵</th><th>案件數</th><th>項目數</th><th>本機最後存檔</th><th>可用最後時間</th><th>5/12後有更新案件</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;}
-function downloadObj(obj,name){const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);}
-function previewItem(i){const it=items[i]; if(!it){return;} const cases=stateCases(it.state); const lines=cases.slice(0,80).map((c,idx)=>`${idx+1}. ${c.caseName||'未命名案件'}｜單據:${c.receiptDate||'—'}｜契約:${c.contractNo||'—'}｜業務:${c.business||'—'}｜更新:${fmt(c.updatedAt||'')}`); $('preview').textContent=`${it.type}\n案件：${it.cases}｜項目：${it.rules}｜5/12後有更新：${it.after}\n最後時間：${fmt(it.maxTime||it.backupTime)}\n儲存鍵：${it.key}\n\n`+(lines.join('\n')||'沒有案件資料');}
-function restoreItem(i){const it=items[i]; if(!it||!it.valid){alert('這份資料格式不完整，不能還原。');return;} if(!confirm(`確定還原這份？\n\n類型：${it.type}\n案件數：${it.cases}\n最後時間：${fmt(it.maxTime||it.backupTime)}\n\n建議先按「下載JSON」備份。`)) return; localStorage.setItem(MAIN_KEY, JSON.stringify(it.state)); alert('已還原到本機。請打開原本 D夾檢查資料；先不要立即同步。'); scan();}
-function downloadAll(){const pkg={exportedAt:new Date().toISOString(),mainKey:MAIN_KEY,backupPrefix:BACKUP_PREFIX,items:items.map(x=>({key:x.key,type:x.type,state:x.state,raw:x.raw,cases:x.cases,lastTime:x.maxTime||x.backupTime,afterMay12:x.after}))}; downloadObj(pkg,`D夾_全部救援包_${rocFileTime()}.json`);}
-async function fetchCloud(){let cfg=safeParse(localStorage.getItem(SB_CFG_KEY)||'{}')||{}; if(!cfg.url||!cfg.key){$('preview').textContent='找不到 Supabase 設定。若你原本沒有在這個瀏覽器設定 URL/Key，這裡無法讀雲端。'; return;} const workspace=cfg.workspace||'dclip-main'; const url=String(cfg.url).replace(/\/+$/,'')+`/rest/v1/dclip_state?workspace_key=eq.${encodeURIComponent(workspace)}&select=payload,updated_at&limit=1`; $('preview').textContent='正在只讀雲端資料，不會上傳、不會覆蓋...'; try{const res=await fetch(url,{method:'GET',headers:{apikey:cfg.key,Authorization:`Bearer ${cfg.key}`,'Content-Type':'application/json'}}); if(!res.ok) throw new Error(await res.text()||res.statusText); const rows=await res.json(); if(!rows||!rows.length||!rows[0].payload){$('preview').textContent='雲端目前沒有讀到資料。';return;} const it=describe(JSON.stringify(rows[0].payload),'Supabase:'+workspace,'雲端目前資料（只讀）'); it.cloudUpdatedAt=rows[0].updated_at; $('preview').textContent=`雲端目前資料（只讀）\nWorkspace：${workspace}\n案件：${it.cases}\n5/12後有更新：${it.after}\n雲端updated_at：${fmt(rows[0].updated_at)}\n資料內最後時間：${fmt(it.maxTime)}\n\n已自動下載一份雲端JSON，方便你備份。`; downloadObj(rows[0].payload,`D夾_雲端只讀備份_案件${it.cases}_${rocFileTime()}.json`);}catch(e){$('preview').textContent='讀取雲端失敗：'+(e.message||e);}}
-function checkManual(){const st=safeParse($('manualJson').value.trim()); const it=describe(JSON.stringify(st||{}),'manual','手動貼上'); $('preview').textContent=`手動JSON檢查\n有效：${it.valid?'是':'否'}\n案件：${it.cases}\n項目：${it.rules}\n5/12後有更新：${it.after}\n最後時間：${fmt(it.maxTime)}`;}
-function restoreManual(){const st=safeParse($('manualJson').value.trim()); if(!st||!Array.isArray(st.cases)){alert('貼上的 JSON 不是有效 D夾資料。');return;} const it=describe(JSON.stringify(st),'manual','手動貼上'); if(!confirm(`確定把貼上的 JSON 還原到本機？\n案件數：${it.cases}\n最後時間：${fmt(it.maxTime)}`)) return; localStorage.setItem(MAIN_KEY, JSON.stringify(st)); alert('已還原到本機。請打開原本 D夾檢查資料；先不要立即同步。'); scan();}
-$('list').addEventListener('click',e=>{const b=e.target.closest('button[data-act]'); if(!b)return; const i=Number(b.dataset.i); if(b.dataset.act==='download') downloadObj(items[i].state||{},`D夾救援_${items[i].type}_案件${items[i].cases}_${rocFileTime()}.json`); if(b.dataset.act==='preview') previewItem(i); if(b.dataset.act==='restore') restoreItem(i);});
-$('scanBtn').addEventListener('click',scan); $('downloadAllBtn').addEventListener('click',downloadAll); $('fetchCloudBtn').addEventListener('click',fetchCloud); $('checkManualBtn').addEventListener('click',checkManual); $('restoreManualBtn').addEventListener('click',restoreManual);
-scan(); if(items[0]) previewItem(0);
-})();
+const MAIN_KEY = 'DCLIP_APP_STATE_V1';
+const CFG_KEY = 'DCLIP_SUPABASE_CONFIG_V1';
+let candidates = [];
+let selectedIndex = -1;
+
+function nowName(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+function fmtBytes(n){
+  if(n < 1024) return n + ' B';
+  if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/1024/1024).toFixed(2) + ' MB';
+}
+function parseMaybe(raw){
+  try{return JSON.parse(raw)}catch(e){return null}
+}
+function getDeepCases(obj){
+  if(!obj || typeof obj !== 'object') return null;
+  if(Array.isArray(obj.cases)) return obj.cases;
+  if(obj.payload && Array.isArray(obj.payload.cases)) return obj.payload.cases;
+  if(obj.state && Array.isArray(obj.state.cases)) return obj.state.cases;
+  if(obj.data && Array.isArray(obj.data.cases)) return obj.data.cases;
+  return null;
+}
+function getRules(obj){
+  if(!obj || typeof obj !== 'object') return [];
+  if(Array.isArray(obj.rules)) return obj.rules;
+  if(obj.payload && Array.isArray(obj.payload.rules)) return obj.payload.rules;
+  if(obj.state && Array.isArray(obj.state.rules)) return obj.state.rules;
+  if(obj.data && Array.isArray(obj.data.rules)) return obj.data.rules;
+  return [];
+}
+function getState(obj){
+  if(!obj || typeof obj !== 'object') return null;
+  if(Array.isArray(obj.cases)) return obj;
+  if(obj.payload && Array.isArray(obj.payload.cases)) return obj.payload;
+  if(obj.state && Array.isArray(obj.state.cases)) return obj.state;
+  if(obj.data && Array.isArray(obj.data.cases)) return obj.data;
+  return null;
+}
+function deepLatest(obj){
+  const times = [];
+  function walk(x){
+    if(!x || typeof x !== 'object') return;
+    if(typeof x.lastSaved === 'string') times.push(x.lastSaved);
+    if(typeof x.updatedAt === 'string') times.push(x.updatedAt);
+    if(Array.isArray(x)) x.forEach(walk);
+    else Object.keys(x).forEach(k=>{
+      if(k === 'note' || k === 'specialTerms' || k === 'keyText') return;
+      const v = x[k];
+      if(v && typeof v === 'object') walk(v);
+    });
+  }
+  walk(obj);
+  let best = '';
+  let bestMs = 0;
+  times.forEach(t=>{ const ms = new Date(t).getTime(); if(ms && ms > bestMs){ bestMs = ms; best = t; } });
+  return best;
+}
+function keyScore(key, obj, raw){
+  const cases = getDeepCases(obj) || [];
+  const latest = deepLatest(obj);
+  let score = 0;
+  score += cases.length * 100000;
+  const ms = latest ? new Date(latest).getTime() : 0;
+  score += Math.floor((ms || 0) / 100000000);
+  if(key === MAIN_KEY) score += 50000;
+  if(key.includes('BACKUP')) score += 20000;
+  if(key.includes('REMOTE')) score += 5000;
+  score += Math.min(raw.length, 100000) / 1000;
+  return score;
+}
+function scanNow(){
+  candidates = [];
+  selectedIndex = -1;
+  const allKeys = [];
+  for(let i=0;i<localStorage.length;i++) allKeys.push(localStorage.key(i));
+  const bundleKeys = [];
+  allKeys.forEach(key=>{
+    const raw = localStorage.getItem(key) || '';
+    const obj = parseMaybe(raw);
+    const cases = getDeepCases(obj);
+    const keyLooks = /^DCLIP/i.test(key) || key.includes('dclip') || key.includes('D夾');
+    if(keyLooks) bundleKeys.push(key);
+    if(obj && (cases || keyLooks)){
+      const st = getState(obj);
+      const count = cases ? cases.length : 0;
+      const rules = getRules(obj).length;
+      const latest = deepLatest(obj);
+      const hasCaseName = cases && cases.some(c => c && (c.caseName || c.contractNo || c.receiptNo || c.business));
+      if(cases || keyLooks){
+        candidates.push({key, raw, obj, state:st, caseCount:count, ruleCount:rules, latest, size:raw.length, score:keyScore(key,obj,raw), hasCaseName});
+      }
+    }
+  });
+  candidates.sort((a,b)=>b.score-a.score);
+  if(candidates.length){ selectedIndex = 0; }
+  renderCandidates();
+  const casesFound = candidates.reduce((m,c)=>Math.max(m,c.caseCount),0);
+  const msg = `掃描完成：共 ${allKeys.length} 個 localStorage 鍵，找到 ${candidates.length} 個疑似 D夾資料；最多案件數 ${casesFound} 筆。`;
+  document.getElementById('scanSummary').textContent = msg;
+  const box = document.getElementById('statusBox');
+  box.className = casesFound > 0 ? 'okbox' : 'badbox';
+  box.textContent = casesFound > 0 ? msg + ' 請先下載「完整救援包 JSON」保存。' : msg + ' 這代表目前這個網址來源讀不到資料，請改用右邊 Console 救援碼在原本 D夾頁面救。';
+  updatePreview();
+}
+function renderCandidates(){
+  const tbody = document.getElementById('candidateRows');
+  if(!candidates.length){
+    tbody.innerHTML = '<tr><td colspan="7" class="muted">沒有找到疑似 D夾資料</td></tr>';
+    return;
+  }
+  tbody.innerHTML = candidates.map((c,i)=>{
+    let mark = '<span class="tag">設定/備份</span>';
+    if(c.caseCount>0) mark = '<span class="tag ok">可救資料</span>';
+    if(c.key===MAIN_KEY) mark += ' <span class="tag warn">主資料</span>';
+    const latest = c.latest ? c.latest.replace('T',' ').slice(0,19) : '—';
+    return `<tr onclick="selectCandidate(${i})">
+      <td><input type="radio" name="pick" ${i===selectedIndex?'checked':''} onclick="selectCandidate(${i});event.stopPropagation()"></td>
+      <td class="left mono">${escapeHtml(c.key)}</td>
+      <td><b>${c.caseCount}</b></td>
+      <td>${c.ruleCount}</td>
+      <td class="mono">${escapeHtml(latest)}</td>
+      <td>${fmtBytes(c.size)}</td>
+      <td>${mark}</td>
+    </tr>`;
+  }).join('');
+}
+function selectCandidate(i){ selectedIndex = i; renderCandidates(); updatePreview(); }
+function escapeHtml(s){return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function updatePreview(){
+  const el = document.getElementById('preview');
+  if(selectedIndex < 0 || !candidates[selectedIndex]){ el.value='尚未選取資料'; return; }
+  const c = candidates[selectedIndex];
+  const st = c.state || c.obj;
+  const cases = getDeepCases(st) || [];
+  const sample = cases.slice(0,12).map((x,idx)=>({
+    n:idx+1, 案名:x.caseName||'', 契約編號:x.contractNo||'', 單據號碼:x.receiptNo||'', 業務:x.business||'', 更新:x.updatedAt||''
+  }));
+  el.value = JSON.stringify({key:c.key, 案件數:c.caseCount, 最後更新:c.latest||'', 前幾筆預覽:sample}, null, 2);
+}
+function download(filename, text){
+  const blob = new Blob([text], {type:'application/json;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function downloadBest(){
+  if(!candidates.length) scanNow();
+  const c = candidates.find(x=>x.caseCount>0) || candidates[0];
+  if(!c){ alert('目前沒有找到可下載的 D夾資料。請改用 Console 救援碼。'); return; }
+  const st = c.state || c.obj;
+  download(`D夾_本機救回主資料_${nowName()}.json`, JSON.stringify(st, null, 2));
+}
+function makeBundle(){
+  const local = {};
+  for(let i=0;i<localStorage.length;i++){
+    const key = localStorage.key(i);
+    if(/^DCLIP/i.test(key) || key.includes('dclip') || key.includes('D夾')) local[key] = localStorage.getItem(key);
+  }
+  return {
+    rescueTool:'D夾本機資料救援包',
+    exportedAt:new Date().toISOString(),
+    origin:location.origin,
+    href:location.href,
+    userAgent:navigator.userAgent,
+    mainKey:MAIN_KEY,
+    candidates:candidates.map(c=>({key:c.key, caseCount:c.caseCount, ruleCount:c.ruleCount, latest:c.latest, size:c.size})),
+    localStorage:local
+  };
+}
+function downloadBundle(){
+  if(!candidates.length) scanNow();
+  download(`D夾_完整救援包_${nowName()}.json`, JSON.stringify(makeBundle(), null, 2));
+}
+function applySelected(){
+  if(selectedIndex < 0 || !candidates[selectedIndex]){ alert('請先掃描並選取一份資料。'); return; }
+  const c = candidates[selectedIndex];
+  const st = c.state;
+  if(!st || !Array.isArray(st.cases)){ alert('這筆不是可套回的主資料，請選案件數大於 0 的資料。'); return; }
+  const msg = `確定要把「${c.key}」套回 D夾主資料？\n案件數：${c.caseCount}\n\n系統會先備份目前主資料。`;
+  if(!confirm(msg)) return;
+  const old = localStorage.getItem(MAIN_KEY);
+  if(old) localStorage.setItem('DCLIP_RESCUE_BACKUP_BEFORE_APPLY_' + Date.now(), old);
+  localStorage.setItem(MAIN_KEY, JSON.stringify(st));
+  alert('已套回 D夾主資料。請回到 D夾頁面重新整理。');
+  scanNow();
+}
+function readImportFile(ev){
+  const f = ev.target.files && ev.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const obj = parseMaybe(r.result);
+    const result = document.getElementById('importResult');
+    if(!obj){ result.innerHTML = '<span class="tag bad">不是有效 JSON</span>'; return; }
+    let msg = '';
+    if(obj.localStorage){
+      const keys = Object.keys(obj.localStorage);
+      const found = keys.map(k=>({k, obj:parseMaybe(obj.localStorage[k])})).map(x=>({key:x.k, cases:(getDeepCases(x.obj)||[]).length, latest:deepLatest(x.obj)})).filter(x=>x.cases>0);
+      msg = `救援包內共 ${keys.length} 個 DCLIP 鍵；含案件資料 ${found.length} 份。` + (found[0] ? ` 最多案件：${Math.max(...found.map(x=>x.cases))} 筆。` : '');
+    }else{
+      const cases = getDeepCases(obj)||[];
+      msg = `這是一份主資料 JSON，案件數 ${cases.length} 筆。最後更新：${deepLatest(obj)||'—'}`;
+    }
+    result.innerHTML = '<span class="tag ok">讀取成功</span> ' + escapeHtml(msg);
+  };
+  r.readAsText(f, 'utf-8');
+}
+function copyConsoleCode(){
+  const t = document.getElementById('consoleCode');
+  t.select(); document.execCommand('copy');
+  alert('已複製 Console 救援碼。');
+}
+function initOrigin(){
+  document.getElementById('originText').textContent = '目前來源：' + location.origin;
+  const warn = document.getElementById('originWarn');
+  if(location.protocol === 'file:'){
+    warn.className = 'badbox';
+    warn.textContent = '你現在是用本機檔案 file:// 開啟救援包。這通常讀不到 GitHub Pages 上的資料；如果掃不到，請用 Console 救援碼在原本 D夾頁面救。';
+  }else{
+    warn.className = 'okbox';
+    warn.textContent = '你現在是用網站網址開啟。只要這個網址跟原本 D夾同一個網域，就可以掃到同一份 localStorage。';
+  }
+}
+function makeConsoleCode(){
+return `(function(){
+  const MAIN_KEY='DCLIP_APP_STATE_V1';
+  function parse(raw){try{return JSON.parse(raw)}catch(e){return null}}
+  function casesOf(o){return o&&typeof o==='object'?(Array.isArray(o.cases)?o.cases:(o.payload&&Array.isArray(o.payload.cases)?o.payload.cases:(o.state&&Array.isArray(o.state.cases)?o.state.cases:(o.data&&Array.isArray(o.data.cases)?o.data.cases:null)))):null}
+  function latest(o){const ts=[];function walk(x){if(!x||typeof x!=='object')return;if(typeof x.lastSaved==='string')ts.push(x.lastSaved);if(typeof x.updatedAt==='string')ts.push(x.updatedAt);if(Array.isArray(x))x.forEach(walk);else Object.keys(x).forEach(k=>{if(['note','specialTerms','keyText'].includes(k))return; if(x[k]&&typeof x[k]==='object')walk(x[k]);});}walk(o);return ts.sort((a,b)=>new Date(b)-new Date(a))[0]||'';}
+  const local={}; const cands=[];
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i); const raw=localStorage.getItem(key)||'';
+    if(/^DCLIP/i.test(key)||key.includes('dclip')||key.includes('D夾')) local[key]=raw;
+    const obj=parse(raw); const cs=casesOf(obj);
+    if(obj && (cs || /^DCLIP/i.test(key)||key.includes('dclip')||key.includes('D夾'))) cands.push({key,caseCount:cs?cs.length:0,latest:latest(obj),size:raw.length});
+  }
+  cands.sort((a,b)=>b.caseCount-a.caseCount || new Date(b.latest)-new Date(a.latest));
+  const bundle={rescueTool:'D夾 Console 救援',exportedAt:new Date().toISOString(),origin:location.origin,href:location.href,userAgent:navigator.userAgent,mainKey:MAIN_KEY,candidates:cands,localStorage:local};
+  const blob=new Blob([JSON.stringify(bundle,null,2)],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='D夾_Console完整救援包_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  alert('救援包已下載。找到疑似資料 '+cands.length+' 份；最多案件 '+(cands[0]?cands[0].caseCount:0)+' 筆。');
+})();`;
+}
+window.addEventListener('load',()=>{ initOrigin(); document.getElementById('consoleCode').value = makeConsoleCode(); scanNow(); });
 </script>
 </body>
 </html>
