@@ -2949,6 +2949,7 @@
         <span class="statusChip" id="saveStatus">已自動存檔</span>
         <button type="button" class="btn btnGray btnMini" onclick="runStorageSelfTestV45(true)">存檔檢查</button>
         <button type="button" class="btn btnOrange btnMini" onclick="manualCleanupStorageV46(true)">清除舊備份</button>
+        <button type="button" class="btn btnRed btnMini" onclick="cleanupBlankUnnamedCasesV47(true)">清除空白未命名</button>
         <div class="clock" id="headerLastUpdate">最後更新時間：—</div>
         <input id="importFile" class="hiddenFile" type="file" accept="application/json,.json" onchange="importData(event)">
       </div>
@@ -3565,7 +3566,7 @@ function guardBeforeDangerActionV45(reason){
 
 function saveState(){
   try{
-    state.version = '46.0';
+    state.version = '47.0';
     state.lastSaved = nowISO();
     let localSaved = false;
     try{
@@ -6019,6 +6020,91 @@ function disconnectSupabase(){
   setSupabaseStatus('未連線','');
   setSupabaseMessage('已中斷連線','warn');
 }
+function isBlankCaseV47(c){
+  if(!c || typeof c !== 'object') return true;
+  const textKeys = [
+    'receiptDate','receiptNo','processDate','contractNo','mainContractNo','business','caseName',
+    'priceOld','priceNew','bottomPriceOld','bottomPriceNew','contractEndOld','contractEndNew','relistType',
+    'contractTypeOld','contractTypeNew','keyText','specialTerms','note'
+  ];
+  const hasText = textKeys.some(k=>String(c[k] || '').trim());
+  if(hasText) return false;
+  const tasks = c.tasks && typeof c.tasks === 'object' ? c.tasks : {};
+  const hasTaskWork = Object.values(tasks).some(t=>{
+    if(!t || typeof t !== 'object') return false;
+    return t.done === true || t.override === 'required' || String(t.assistant || '').trim() || String(t.note || '').trim();
+  });
+  return !hasTaskWork;
+}
+function cleanupImportedStateV47(nextState){
+  const result = {state: Object.assign(defaultStateV37(), nextState || {}), removedBlank:0, fixedIds:0, removedDup:0};
+  if(!Array.isArray(result.state.cases)) result.state.cases = [];
+  const seen = new Map();
+  const cleaned = [];
+  result.state.cases.forEach(raw=>{
+    if(!raw || typeof raw !== 'object') return;
+    const c = Object.assign(makeBlankCase(), raw);
+    if(!c.id){ c.id = uid('case'); result.fixedIds++; }
+    if(isBlankCaseV47(c)){ result.removedBlank++; return; }
+    const old = seen.get(c.id);
+    if(!old){ seen.set(c.id, c); return; }
+    result.removedDup++;
+    const keep = caseDeepTimeV37(c) >= caseDeepTimeV37(old) ? c : old;
+    seen.set(c.id, keep);
+  });
+  seen.forEach(c=>cleaned.push(c));
+  cleaned.sort((a,b)=>caseDeepTimeV37(b)-caseDeepTimeV37(a));
+  result.state.cases = cleaned;
+  if(!result.state.deletedCases || typeof result.state.deletedCases !== 'object' || Array.isArray(result.state.deletedCases)) result.state.deletedCases = {};
+  result.state.version = '47.0';
+  result.state.systemName = 'D夾';
+  result.state.assistants = fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'紹薇',active:true},{id:'fixed2',name:'無',active:true}];
+  return result;
+}
+function pickImportedPayloadV47(imported){
+  if(imported && imported.payload && typeof imported.payload === 'object') return imported.payload;
+  if(imported && imported.state && typeof imported.state === 'object') return imported.state;
+  if(Array.isArray(imported)) return {cases: imported};
+  return imported;
+}
+async function forceUploadSupabaseStateV47(messageOk, messageFail){
+  const cfg = loadSupabaseConfig();
+  if(!cfg.connected || !cfg.url || !cfg.key) return false;
+  const wasBusy = sbSyncBusyV37;
+  sbSyncBusyV37 = true;
+  try{
+    await rawUploadSupabaseStateV37(state, true);
+    sbInitialSyncDoneV37 = true;
+    setSupabaseStatus('已連線','ok');
+    if(messageOk) setSupabaseMessage(messageOk, 'ok');
+    return true;
+  }catch(err){
+    console.error(err);
+    setSupabaseStatus('已連線','warn');
+    if(messageFail) setSupabaseMessage(messageFail, 'warn');
+    return false;
+  }finally{
+    sbSyncBusyV37 = wasBusy;
+  }
+}
+function cleanupBlankUnnamedCasesV47(showAlert=false){
+  if(!Array.isArray(state.cases)) state.cases = [];
+  const before = state.cases.length;
+  state.cases = state.cases.filter(c=>!isBlankCaseV47(c));
+  const removed = before - state.cases.length;
+  state.version = '47.0';
+  state.lastSaved = nowISO();
+  try{
+    persistStateToLocalV44();
+    updateSaveStatus();
+  }catch(err){
+    showLocalSaveErrorV44(err);
+  }
+  renderAll();
+  forceUploadSupabaseStateV47('已清除空白未命名案件，雲端也已更新。','空白未命名案件已在本機清除；雲端稍後請再按立即同步。');
+  if(showAlert) alert(removed ? '已清除空白未命名案件 ' + removed + ' 筆。' : '沒有找到空白未命名案件。');
+  return removed;
+}
 function importData(event){
   const file = event.target.files[0]; event.target.value = '';
   if(!file) return;
@@ -6026,24 +6112,32 @@ function importData(event){
   reader.onload = async function(){
     try{
       const imported = JSON.parse(reader.result);
-      if(!confirm('匯入會覆蓋目前本機 D夾資料，確定匯入？')) return;
+      if(!confirm('匯入會覆蓋目前本機 D夾資料；如果 Supabase 已連線，也會用這份匯入資料覆蓋雲端，不再跟舊雲端資料合併。確定匯入？')) return;
       safeBackupV37('DCLIP_BACKUP_BEFORE_JSON_IMPORT', state);
+      const picked = pickImportedPayloadV47(imported);
+      const cleaned = cleanupImportedStateV47(picked);
       sbSuppressAuto = true;
-      state = Object.assign(defaultStateV37(), imported);
+      state = cleaned.state;
       migrateState();
+      state.version = '47.0';
       state.lastSaved = nowISO();
       persistStateToLocalV44();
       updateSaveStatus();
       sbSuppressAuto = false;
       renderAll();
-      const cfg = loadSupabaseConfig();
-      if(cfg.connected && cfg.url && cfg.key){
-        await uploadSupabaseState(false);
-        alert('匯入完成，並已同步到雲端。');
+      const uploaded = await forceUploadSupabaseStateV47('匯入完成，已用這份資料覆蓋雲端。','匯入完成但雲端覆蓋失敗，請確認 Supabase 連線後按立即同步。');
+      const extra = cleaned.removedBlank ? '（已自動移除空白未命名 ' + cleaned.removedBlank + ' 筆）' : '';
+      if(uploaded){
+        alert('匯入完成，並已覆蓋同步到雲端。' + extra);
       }else{
-        alert('匯入完成；目前未連線 Supabase，請連線後按立即同步。');
+        alert('匯入完成；目前未連線 Supabase 或雲端覆蓋失敗。' + extra);
       }
-    }catch(e){ alert('匯入失敗，請確認檔案格式。'); }
+    }catch(e){
+      console.error(e);
+      alert('匯入失敗，請確認檔案格式。');
+    }finally{
+      sbSuppressAuto = false;
+    }
   };
   reader.readAsText(file, 'utf-8');
 }
@@ -6234,27 +6328,29 @@ function deleteCurrentCase(){
   const c = getCase(id);
   if(!c) return;
   if(!confirm('確定要刪除這筆 D夾案件？')) return;
-  guardBeforeDangerActionV45('刪除案件前備份');
+  // V47：刪除前不再自動下載 JSON，避免每刪一筆都跳出備份檔。
+  // 刪除後採「本機直接刪除 + 雲端直接覆蓋」，不再先跟雲端舊資料合併，避免刪掉又跑回來。
   safeBackupV37('DCLIP_BACKUP_BEFORE_DELETE_CASE', state);
   ensureDeletedCasesV43(state)[id] = nowISO();
   state.cases = (state.cases || []).filter(x=>x.id !== id);
+  state.version = '47.0';
   state.lastSaved = nowISO();
-  persistStateToLocalV44();
-  updateSaveStatus();
+  try{
+    persistStateToLocalV44();
+    updateSaveStatus();
+  }catch(err){
+    showLocalSaveErrorV44(err);
+  }
   const mask = document.getElementById('editModalMask');
   if(mask) mask.classList.remove('show');
   currentCaseId = null;
   renderAll();
   const cfg = loadSupabaseConfig();
   if(cfg.connected && cfg.url && cfg.key){
-    setSupabaseMessage('已刪除案件，正在同步雲端刪除紀錄...','warn');
-    uploadSupabaseState(true).then(()=>{
-      setSupabaseMessage('案件已刪除，雲端也已更新。','ok');
-    }).catch(()=>{
-      setSupabaseMessage('案件已在本機刪除；雲端稍後會再自動同步。','warn');
-    });
+    setSupabaseMessage('已刪除案件，正在覆蓋同步到雲端...','warn');
+    forceUploadSupabaseStateV47('案件已刪除，雲端也已更新。','案件已在本機刪除；雲端更新失敗，請稍後按立即同步。');
   }else{
-    queueSupabaseAutoSync();
+    setSupabaseMessage('案件已在本機刪除；目前未連線 Supabase。','warn');
   }
 }
 
