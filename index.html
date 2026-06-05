@@ -7390,63 +7390,54 @@ init();
 })();
 </script>
 
+
 <script>
-/* ===== V63：雲端主資料版（不再把本機 localStorage 當主資料） =====
-   目標：
-   1) 開啟網頁：以 Supabase 雲端為主，不把這台電腦舊資料上傳。
-   2) 有輸入/修改：先更新畫面記憶體，立刻排程上傳雲端。
-   3) 本機 localStorage 只當短暫的同步失敗暫存；雲端成功後清掉主資料 key。
-   4) 沒有輸入時：只輪詢雲端並套用雲端，不主動上傳本機。
+/* ===== V65：雲端主資料立即同步版（不做 8 秒輪詢） =====
+   原則：
+   1) 開啟網頁：先讀 Supabase 雲端主資料，不把本機舊資料上傳。
+   2) 有輸入/修改/刪除：立刻排程上傳雲端；成功後清除本機主資料暫存。
+   3) 沒有輸入：不每 8 秒輪詢、不上傳。
+   4) 上傳失敗：只保留暫時待同步備援，提醒不要關閉；成功後清掉。
 */
 (function(){
   'use strict';
-  const V63 = 'V63雲端主資料版';
+  const VERSION = 'V65雲端主資料立即同步版';
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
-  const EMERGENCY_KEY = 'DCLIP_V63_UNSYNCED_EMERGENCY';
-  const DEVICE_KEY = 'DCLIP_V63_DEVICE_ID';
-  const POLL_MS = 8000;
-  const SAVE_DELAY_MS = 450;
-  const stateBase = () => {
-    try{ if(typeof defaultStateV37 === 'function') return defaultStateV37(); }catch(_e){}
-    try{ return {version:'63.0', systemName:'D夾', assistants: fixedTaskAssistants(), rules: cloneRules(DEFAULT_RULES), cases:[], lastSaved:''}; }catch(_e){}
-    return {version:'63.0', systemName:'D夾', assistants:[], rules:[], cases:[], lastSaved:''};
-  };
-  let applyingRemote = false;
-  let bootCloudLoading = false;
-  let cloudWriting = false;
-  let writeTimer = null;
-  let pollTimer = null;
-  let lastCloudAt = '';
-  let lastLocalEditAt = 0;
-  let userDirty = false;
+  const EMERGENCY_KEY = 'DCLIP_V65_UNSYNCED_PENDING';
+  const DEVICE_KEY = 'DCLIP_V65_DEVICE_ID';
+  const SAVE_DELAY_MS = 350;
+  const RETRY_DELAY_MS = 8000; // 只有「有待同步」才重試，不做一般輪詢
 
-  function now(){ try{ return nowISO(); }catch(_e){ return new Date().toISOString(); } }
-  function ms(t){ const n = Date.parse(t || ''); return Number.isFinite(n) ? n : 0; }
-  function fmt(t){ try{ return formatHeaderSavedTime(t); }catch(_e){ return t || '—'; } }
-  function deviceId(){
-    try{
-      let id = localStorage.getItem(DEVICE_KEY);
-      if(!id){ id = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); localStorage.setItem(DEVICE_KEY,id); }
-      return id;
-    }catch(_e){ return 'dev_unknown'; }
-  }
+  let applyingCloud = false;
+  let cloudLoading = false;
+  let cloudWriting = false;
+  let dirty = false;
+  let saveTimer = null;
+  let retryTimer = null;
+  let lastRemoteAt = '';
+
+  function iso(){ try{ return (typeof nowISO === 'function') ? nowISO() : new Date().toISOString(); }catch(_e){ return new Date().toISOString(); } }
+  function ms(v){ const n = Date.parse(v || ''); return Number.isFinite(n) ? n : 0; }
+  function fmt(v){ try{ return formatHeaderSavedTime(v); }catch(_e){ return v || '—'; } }
   function cfg(){ try{ return loadSupabaseConfig(); }catch(_e){ return {}; } }
-  function isConnected(){ const c = cfg(); return !!(c && c.connected && c.url && c.key); }
-  function safeRemoveMainLocal(){ try{ localStorage.removeItem(MAIN_KEY); }catch(_e){} }
-  function keepEmergency(reason){
-    try{
-      localStorage.setItem(EMERGENCY_KEY, JSON.stringify({at:now(), reason:reason||'', device:deviceId(), state:state}));
-    }catch(_e){}
+  function connected(){ const c = cfg(); return !!(c && c.connected && c.url && c.key); }
+  function deviceId(){
+    try{ let id = localStorage.getItem(DEVICE_KEY); if(!id){ id='dev_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8); localStorage.setItem(DEVICE_KEY,id); } return id; }
+    catch(_e){ return 'dev_unknown'; }
   }
-  function clearEmergency(){ try{ localStorage.removeItem(EMERGENCY_KEY); }catch(_e){} }
-  function hasEmergency(){ try{ return !!localStorage.getItem(EMERGENCY_KEY); }catch(_e){ return false; } }
-  function status(text, type){
-    try{ if(typeof setSupabaseMessage === 'function') setSupabaseMessage(text, type==='bad'?'bad':type==='warn'?'warn':'ok'); }catch(_e){}
+  function baseState(){
+    try{ if(typeof defaultStateV37 === 'function') return defaultStateV37(); }catch(_e){}
+    try{ return {version:'65.0', systemName:'D夾', assistants: fixedTaskAssistants(), rules: cloneRules(DEFAULT_RULES), cases:[], lastSaved:''}; }catch(_e){}
+    return {version:'65.0', systemName:'D夾', assistants:[], rules:[], cases:[], lastSaved:''};
+  }
+  function setMsg(text, type){
+    try{ if(typeof setSupabaseStatus === 'function') setSupabaseStatus(connected() ? '已連線' : '未連線', type === 'bad' ? 'warn' : 'ok'); }catch(_e){}
+    try{ if(typeof setSupabaseMessage === 'function') setSupabaseMessage(text, type === 'bad' ? 'bad' : type === 'warn' ? 'warn' : 'ok'); }catch(_e){}
     try{
-      let el = document.getElementById('dclipV63CloudBadge');
+      let el = document.getElementById('dclipV65CloudBadge');
       if(!el){
         el = document.createElement('span');
-        el.id = 'dclipV63CloudBadge';
+        el.id = 'dclipV65CloudBadge';
         el.className = 'statusChip';
         const save = document.getElementById('saveStatus');
         if(save && save.parentNode) save.parentNode.insertBefore(el, save.nextSibling);
@@ -7462,281 +7453,254 @@ init();
       el.style.cssText = css[type || 'off'] || css.off;
     }catch(_e){}
   }
-  function remoteMs(row){
-    try{ if(typeof remoteTimeMsV53 === 'function') return remoteTimeMsV53(row); }catch(_e){}
-    return ms(row && row.updated_at);
+  function normalizePayload(payload){
+    let p = payload;
+    try{ if(typeof sanitizeStateV52 === 'function') p = sanitizeStateV52(p).state; }catch(_e){}
+    return p || baseState();
   }
-  function localMs(){
+  function stateTime(s){
     try{
-      let best = ms(state && state.lastSaved);
-      (Array.isArray(state && state.cases) ? state.cases : []).forEach(c=>{
+      let best = ms(s && s.lastSaved);
+      (Array.isArray(s && s.cases) ? s.cases : []).forEach(c=>{
         best = Math.max(best, ms(c && c.updatedAt), ms(c && c.createdAt));
         if(c && c.tasks && typeof c.tasks === 'object') Object.values(c.tasks).forEach(t=>{ best = Math.max(best, ms(t && t.updatedAt)); });
       });
       return best;
-    }catch(_e){ return ms(state && state.lastSaved); }
+    }catch(_e){ return ms(s && s.lastSaved); }
   }
-  async function fetchRemote(){
+  function localTime(){ return stateTime(state); }
+  function remoteTime(row){
+    try{ if(typeof remoteTimeMsV53 === 'function') return remoteTimeMsV53(row); }catch(_e){}
+    return ms(row && row.updated_at);
+  }
+  function clearMainLocal(){ try{ localStorage.removeItem(MAIN_KEY); }catch(_e){} }
+  function keepPending(reason){
+    try{ localStorage.setItem(EMERGENCY_KEY, JSON.stringify({at:iso(), reason:reason||'', device:deviceId(), state:state})); }catch(_e){}
+  }
+  function clearPending(){ try{ localStorage.removeItem(EMERGENCY_KEY); }catch(_e){} }
+  function getPending(){ try{ const raw = localStorage.getItem(EMERGENCY_KEY); return raw ? JSON.parse(raw) : null; }catch(_e){ return null; } }
+  function hasPending(){ const p = getPending(); return !!(p && p.state && Array.isArray(p.state.cases)); }
+
+  async function fetchCloud(){
     if(typeof fetchSupabaseRemote === 'function') return await fetchSupabaseRemote(cfg());
     const c = cfg();
     if(!(c && c.url && c.key)) return null;
-    const qWorkspace = encodeURIComponent(c.workspace || 'dclip-main');
-    const res = await fetch(`${supabaseTableUrl(c)}?workspace_key=eq.${qWorkspace}&select=payload,updated_at&limit=1`, {method:'GET', headers:supabaseHeaders(c)});
+    const workspace = encodeURIComponent(c.workspace || 'dclip-main');
+    const res = await fetch(`${supabaseTableUrl(c)}?workspace_key=eq.${workspace}&select=payload,updated_at&limit=1`, {method:'GET', headers:supabaseHeaders(c)});
     if(!res.ok) throw new Error(await res.text() || res.statusText);
     const rows = await res.json();
     return rows && rows.length ? rows[0] : null;
   }
-  async function upsertRemote(payloadState){
+  async function upsertCloud(payloadState){
     const c = cfg();
-    const payload = {
-      workspace_key: c.workspace || 'dclip-main',
-      payload: payloadState,
-      updated_at: now(),
-      device_id: deviceId()
-    };
+    const t = iso();
+    const body = {workspace_key:c.workspace || 'dclip-main', payload:payloadState, updated_at:t};
     const res = await fetch(`${supabaseTableUrl(c)}?on_conflict=workspace_key`, {
       method:'POST',
       headers:{...supabaseHeaders(c), Prefer:'resolution=merge-duplicates,return=representation'},
-      body:JSON.stringify(payload)
+      body:JSON.stringify(body)
     });
     if(!res.ok) throw new Error(await res.text() || res.statusText);
     const rows = await res.json().catch(()=>[]);
-    return (rows && rows[0] && rows[0].updated_at) ? rows[0].updated_at : payload.updated_at;
+    return (rows && rows[0] && rows[0].updated_at) ? rows[0].updated_at : t;
   }
-  function normalizePayload(payload){
-    let p = payload;
-    try{ if(typeof sanitizeStateV52 === 'function') p = sanitizeStateV52(p).state; }catch(_e){}
-    return p;
-  }
-  function applyCloudPayload(payload, remoteTime, message){
+  function applyCloud(payload, remoteAt, message){
     if(!payload) return false;
-    applyingRemote = true;
+    applyingCloud = true;
     try{
-      const next = Object.assign(stateBase(), normalizePayload(payload));
-      state = next;
+      state = Object.assign(baseState(), normalizePayload(payload));
+      state.version = '65.0';
+      if(!state.lastSaved) state.lastSaved = remoteAt || iso();
       try{ migrateState(); }catch(_e){}
-      if(!state.lastSaved) state.lastSaved = remoteTime || now();
       try{ updateSaveStatus(); }catch(_e){}
       try{ renderAll(false); }catch(_e){ try{ renderAll(); }catch(_e2){} }
       try{ if(currentCaseId && typeof getCase === 'function' && getCase(currentCaseId) && typeof renderTaskTable === 'function') renderTaskTable(); }catch(_e){}
-      lastCloudAt = remoteTime || now();
-      userDirty = false;
-      clearEmergency();
-      safeRemoveMainLocal();
-      status(message || '已套用雲端最新資料', 'ok');
+      dirty = false;
+      lastRemoteAt = remoteAt || lastRemoteAt || iso();
+      clearPending();
+      clearMainLocal();
+      setMsg(message || '已載入雲端主資料', 'ok');
       return true;
-    }finally{
-      applyingRemote = false;
-    }
+    }finally{ applyingCloud = false; }
   }
-  function mergeForUpload(remotePayload){
-    try{
-      if(remotePayload && typeof mergeStatesV37 === 'function') return mergeStatesV37(state, remotePayload);
-    }catch(_e){}
+  function mergeUploadState(remotePayload){
+    try{ if(remotePayload && typeof mergeStatesV37 === 'function') return mergeStatesV37(state, remotePayload); }catch(_e){}
     return state;
   }
-  async function loadCloudAsSource(reason){
-    if(!isConnected()){
-      status('雲端未連線：目前不做正式儲存', 'bad');
+  async function loadCloud(reason){
+    if(!connected()){
+      setMsg('雲端未連線：請先連線 Supabase', 'bad');
       return false;
     }
-    if(bootCloudLoading || cloudWriting) return false;
-    bootCloudLoading = true;
-    status('讀取雲端主資料中…', 'warn');
+    if(cloudLoading || cloudWriting) return false;
+    cloudLoading = true;
+    clearIntervalSafely();
+    setMsg('讀取雲端主資料中…', 'warn');
     try{
-      const row = await fetchRemote();
-      if(row && row.payload){
-        applyCloudPayload(row.payload, row.updated_at, reason === 'connect' ? '已載入雲端主資料' : '已讀取雲端主資料');
-        try{ if(typeof setLastRemoteTime === 'function') setLastRemoteTime(cfg(), row.updated_at || now()); }catch(_e){}
+      const row = await fetchCloud();
+      const pending = getPending();
+      const pendingState = pending && pending.state ? normalizePayload(pending.state) : null;
+      const pendingMs = pendingState ? stateTime(pendingState) : 0;
+      const cloudMs = row ? remoteTime(row) : 0;
+
+      // 只有「上次同步失敗的暫存」且比雲端新，才補傳；一般本機舊資料絕不上傳。
+      if(pendingState && pendingMs > cloudMs + 1000){
+        applyingCloud = true;
+        try{ state = Object.assign(baseState(), pendingState); try{ migrateState(); }catch(_e){} try{ renderAll(false); }catch(_e){} }finally{ applyingCloud = false; }
+        dirty = true;
+        setMsg('偵測到未完成同步資料，正在補傳雲端…', 'warn');
+        scheduleUpload('resume_pending', 200);
         return true;
       }
-      // 雲端沒有資料時，不上傳本機舊資料；等使用者匯入或新增後才建立雲端。
-      safeRemoveMainLocal();
-      clearEmergency();
-      status('雲端目前沒有資料；請匯入JSON或新增後建立雲端資料', 'warn');
+      if(row && row.payload){
+        applyCloud(row.payload, row.updated_at, reason === 'connect' ? '已載入雲端主資料' : '已讀取雲端主資料');
+        try{ if(typeof setLastRemoteTime === 'function') setLastRemoteTime(cfg(), row.updated_at || iso()); }catch(_e){}
+        return true;
+      }
+      clearMainLocal();
+      clearPending();
+      setMsg('雲端目前沒有資料；請匯入JSON或新增後建立雲端資料', 'warn');
       return false;
     }catch(err){
-      console.warn('V63 load cloud failed', err);
-      status('雲端讀取失敗，請確認連線', 'bad');
+      console.warn('V65 cloud load failed', err);
+      setMsg('雲端讀取失敗，請確認 Supabase URL/Key/網路', 'bad');
       return false;
-    }finally{
-      bootCloudLoading = false;
-    }
+    }finally{ cloudLoading = false; }
   }
-  async function cloudSaveNow(reason){
-    clearTimeout(writeTimer);
-    if(applyingRemote) return false;
-    if(!isConnected()){
-      userDirty = true;
-      keepEmergency('not_connected');
-      status('雲端未連線：尚未正式存檔', 'bad');
+  async function uploadNow(reason){
+    clearTimeout(saveTimer);
+    clearTimeout(retryTimer);
+    if(applyingCloud) return false;
+    if(!connected()){
+      dirty = true;
+      keepPending('not_connected');
+      setMsg('雲端未連線：資料暫存待同步，請勿關閉', 'bad');
       return false;
     }
     if(cloudWriting) return false;
     cloudWriting = true;
-    status('雲端上傳中，請勿關閉…', 'warn');
+    setMsg('雲端上傳中，請勿關閉…', 'warn');
     try{
-      let row = null;
-      try{ row = await fetchRemote(); }catch(e){ throw e; }
-      const rms = remoteMs(row);
-      const lms = localMs();
-      let uploadState = state;
-      // 如果雲端比這台資料新，而且這台沒有新修改，就直接套用雲端，不上傳舊本機。
-      if(row && row.payload && rms > lms + 1000 && !userDirty){
-        applyCloudPayload(row.payload, row.updated_at, '雲端較新，已套用雲端');
+      const row = await fetchCloud();
+      const rms = remoteTime(row);
+      const lms = localTime();
+      if(row && row.payload && rms > lms + 1000 && !dirty){
+        applyCloud(row.payload, row.updated_at, '雲端較新，已套用雲端');
         return true;
       }
-      // 有新修改時才上傳；上傳前合併另一台資料。
-      uploadState = mergeForUpload(row && row.payload ? row.payload : null);
-      try{ uploadState.version = '63.0'; uploadState.lastSaved = state.lastSaved || now(); }catch(_e){}
-      const remoteTime = await upsertRemote(uploadState);
-      applyingRemote = true;
-      try{ state = Object.assign(stateBase(), uploadState); try{ migrateState(); }catch(_e){} }finally{ applyingRemote = false; }
-      lastCloudAt = remoteTime || now();
-      userDirty = false;
-      clearEmergency();
-      safeRemoveMainLocal();
-      try{ if(typeof setLastRemoteTime === 'function') setLastRemoteTime(cfg(), lastCloudAt); }catch(_e){}
-      status('雲端已同步 ' + fmt(lastCloudAt), 'ok');
+      let uploadState = mergeUploadState(row && row.payload ? row.payload : null);
+      uploadState = normalizePayload(uploadState);
+      uploadState.version = '65.0';
+      uploadState.lastSaved = state.lastSaved || iso();
+      const remoteAt = await upsertCloud(uploadState);
+      applyingCloud = true;
+      try{ state = Object.assign(baseState(), uploadState); try{ migrateState(); }catch(_e){} }finally{ applyingCloud = false; }
+      lastRemoteAt = remoteAt || iso();
+      dirty = false;
+      clearPending();
+      clearMainLocal();
+      try{ if(typeof setLastRemoteTime === 'function') setLastRemoteTime(cfg(), lastRemoteAt); }catch(_e){}
       try{ updateSaveStatus(); }catch(_e){}
+      setMsg('雲端已同步 ' + fmt(lastRemoteAt), 'ok');
       return true;
     }catch(err){
-      console.warn('V63 cloud save failed', err);
-      userDirty = true;
-      keepEmergency(reason || 'upload_failed');
-      status('雲端上傳失敗，請勿關閉', 'bad');
+      console.warn('V65 upload failed', err);
+      dirty = true;
+      keepPending(reason || 'upload_failed');
+      setMsg('雲端上傳失敗，請勿關閉；會自動重試', 'bad');
+      retryTimer = setTimeout(()=>{ if(dirty || hasPending()) uploadNow('retry'); }, RETRY_DELAY_MS);
       return false;
-    }finally{
-      cloudWriting = false;
-    }
+    }finally{ cloudWriting = false; }
   }
-  function scheduleCloudSave(reason, delay){
-    userDirty = true;
-    lastLocalEditAt = Date.now();
-    keepEmergency(reason || 'dirty');
-    clearTimeout(writeTimer);
-    writeTimer = setTimeout(()=>cloudSaveNow(reason || 'auto'), delay == null ? SAVE_DELAY_MS : delay);
+  function scheduleUpload(reason, delay){
+    if(applyingCloud || cloudLoading) return;
+    dirty = true;
+    keepPending(reason || 'dirty');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>uploadNow(reason || 'auto'), delay == null ? SAVE_DELAY_MS : delay);
   }
-  async function cloudPoll(reason){
-    if(!isConnected()) return;
-    if(cloudWriting || bootCloudLoading) return;
-    if(userDirty || hasEmergency()){
-      await cloudSaveNow(reason || 'pending');
-      return;
-    }
-    try{
-      const row = await fetchRemote();
-      if(!row || !row.payload || !row.updated_at) return;
-      const rms = remoteMs(row);
-      const lms = localMs();
-      if(rms > lms + 1000){
-        applyCloudPayload(row.payload, row.updated_at, '已同步另一台電腦的最新資料');
-      }else{
-        lastCloudAt = row.updated_at || lastCloudAt || now();
-        status('雲端主資料已連線', 'ok');
-      }
-    }catch(err){
-      console.warn('V63 poll failed', err);
-      status('雲端檢查暫時失敗', 'warn');
-    }
-  }
-  function startCloudPolling(){
-    if(pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(()=>{ if(document.visibilityState === 'visible') cloudPoll('poll'); }, POLL_MS);
-    setTimeout(()=>loadCloudAsSource('init'), 300);
+  function clearIntervalSafely(){
+    try{ if(typeof sbPollTimer !== 'undefined' && sbPollTimer){ clearInterval(sbPollTimer); sbPollTimer = null; } }catch(_e){}
   }
   function markLoaded(){
     try{
-      document.title = 'D夾｜' + V63;
+      document.title = 'D夾｜' + VERSION;
       const h = document.querySelector('.titleWrap h1');
-      if(h && !document.getElementById('dclipV63LoadedBadge')){
+      if(h && !document.getElementById('dclipV65LoadedBadge')){
         const b = document.createElement('span');
-        b.id = 'dclipV63LoadedBadge';
-        b.textContent = ' V63雲端主資料已載入';
+        b.id = 'dclipV65LoadedBadge';
+        b.textContent = ' V65雲端主資料已載入';
         b.style.cssText = 'font-size:12px;letter-spacing:0;background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:middle;';
         h.appendChild(b);
       }
     }catch(_e){}
   }
 
-  // 覆蓋：不讓舊版 polling 在沒有輸入時把本機資料上傳；只讀雲端。
+  // 停掉舊版 5秒/8秒輪詢；改為開啟/連線/回到視窗才讀雲端。
+  clearIntervalSafely();
+  try{ startSupabasePolling = function(){ clearIntervalSafely(); setTimeout(()=>loadCloud('start'), 120); }; }catch(_e){}
+  try{ checkSupabaseRemoteUpdates = async function(){ return loadCloud('check'); }; }catch(_e){}
+
+  // 連線：只讀雲端，不把本機舊資料上傳。
   try{
     const oldInit = initSupabasePanel;
     initSupabasePanel = function(){
       const r = oldInit.apply(this, arguments);
+      clearIntervalSafely();
       markLoaded();
-      if(isConnected()) startCloudPolling();
+      if(connected()) setTimeout(()=>loadCloud('init'), 120);
       return r;
     };
-  }catch(e){ console.warn('V63 init override failed', e); }
+  }catch(_e){}
   try{
     const oldConnect = connectSupabase;
     connectSupabase = async function(){
       const r = await oldConnect.apply(this, arguments);
-      if(isConnected()){
-        startCloudPolling();
-        await loadCloudAsSource('connect');
-      }
+      clearIntervalSafely();
+      if(connected()) await loadCloud('connect');
       return r;
-    };
-  }catch(e){ console.warn('V63 connect override failed', e); }
-  try{
-    const oldDisconnect = disconnectSupabase;
-    disconnectSupabase = function(){
-      if(pollTimer) clearInterval(pollTimer);
-      pollTimer = null;
-      return oldDisconnect.apply(this, arguments);
     };
   }catch(_e){}
   try{
-    startSupabasePolling = startCloudPolling;
-    checkSupabaseRemoteUpdates = cloudPoll;
-    syncSupabaseNow = async function(){ return cloudSaveNow('manual'); };
-    queueSupabaseAutoSync = function(){ scheduleCloudSave('queue', SAVE_DELAY_MS); };
-    uploadSupabaseState = async function(silent){ return cloudSaveNow(silent?'auto':'manual'); };
-    downloadSupabaseState = async function(){ return loadCloudAsSource('manual_download'); };
-  }catch(e){ console.warn('V63 sync override failed', e); }
+    const oldDisconnect = disconnectSupabase;
+    disconnectSupabase = function(){ clearIntervalSafely(); return oldDisconnect.apply(this, arguments); };
+  }catch(_e){}
 
-  // 覆蓋 saveState：舊版仍會更新畫面；雲端成功後會清掉本機主資料 key。
+  // 儲存：舊版先跑畫面與必要暫存；成功上傳後會清掉主 localStorage。
   try{
     const oldSave = saveState;
     saveState = function(){
       let ret;
-      try{
-        // 阻止舊版 queueSupabaseAutoSync 在 oldSave 裡被觸發成舊同步。
-        const oldSuppress = (typeof sbSuppressAuto !== 'undefined') ? sbSuppressAuto : false;
-        try{ if(typeof sbSuppressAuto !== 'undefined') sbSuppressAuto = true; }catch(_e){}
-        ret = oldSave.apply(this, arguments);
-        try{ if(typeof sbSuppressAuto !== 'undefined') sbSuppressAuto = oldSuppress; }catch(_e){}
-      }catch(err){
-        console.error('V63 wrapped saveState failed', err);
-        try{ ret = oldSave.apply(this, arguments); }catch(_e2){}
-      }
-      if(!applyingRemote && !bootCloudLoading){
-        scheduleCloudSave('saveState', SAVE_DELAY_MS);
-      }
+      const oldSuppress = (typeof sbSuppressAuto !== 'undefined') ? sbSuppressAuto : false;
+      try{ if(typeof sbSuppressAuto !== 'undefined') sbSuppressAuto = true; }catch(_e){}
+      try{ ret = oldSave.apply(this, arguments); }
+      finally{ try{ if(typeof sbSuppressAuto !== 'undefined') sbSuppressAuto = oldSuppress; }catch(_e){} }
+      if(!applyingCloud && !cloudLoading) scheduleUpload('saveState', SAVE_DELAY_MS);
       return ret;
     };
-  }catch(e){ console.warn('V63 saveState override failed', e); }
+  }catch(e){ console.warn('V65 save override failed', e); }
 
-  // 匯入 JSON 是人工指定覆蓋，允許直接上傳雲端。
+  try{ queueSupabaseAutoSync = function(){ scheduleUpload('queue', SAVE_DELAY_MS); }; }catch(_e){}
+  try{ uploadSupabaseState = async function(){ return uploadNow('upload'); }; }catch(_e){}
+  try{ syncSupabaseNow = async function(){ return uploadNow('manual'); }; }catch(_e){}
+  try{ downloadSupabaseState = async function(){ return loadCloud('manual_download'); }; }catch(_e){}
+
   try{
     const oldImport = importData;
     importData = function(event){
       const r = oldImport.apply(this, arguments);
-      setTimeout(()=>scheduleCloudSave('import_json', 200), 300);
+      setTimeout(()=>scheduleUpload('import_json', 200), 300);
       return r;
     };
   }catch(_e){}
 
-  window.addEventListener('focus', ()=>{ if(isConnected()) cloudPoll('focus'); });
+  window.addEventListener('focus', ()=>{ if(connected() && !dirty && !hasPending()) loadCloud('focus'); });
   document.addEventListener('visibilitychange', ()=>{
-    if(document.visibilityState === 'visible' && isConnected()) cloudPoll('visible');
-    if(document.visibilityState === 'hidden' && isConnected() && (userDirty || hasEmergency())) cloudSaveNow('hidden');
+    if(document.visibilityState === 'visible' && connected() && !dirty && !hasPending()) loadCloud('visible');
+    if(document.visibilityState === 'hidden' && connected() && (dirty || hasPending())) uploadNow('hidden');
   });
-  window.addEventListener('pagehide', ()=>{ if(isConnected() && (userDirty || hasEmergency())) cloudSaveNow('pagehide'); });
   window.addEventListener('beforeunload', function(e){
-    if(cloudWriting || userDirty || hasEmergency()){
+    if(cloudWriting || dirty || hasPending()){
       e.preventDefault();
       e.returnValue = '資料尚未完成雲端同步，建議等到顯示「雲端已同步」再關閉。';
       return e.returnValue;
@@ -7744,7 +7708,7 @@ init();
   });
 
   markLoaded();
-  setTimeout(()=>{ markLoaded(); if(isConnected()) startCloudPolling(); else status('雲端未連線：目前不做正式儲存', 'bad'); }, 800);
+  setTimeout(()=>{ clearIntervalSafely(); markLoaded(); if(connected()) loadCloud('late_init'); else setMsg('雲端未連線：請先連線 Supabase', 'bad'); }, 600);
 })();
 </script>
 
