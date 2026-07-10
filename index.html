@@ -7777,5 +7777,113 @@ function selectTaskAssistant(ruleId, encodedName){
 }
 </script>
 
+<script>
+/* ===== V67：操作人員點選後不被自動刷新/雲端舊資料取消 ===== */
+(function(){
+  const RECENT_MS = 15000;
+  const recentTaskChoices = Object.create(null);
+  const taskKey = (caseId, ruleId) => String(caseId || '') + '::' + String(ruleId || '');
+  const stamp = () => Date.now();
+  const parseMs = (v) => {
+    const n = Date.parse(v || '');
+    return Number.isFinite(n) ? n : 0;
+  };
+  const rememberChoice = (caseId, ruleId, assistant) => {
+    if(!caseId || !ruleId) return;
+    recentTaskChoices[taskKey(caseId, ruleId)] = {
+      caseId,
+      ruleId,
+      assistant: assistant || '',
+      at: stamp()
+    };
+  };
+  const keepRecentChoices = (targetState) => {
+    if(!targetState || !Array.isArray(targetState.cases)) return targetState;
+    const now = stamp();
+    targetState.cases.forEach(c => {
+      if(!c || !c.id || !c.tasks) return;
+      Object.keys(c.tasks).forEach(ruleId => {
+        const recent = recentTaskChoices[taskKey(c.id, ruleId)];
+        if(!recent || now - recent.at > RECENT_MS) return;
+        const t = c.tasks[ruleId] || (c.tasks[ruleId] = {});
+        t.assistant = recent.assistant;
+        t.done = !!recent.assistant;
+        t.override = 'required';
+        t.updatedAt = t.updatedAt || new Date(recent.at).toISOString();
+        c.updatedAt = c.updatedAt || t.updatedAt;
+      });
+    });
+    return targetState;
+  };
+  const preferNewerTaskChoices = (mergedState, localState) => {
+    if(!mergedState || !localState || !Array.isArray(mergedState.cases) || !Array.isArray(localState.cases)) return mergedState;
+    const localCases = new Map(localState.cases.filter(c => c && c.id).map(c => [c.id, c]));
+    mergedState.cases.forEach(c => {
+      const localCase = c && localCases.get(c.id);
+      if(!c || !localCase || !c.tasks || !localCase.tasks) return;
+      Object.keys(localCase.tasks).forEach(ruleId => {
+        const lt = localCase.tasks[ruleId];
+        const mt = c.tasks[ruleId] || (c.tasks[ruleId] = {});
+        if(parseMs(lt && lt.updatedAt) >= parseMs(mt && mt.updatedAt)){
+          mt.assistant = lt.assistant || '';
+          mt.done = !!lt.done || !!lt.assistant;
+          mt.note = lt.note || '';
+          mt.override = 'required';
+          mt.updatedAt = lt.updatedAt || mt.updatedAt || '';
+        }
+      });
+    });
+    return mergedState;
+  };
+
+  if(typeof mergeStatesV37 === 'function'){
+    const oldMergeStatesV37 = mergeStatesV37;
+    mergeStatesV37 = function(localState, remoteState){
+      const merged = oldMergeStatesV37.apply(this, arguments);
+      preferNewerTaskChoices(merged, localState);
+      keepRecentChoices(merged);
+      return merged;
+    };
+  }
+
+  if(typeof sanitizeStateV52 === 'function'){
+    const oldSanitizeStateV52 = sanitizeStateV52;
+    sanitizeStateV52 = function(input){
+      const result = oldSanitizeStateV52.apply(this, arguments);
+      if(result && result.state) keepRecentChoices(result.state);
+      return result;
+    };
+  }
+
+  selectTaskAssistant = function(ruleId, encodedName){
+    const c = getCase(currentCaseId);
+    if(!c) return;
+    const name = decodeURIComponent(encodedName);
+    ensureCaseTasks(c);
+    const t = c.tasks[ruleId];
+    if(!t) return;
+
+    t.assistant = name;
+    t.done = true;
+    t.override = 'required';
+    touchTask(c, t);
+    rememberChoice(c.id, ruleId, name);
+
+    try{
+      const ev = window.event;
+      if(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      }
+    }catch(_e){}
+
+    saveState();
+    renderTaskTable();
+    renderAll(false);
+  };
+})();
+</script>
+
 </body>
 </html>
