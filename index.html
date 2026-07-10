@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>D夾｜V61按鈕不自動取消版</title>
+  <title>D夾｜V66按鈕選取不取消・雲端同步修正版</title>
   <style>
     :root{
       --bg:#f4f8ff;
@@ -4013,7 +4013,10 @@ function selectTaskAssistant(ruleId, encodedName){
   ensureCaseTasks(c); 
   const rule = state.rules.find(r=>r.id===ruleId);
   const t = c.tasks[ruleId];
-  if(t.assistant !== name){
+  if(t.assistant === name){
+    t.assistant = '';
+    if(rule && taskInfo(c, rule).finalRequired) t.done = false;
+  }else{
     t.override = 'required';
     t.assistant = name;
     t.done = true;
@@ -5534,7 +5537,10 @@ function selectTaskAssistant(ruleId, encodedName){
   ensureCaseTasks(c);
   const t = c.tasks[ruleId];
   if(!t) return;
-  if(t.assistant !== name){
+  if(t.assistant === name){
+    t.assistant = '';
+    t.done = false;
+  }else{
     t.assistant = name;
     t.done = true;
     t.override = 'required';
@@ -7386,7 +7392,7 @@ init();
 
 
 <script>
-/* ===== V65：雲端主資料立即同步版（不做 8 秒輪詢） =====
+/* ===== V66：按鈕選取不取消＋雲端讀取期間不覆蓋操作 =====
    原則：
    1) 開啟網頁：先讀 Supabase 雲端主資料，不把本機舊資料上傳。
    2) 有輸入/修改/刪除：立刻排程上傳雲端；成功後清除本機主資料暫存。
@@ -7395,7 +7401,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V65雲端主資料立即同步版';
+  const VERSION = 'V66按鈕選取不取消・雲端同步修正版';
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
   const EMERGENCY_KEY = 'DCLIP_V65_UNSYNCED_PENDING';
   const DEVICE_KEY = 'DCLIP_V65_DEVICE_ID';
@@ -7421,8 +7427,8 @@ init();
   }
   function baseState(){
     try{ if(typeof defaultStateV37 === 'function') return defaultStateV37(); }catch(_e){}
-    try{ return {version:'65.0', systemName:'D夾', assistants: fixedTaskAssistants(), rules: cloneRules(DEFAULT_RULES), cases:[], lastSaved:''}; }catch(_e){}
-    return {version:'65.0', systemName:'D夾', assistants:[], rules:[], cases:[], lastSaved:''};
+    try{ return {version:'66.0', systemName:'D夾', assistants: fixedTaskAssistants(), rules: cloneRules(DEFAULT_RULES), cases:[], lastSaved:''}; }catch(_e){}
+    return {version:'66.0', systemName:'D夾', assistants:[], rules:[], cases:[], lastSaved:''};
   }
   function setMsg(text, type){
     try{ if(typeof setSupabaseStatus === 'function') setSupabaseStatus(connected() ? '已連線' : '未連線', type === 'bad' ? 'warn' : 'ok'); }catch(_e){}
@@ -7503,7 +7509,7 @@ init();
     applyingCloud = true;
     try{
       state = Object.assign(baseState(), normalizePayload(payload));
-      state.version = '65.0';
+      state.version = '66.0';
       if(!state.lastSaved) state.lastSaved = remoteAt || iso();
       try{ migrateState(); }catch(_e){}
       try{ updateSaveStatus(); }catch(_e){}
@@ -7536,6 +7542,26 @@ init();
       const pendingState = pending && pending.state ? normalizePayload(pending.state) : null;
       const pendingMs = pendingState ? stateTime(pendingState) : 0;
       const cloudMs = row ? remoteTime(row) : 0;
+
+      // V66：如果讀取雲端期間使用者已經有操作，待同步內容一定優先，
+      // 避免雲端舊狀態把剛點選的按鈕取消。
+      if(pendingState && dirty){
+        applyingCloud = true;
+        try{
+          state = Object.assign(baseState(), pendingState);
+          try{ migrateState(); }catch(_e){}
+          try{ renderAll(false); }catch(_e){}
+          try{
+            if(currentCaseId && typeof getCase === 'function' && getCase(currentCaseId) &&
+               typeof renderTaskTable === 'function') renderTaskTable();
+          }catch(_e){}
+        }finally{
+          applyingCloud = false;
+        }
+        setMsg('已保留剛才的操作，正在同步雲端…', 'warn');
+        scheduleUpload('edit_during_cloud_load', 120);
+        return true;
+      }
 
       // 只有「上次同步失敗的暫存」且比雲端新，才補傳；一般本機舊資料絕不上傳。
       if(pendingState && pendingMs > cloudMs + 1000){
@@ -7584,7 +7610,7 @@ init();
       }
       let uploadState = mergeUploadState(row && row.payload ? row.payload : null);
       uploadState = normalizePayload(uploadState);
-      uploadState.version = '65.0';
+      uploadState.version = '66.0';
       uploadState.lastSaved = state.lastSaved || iso();
       const remoteAt = await upsertCloud(uploadState);
       applyingCloud = true;
@@ -7607,11 +7633,25 @@ init();
     }finally{ cloudWriting = false; }
   }
   function scheduleUpload(reason, delay){
-    if(applyingCloud || cloudLoading) return;
+    if(applyingCloud) return;
     dirty = true;
     keepPending(reason || 'dirty');
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(()=>uploadNow(reason || 'auto'), delay == null ? SAVE_DELAY_MS : delay);
+
+    // V66：若雲端仍在讀取，先保留本次操作，等讀取結束再上傳。
+    // 不可直接略過，否則剛點選的按鈕會被雲端舊資料蓋回去。
+    if(cloudLoading){
+      saveTimer = setTimeout(
+        ()=>scheduleUpload(reason || 'auto', delay == null ? SAVE_DELAY_MS : delay),
+        120
+      );
+      return;
+    }
+
+    saveTimer = setTimeout(
+      ()=>uploadNow(reason || 'auto'),
+      delay == null ? SAVE_DELAY_MS : delay
+    );
   }
   function clearIntervalSafely(){
     try{ if(typeof sbPollTimer !== 'undefined' && sbPollTimer){ clearInterval(sbPollTimer); sbPollTimer = null; } }catch(_e){}
@@ -7620,10 +7660,10 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const h = document.querySelector('.titleWrap h1');
-      if(h && !document.getElementById('dclipV65LoadedBadge')){
+      if(h && !document.getElementById('dclipV66LoadedBadge')){
         const b = document.createElement('span');
-        b.id = 'dclipV65LoadedBadge';
-        b.textContent = ' V65雲端主資料已載入';
+        b.id = 'dclipV66LoadedBadge';
+        b.textContent = ' V66按鈕穩定版已載入';
         b.style.cssText = 'font-size:12px;letter-spacing:0;background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:middle;';
         h.appendChild(b);
       }
@@ -7669,7 +7709,7 @@ init();
       try{ if(typeof sbSuppressAuto !== 'undefined') sbSuppressAuto = true; }catch(_e){}
       try{ ret = oldSave.apply(this, arguments); }
       finally{ try{ if(typeof sbSuppressAuto !== 'undefined') sbSuppressAuto = oldSuppress; }catch(_e){} }
-      if(!applyingCloud && !cloudLoading) scheduleUpload('saveState', SAVE_DELAY_MS);
+      if(!applyingCloud) scheduleUpload('saveState', SAVE_DELAY_MS);
       return ret;
     };
   }catch(e){ console.warn('V65 save override failed', e); }
@@ -7704,6 +7744,37 @@ init();
   markLoaded();
   setTimeout(()=>{ clearIntervalSafely(); markLoaded(); if(connected()) loadCloud('late_init'); else setMsg('雲端未連線：請先連線 Supabase', 'bad'); }, 600);
 })();
+</script>
+
+
+<script>
+/* ===== V66：操作人員按鈕保持選取 =====
+   同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
+   要更換人員時，直接點選另一個人員按鈕即可。 */
+function selectTaskAssistant(ruleId, encodedName){
+  const c = getCase(currentCaseId);
+  if(!c) return;
+
+  const name = decodeURIComponent(encodedName);
+  ensureCaseTasks(c);
+  const t = c.tasks[ruleId];
+  if(!t) return;
+
+  // 已經選取同一個按鈕時保持原狀，避免被取消。
+  if(t.assistant === name){
+    t.done = true;
+    t.override = 'required';
+    return;
+  }
+
+  t.assistant = name;
+  t.done = true;
+  t.override = 'required';
+  touchTask(c, t);
+  saveState();
+  renderTaskTable();
+  renderAll(false);
+}
 </script>
 
 </body>
