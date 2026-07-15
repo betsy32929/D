@@ -7392,16 +7392,16 @@ init();
 
 
 <script>
-/* ===== V66：按鈕選取不取消＋雲端讀取期間不覆蓋操作 =====
+/* ===== V67：本機匯出模式＋按鈕選取不取消 =====
    原則：
-   1) 開啟網頁：先讀 Supabase 雲端主資料，不把本機舊資料上傳。
-   2) 有輸入/修改/刪除：立刻排程上傳雲端；成功後清除本機主資料暫存。
-   3) 沒有輸入：不每 8 秒輪詢、不上傳。
-   4) 上傳失敗：只保留暫時待同步備援，提醒不要關閉；成功後清掉。
+   1) Supabase 流量限制期間，開啟/切回分頁不自動讀取雲端。
+   2) 有輸入/修改/刪除：只存本機，完成後由使用者匯出 JSON。
+   3) 保留手動連線功能，流量恢復後仍可自行重新連線。
 */
 (function(){
   'use strict';
-  const VERSION = 'V66按鈕選取不取消・雲端同步修正版';
+  const VERSION = 'V67本機匯出模式・雲端暫停版';
+  const AUTO_CLOUD_ENABLED = false;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
   const EMERGENCY_KEY = 'DCLIP_V65_UNSYNCED_PENDING';
   const DEVICE_KEY = 'DCLIP_V65_DEVICE_ID';
@@ -7660,13 +7660,15 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const h = document.querySelector('.titleWrap h1');
-      if(h && !document.getElementById('dclipV66LoadedBadge')){
+      if(h && !document.getElementById('dclipV67LoadedBadge')){
         const b = document.createElement('span');
-        b.id = 'dclipV66LoadedBadge';
-        b.textContent = ' V66按鈕穩定版已載入';
+        b.id = 'dclipV67LoadedBadge';
+        b.textContent = ' V67本機匯出模式';
         b.style.cssText = 'font-size:12px;letter-spacing:0;background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:middle;';
         h.appendChild(b);
       }
+      const hint = document.querySelector('.syncHintLine');
+      if(hint) hint.textContent = 'V67本機匯出模式：目前停止自動讀取與上傳雲端；資料只存本機，完成後請匯出JSON。流量恢復後可再按「連線」。';
     }catch(_e){}
   }
 
@@ -7682,7 +7684,8 @@ init();
       const r = oldInit.apply(this, arguments);
       clearIntervalSafely();
       markLoaded();
-      if(connected()) setTimeout(()=>loadCloud('init'), 120);
+      if(AUTO_CLOUD_ENABLED && connected()) setTimeout(()=>loadCloud('init'), 120);
+      else setMsg('本機模式：資料只存本機，完成後請匯出JSON', 'warn');
       return r;
     };
   }catch(_e){}
@@ -7709,12 +7712,18 @@ init();
       try{ if(typeof sbSuppressAuto !== 'undefined') sbSuppressAuto = true; }catch(_e){}
       try{ ret = oldSave.apply(this, arguments); }
       finally{ try{ if(typeof sbSuppressAuto !== 'undefined') sbSuppressAuto = oldSuppress; }catch(_e){} }
-      if(!applyingCloud) scheduleUpload('saveState', SAVE_DELAY_MS);
+      if(!applyingCloud){
+        if(AUTO_CLOUD_ENABLED) scheduleUpload('saveState', SAVE_DELAY_MS);
+        else setMsg('本機已存檔；完成後請匯出JSON', 'warn');
+      }
       return ret;
     };
   }catch(e){ console.warn('V65 save override failed', e); }
 
-  try{ queueSupabaseAutoSync = function(){ scheduleUpload('queue', SAVE_DELAY_MS); }; }catch(_e){}
+  try{ queueSupabaseAutoSync = function(){
+    if(AUTO_CLOUD_ENABLED) scheduleUpload('queue', SAVE_DELAY_MS);
+    else setMsg('本機已存檔；完成後請匯出JSON', 'warn');
+  }; }catch(_e){}
   try{ uploadSupabaseState = async function(){ return uploadNow('upload'); }; }catch(_e){}
   try{ syncSupabaseNow = async function(){ return uploadNow('manual'); }; }catch(_e){}
   try{ downloadSupabaseState = async function(){ return loadCloud('manual_download'); }; }catch(_e){}
@@ -7728,10 +7737,10 @@ init();
     };
   }catch(_e){}
 
-  window.addEventListener('focus', ()=>{ if(connected() && !dirty && !hasPending()) loadCloud('focus'); });
+  window.addEventListener('focus', ()=>{ if(AUTO_CLOUD_ENABLED && connected() && !dirty && !hasPending()) loadCloud('focus'); });
   document.addEventListener('visibilitychange', ()=>{
-    if(document.visibilityState === 'visible' && connected() && !dirty && !hasPending()) loadCloud('visible');
-    if(document.visibilityState === 'hidden' && connected() && (dirty || hasPending())) uploadNow('hidden');
+    if(AUTO_CLOUD_ENABLED && document.visibilityState === 'visible' && connected() && !dirty && !hasPending()) loadCloud('visible');
+    if(AUTO_CLOUD_ENABLED && document.visibilityState === 'hidden' && connected() && (dirty || hasPending())) uploadNow('hidden');
   });
   window.addEventListener('beforeunload', function(e){
     if(cloudWriting || dirty || hasPending()){
@@ -7742,7 +7751,12 @@ init();
   });
 
   markLoaded();
-  setTimeout(()=>{ clearIntervalSafely(); markLoaded(); if(connected()) loadCloud('late_init'); else setMsg('雲端未連線：請先連線 Supabase', 'bad'); }, 600);
+  setTimeout(()=>{
+    clearIntervalSafely();
+    markLoaded();
+    if(AUTO_CLOUD_ENABLED && connected()) loadCloud('late_init');
+    else setMsg('本機模式：資料只存本機，完成後請匯出JSON', 'warn');
+  }, 600);
 })();
 </script>
 
