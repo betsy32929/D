@@ -2939,7 +2939,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V60</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V68 本機匯出模式</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7374,14 +7374,6 @@ init();
         btn.title = V60;
         btn.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopImmediatePropagation(); addCase(); }, true);
       });
-      const h = document.querySelector('.titleWrap h1');
-      if(h && !document.getElementById('dclipV60LoadedBadge')){
-        const b = document.createElement('span');
-        b.id = 'dclipV60LoadedBadge';
-        b.textContent = ' 新增已載入';
-        b.style.cssText = 'font-size:12px;letter-spacing:0;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:middle;';
-        h.appendChild(b);
-      }
     }catch(e){ console.warn('V60 bind failed', e); }
   }
   bind();
@@ -7392,7 +7384,7 @@ init();
 
 
 <script>
-/* ===== V67：本機匯出模式＋按鈕選取不取消 =====
+/* ===== V68：本機匯出模式＋版本標題修正＋按鈕選取不取消 =====
    原則：
    1) Supabase 流量限制期間，開啟/切回分頁不自動讀取雲端。
    2) 有輸入/修改/刪除：只存本機，完成後由使用者匯出 JSON。
@@ -7400,7 +7392,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V67本機匯出模式・雲端暫停版';
+  const VERSION = 'V68本機匯出模式・雲端暫停版';
   const AUTO_CLOUD_ENABLED = false;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
   const EMERGENCY_KEY = 'DCLIP_V65_UNSYNCED_PENDING';
@@ -7659,16 +7651,10 @@ init();
   function markLoaded(){
     try{
       document.title = 'D夾｜' + VERSION;
-      const h = document.querySelector('.titleWrap h1');
-      if(h && !document.getElementById('dclipV67LoadedBadge')){
-        const b = document.createElement('span');
-        b.id = 'dclipV67LoadedBadge';
-        b.textContent = ' V67本機匯出模式';
-        b.style.cssText = 'font-size:12px;letter-spacing:0;background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:middle;';
-        h.appendChild(b);
-      }
+      const currentBadge = document.getElementById('dclipCurrentVersionBadge');
+      if(currentBadge) currentBadge.textContent = 'V68 本機匯出模式';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V67本機匯出模式：目前停止自動讀取與上傳雲端；資料只存本機，完成後請匯出JSON。流量恢復後可再按「連線」。';
+      if(hint) hint.textContent = 'V68本機匯出模式：目前停止自動讀取與上傳雲端；資料只存本機，完成後請匯出JSON。流量恢復後可再按「連線」。';
     }catch(_e){}
   }
 
