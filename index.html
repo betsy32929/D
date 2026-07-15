@@ -454,6 +454,7 @@
     .modalHeader h2{line-height:1.25;}
     .editTitleCase{display:block;font-size:20px;font-weight:1000;letter-spacing:1px;}
     .editTitleContract{display:block;font-size:13px;font-weight:800;opacity:.92;margin-top:3px;letter-spacing:0;}
+    .editTitleMeta{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;font-weight:800;opacity:.92;margin-top:3px;letter-spacing:0;}
     .filterGridMaking{
       grid-template-columns:1.15fr .95fr .95fr .95fr 1.05fr 1.35fr auto;
       align-items:end;
@@ -2939,7 +2940,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V68 本機匯出模式</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V69 本機匯出模式</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3681,7 +3682,9 @@ function updateEditModalTitle(c){
   if(!title || !c) return;
   const caseName = c.caseName || '新增案件';
   const contract = c.contractNo || '—';
-  title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleContract">契約編號：${esc(contract)}</span>`;
+  const mainContract = c.mainContractNo || '—';
+  const developer = c.business || '—';
+  title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleMeta"><span>契約編號：${esc(contract)}</span><span>跟隨主約：${esc(mainContract)}</span><span>開發：${esc(developer)}</span></span>`;
 }
 function openEditModal(id){
   currentCaseId = id;
@@ -7384,7 +7387,7 @@ init();
 
 
 <script>
-/* ===== V68：本機匯出模式＋版本標題修正＋按鈕選取不取消 =====
+/* ===== V69：輸入標題資訊列＋本機匯出模式＋按鈕選取不取消 =====
    原則：
    1) Supabase 流量限制期間，開啟/切回分頁不自動讀取雲端。
    2) 有輸入/修改/刪除：只存本機，完成後由使用者匯出 JSON。
@@ -7392,7 +7395,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V68本機匯出模式・雲端暫停版';
+  const VERSION = 'V69輸入標題資訊列・本機匯出模式';
   const AUTO_CLOUD_ENABLED = false;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
   const EMERGENCY_KEY = 'DCLIP_V65_UNSYNCED_PENDING';
@@ -7652,9 +7655,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V68 本機匯出模式';
+      if(currentBadge) currentBadge.textContent = 'V69 本機匯出模式';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V68本機匯出模式：目前停止自動讀取與上傳雲端；資料只存本機，完成後請匯出JSON。流量恢復後可再按「連線」。';
+      if(hint) hint.textContent = 'V69本機匯出模式：目前停止自動讀取與上傳雲端；資料只存本機，完成後請匯出JSON。流量恢復後可再按「連線」。';
     }catch(_e){}
   }
 
