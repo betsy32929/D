@@ -2940,7 +2940,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V71 本機匯出模式</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V72 本機匯出模式</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3596,6 +3596,24 @@ function scheduleSave(){
   document.getElementById('saveStatus').textContent = '自動存檔中...';
   saveTimer = setTimeout(()=>{ saveState(); renderAll(false); }, 220);
 }
+function getActualLastModifiedTime(){
+  let bestMs = 0;
+  let bestText = '';
+  const remember = function(value){
+    const ms = Date.parse(value || '');
+    if(Number.isFinite(ms) && ms > bestMs){ bestMs = ms; bestText = value; }
+  };
+  (Array.isArray(state && state.cases) ? state.cases : []).forEach(c=>{
+    remember(c && c.updatedAt);
+    if(c && c.tasks && typeof c.tasks === 'object'){
+      Object.values(c.tasks).forEach(t=>remember(t && t.updatedAt));
+    }
+  });
+  if(state && state.deletedCases && typeof state.deletedCases === 'object'){
+    Object.values(state.deletedCases).forEach(remember);
+  }
+  return bestText || (state && state.lastSaved) || '';
+}
 function updateSaveStatus(){
   const saveEl = document.getElementById('saveStatus');
   if(saveEl){
@@ -3611,7 +3629,8 @@ function updateSaveStatus(){
       saveEl.style.borderColor = '';
     }
   }
-  const text = '最後修改時間：' + (state.lastSaved ? formatHeaderSavedTime(state.lastSaved) : '—');
+  const actualModified = getActualLastModifiedTime();
+  const text = '最後修改時間：' + (actualModified ? formatHeaderSavedTime(actualModified) : '—');
   const header = document.getElementById('headerLastUpdate');
   if(header) header.textContent = text;
   const old = document.getElementById('lastSavedText');
@@ -7388,7 +7407,7 @@ init();
 
 
 <script>
-/* ===== V71：完整日期最後修改時間＋輸入標題資訊列＋本機匯出模式 =====
+/* ===== V72：依案件紀錄顯示最後修改時間＋輸入標題資訊列＋本機匯出模式 =====
    原則：
    1) Supabase 流量限制期間，開啟/切回分頁不自動讀取雲端。
    2) 有輸入/修改/刪除：只存本機，完成後由使用者匯出 JSON。
@@ -7396,7 +7415,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V71完整日期最後修改時間・本機匯出模式';
+  const VERSION = 'V72案件最後修改時間・本機匯出模式';
   const AUTO_CLOUD_ENABLED = false;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
   const EMERGENCY_KEY = 'DCLIP_V65_UNSYNCED_PENDING';
@@ -7656,9 +7675,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V71 本機匯出模式';
+      if(currentBadge) currentBadge.textContent = 'V72 本機匯出模式';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V71本機匯出模式：目前停止自動讀取與上傳雲端；資料只存本機，完成後請匯出JSON。流量恢復後可再按「連線」。';
+      if(hint) hint.textContent = 'V72本機匯出模式：目前停止自動讀取與上傳雲端；資料只存本機，完成後請匯出JSON。流量恢復後可再按「連線」。';
     }catch(_e){}
   }
 
