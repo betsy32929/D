@@ -2940,7 +2940,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V73 本機資料保留模式</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V74 安全跨電腦同步</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7411,16 +7411,17 @@ init();
 
 
 <script>
-/* ===== V73：重新整理保留本機資料＋依案件紀錄顯示最後修改時間 =====
+/* ===== V74：變更時上傳＋開啟時合併＋不定時輪詢 =====
    原則：
-   1) Supabase 流量限制期間，開啟/切回分頁不自動讀取雲端。
-   2) 有輸入/修改/刪除：只存本機，完成後由使用者匯出 JSON。
-   3) 保留手動連線功能，流量恢復後仍可自行重新連線。
+   1) 有輸入、修改、刪除才延遲上傳雲端。
+   2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
+   3) 同步成功後仍保留本機資料，重新整理不會變空白。
 */
 (function(){
   'use strict';
-  const VERSION = 'V73重新整理保留本機資料';
-  const AUTO_CLOUD_ENABLED = false;
+  const VERSION = 'V74安全跨電腦同步';
+  const AUTO_CLOUD_ENABLED = true;
+  window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
   const EMERGENCY_KEY = 'DCLIP_V65_UNSYNCED_PENDING';
   const DEVICE_KEY = 'DCLIP_V65_DEVICE_ID';
@@ -7492,7 +7493,16 @@ init();
     try{ if(typeof remoteTimeMsV53 === 'function') return remoteTimeMsV53(row); }catch(_e){}
     return ms(row && row.updated_at);
   }
-  function clearMainLocal(){ try{ localStorage.removeItem(MAIN_KEY); }catch(_e){} }
+  function persistMainLocal(){
+    try{
+      if(typeof persistStateToLocalV44 === 'function') persistStateToLocalV44();
+      else localStorage.setItem(MAIN_KEY, JSON.stringify(state));
+      return true;
+    }catch(err){
+      try{ if(typeof showLocalSaveErrorV44 === 'function') showLocalSaveErrorV44(err); }catch(_e){}
+      return false;
+    }
+  }
   function keepPending(reason){
     try{ localStorage.setItem(EMERGENCY_KEY, JSON.stringify({at:iso(), reason:reason||'', device:deviceId(), state:state})); }catch(_e){}
   }
@@ -7537,7 +7547,7 @@ init();
       dirty = false;
       lastRemoteAt = remoteAt || lastRemoteAt || iso();
       clearPending();
-      clearMainLocal();
+      persistMainLocal();
       setMsg(message || '已載入雲端主資料', 'ok');
       return true;
     }finally{ applyingCloud = false; }
@@ -7592,13 +7602,36 @@ init();
         return true;
       }
       if(row && row.payload){
-        applyCloud(row.payload, row.updated_at, reason === 'connect' ? '已載入雲端主資料' : '已讀取雲端主資料');
+        const remoteState = normalizePayload(row.payload);
+        const mergedState = normalizePayload(mergeUploadState(remoteState));
+        const compare = function(value){
+          try{ if(typeof normalizeStateForCompareV37 === 'function') return normalizeStateForCompareV37(value); }catch(_e){}
+          return JSON.stringify(value || {});
+        };
+        const cloudNeedsMerge = compare(mergedState) !== compare(remoteState);
+        applyCloud(
+          mergedState,
+          row.updated_at,
+          cloudNeedsMerge ? '已合併本機與雲端資料，正在更新雲端…' : (reason === 'connect' ? '已載入雲端主資料' : '已讀取雲端主資料')
+        );
         try{ if(typeof setLastRemoteTime === 'function') setLastRemoteTime(cfg(), row.updated_at || iso()); }catch(_e){}
+        if(cloudNeedsMerge){
+          dirty = true;
+          keepPending('merge_after_load');
+          setTimeout(()=>scheduleUpload('merge_after_load', 200), 0);
+        }
         return true;
       }
-      clearMainLocal();
       clearPending();
-      setMsg('雲端目前沒有資料；請匯入JSON或新增後建立雲端資料', 'warn');
+      persistMainLocal();
+      if(state && Array.isArray(state.cases) && state.cases.length){
+        dirty = true;
+        keepPending('create_cloud_from_local');
+        setTimeout(()=>scheduleUpload('create_cloud_from_local', 200), 0);
+        setMsg('雲端目前沒有資料，正在用本機資料建立雲端主資料…', 'warn');
+        return true;
+      }
+      setMsg('雲端目前沒有資料；新增資料後會自動建立', 'warn');
       return false;
     }catch(err){
       console.warn('V65 cloud load failed', err);
@@ -7637,7 +7670,7 @@ init();
       lastRemoteAt = remoteAt || iso();
       dirty = false;
       clearPending();
-      clearMainLocal();
+      persistMainLocal();
       try{ if(typeof setLastRemoteTime === 'function') setLastRemoteTime(cfg(), lastRemoteAt); }catch(_e){}
       try{ updateSaveStatus(); }catch(_e){}
       setMsg('雲端已同步 ' + fmt(lastRemoteAt), 'ok');
@@ -7679,9 +7712,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V73 本機資料保留模式';
+      if(currentBadge) currentBadge.textContent = 'V74 安全跨電腦同步';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V73本機資料保留模式：重新整理不會自動讀取或上傳雲端；資料先存本機，需要時再手動連線或立即同步。';
+      if(hint) hint.textContent = 'V74安全跨電腦同步：有變更才上傳；開啟或切回頁面時只讀取一次並合併，不做定時輪詢。';
     }catch(_e){}
   }
 
@@ -7690,7 +7723,7 @@ init();
   try{ startSupabasePolling = function(){ clearIntervalSafely(); setTimeout(()=>loadCloud('start'), 120); }; }catch(_e){}
   try{ checkSupabaseRemoteUpdates = async function(){ return loadCloud('check'); }; }catch(_e){}
 
-  // 連線：只讀雲端，不把本機舊資料上傳。
+  // 啟動時只做一次合併，不啟動舊版輪詢。
   try{
     const oldInit = initSupabasePanel;
     initSupabasePanel = function(){
@@ -7703,12 +7736,26 @@ init();
     };
   }catch(_e){}
   try{
-    const oldConnect = connectSupabase;
     connectSupabase = async function(){
-      const r = await oldConnect.apply(this, arguments);
-      clearIntervalSafely();
-      if(connected()) await loadCloud('connect');
-      return r;
+      const c = saveSupabaseConfig({connected:false});
+      if(!supabaseReady(c)) return false;
+      setSupabaseStatus('連線中…','warn');
+      setSupabaseMessage('正在連線並合併本機與雲端資料…','warn');
+      try{
+        const res = await fetch(`${supabaseTableUrl(c)}?select=workspace_key&limit=1`, {method:'GET', headers:supabaseHeaders(c)});
+        if(!res.ok) throw new Error(await res.text() || res.statusText);
+        saveSupabaseConfig({connected:true});
+        clearIntervalSafely();
+        setSupabaseStatus('已連線','ok');
+        return await loadCloud('connect');
+      }catch(err){
+        console.warn('V74 connect failed', err);
+        saveSupabaseConfig({connected:false});
+        setSupabaseStatus('未連線','bad');
+        setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
+        alert('Supabase 連線失敗：\n' + (err && err.message ? err.message : err));
+        return false;
+      }
     };
   }catch(_e){}
   try{
@@ -7716,7 +7763,7 @@ init();
     disconnectSupabase = function(){ clearIntervalSafely(); return oldDisconnect.apply(this, arguments); };
   }catch(_e){}
 
-  // 儲存：舊版先跑畫面與必要暫存；成功上傳後會清掉主 localStorage。
+  // 儲存：先存本機，再於資料變更後延遲上傳；同步成功仍保留本機資料。
   try{
     const oldSave = saveState;
     saveState = function(){
