@@ -2940,7 +2940,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V72 本機匯出模式</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V73 本機資料保留模式</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -6053,10 +6053,12 @@ function initSupabasePanel(){
   if(url) url.value = cfg.url || '';
   if(key) key.value = cfg.key || '';
   if(cfg.connected && cfg.url && cfg.key){
-    setSupabaseStatus('已連線','ok');
-    setSupabaseMessage('已自動連上 Supabase，同步監看中。','ok');
-    startSupabasePolling();
-    setTimeout(()=>syncSupabaseNow(true), 350);
+    setSupabaseStatus('已設定','ok');
+    setSupabaseMessage('本機模式：重新整理不讀取雲端；需要時請手動按「連線」或「立即同步」。','warn');
+    if(window.DCLIP_AUTO_CLOUD_ENABLED === true){
+      startSupabasePolling();
+      setTimeout(()=>syncSupabaseNow(true), 350);
+    }
   }else{
     setSupabaseStatus('未連線','');
     setSupabaseMessage('尚未連線','');
@@ -7130,10 +7132,12 @@ function initSupabasePanel(){
   if(url) url.value = cfg.url || '';
   if(key) key.value = cfg.key || '';
   if(cfg.connected && cfg.url && cfg.key){
-    setSupabaseStatus('已連線','ok');
-    setSupabaseMessage('已自動連上 Supabase，同步監看中；開啟網頁不會自動上傳覆蓋雲端。','ok');
-    startSupabasePolling();
-    setTimeout(()=>checkSupabaseRemoteUpdates(), 650);
+    setSupabaseStatus('已設定','ok');
+    setSupabaseMessage('本機模式：重新整理不讀取雲端；需要時請手動按「連線」或「立即同步」。','warn');
+    if(window.DCLIP_AUTO_CLOUD_ENABLED === true){
+      startSupabasePolling();
+      setTimeout(()=>checkSupabaseRemoteUpdates(), 650);
+    }
   }else{
     setSupabaseStatus('未連線','');
     setSupabaseMessage('尚未連線','');
@@ -7407,7 +7411,7 @@ init();
 
 
 <script>
-/* ===== V72：依案件紀錄顯示最後修改時間＋輸入標題資訊列＋本機匯出模式 =====
+/* ===== V73：重新整理保留本機資料＋依案件紀錄顯示最後修改時間 =====
    原則：
    1) Supabase 流量限制期間，開啟/切回分頁不自動讀取雲端。
    2) 有輸入/修改/刪除：只存本機，完成後由使用者匯出 JSON。
@@ -7415,7 +7419,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V72案件最後修改時間・本機匯出模式';
+  const VERSION = 'V73重新整理保留本機資料';
   const AUTO_CLOUD_ENABLED = false;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
   const EMERGENCY_KEY = 'DCLIP_V65_UNSYNCED_PENDING';
@@ -7675,9 +7679,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V72 本機匯出模式';
+      if(currentBadge) currentBadge.textContent = 'V73 本機資料保留模式';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V72本機匯出模式：目前停止自動讀取與上傳雲端；資料只存本機，完成後請匯出JSON。流量恢復後可再按「連線」。';
+      if(hint) hint.textContent = 'V73本機資料保留模式：重新整理不會自動讀取或上傳雲端；資料先存本機，需要時再手動連線或立即同步。';
     }catch(_e){}
   }
 
@@ -7741,7 +7745,7 @@ init();
     const oldImport = importData;
     importData = function(event){
       const r = oldImport.apply(this, arguments);
-      setTimeout(()=>scheduleUpload('import_json', 200), 300);
+      if(AUTO_CLOUD_ENABLED) setTimeout(()=>scheduleUpload('import_json', 200), 300);
       return r;
     };
   }catch(_e){}
