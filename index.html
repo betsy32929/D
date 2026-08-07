@@ -2940,7 +2940,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V74 安全跨電腦同步</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V75 操作人員選取不跳掉</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7411,7 +7411,7 @@ init();
 
 
 <script>
-/* ===== V74：變更時上傳＋開啟時合併＋不定時輪詢 =====
+/* ===== V75：變更時上傳＋開啟時合併＋不定時輪詢 =====
    原則：
    1) 有輸入、修改、刪除才延遲上傳雲端。
    2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
@@ -7419,7 +7419,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V74安全跨電腦同步';
+  const VERSION = 'V75操作人員選取不跳掉';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7673,6 +7673,7 @@ init();
       persistMainLocal();
       try{ if(typeof setLastRemoteTime === 'function') setLastRemoteTime(cfg(), lastRemoteAt); }catch(_e){}
       try{ updateSaveStatus(); }catch(_e){}
+      try{ window.dispatchEvent(new CustomEvent('dclip:cloud-synced', {detail:{state:state}})); }catch(_e){}
       setMsg('雲端已同步 ' + fmt(lastRemoteAt), 'ok');
       return true;
     }catch(err){
@@ -7712,9 +7713,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V74 安全跨電腦同步';
+      if(currentBadge) currentBadge.textContent = 'V75 操作人員選取不跳掉';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V74安全跨電腦同步：有變更才上傳；開啟或切回頁面時只讀取一次並合併，不做定時輪詢。';
+      if(hint) hint.textContent = 'V75操作人員選取不跳掉：選取會保留到雲端確認；有變更才上傳，開啟或切回頁面時合併一次。';
     }catch(_e){}
   }
 
@@ -7749,7 +7750,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V74 connect failed', err);
+        console.warn('V75 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -7822,7 +7823,7 @@ init();
 
 
 <script>
-/* ===== V66：操作人員按鈕保持選取 =====
+/* ===== V75：操作人員按鈕保持選取 =====
    同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
    要更換人員時，直接點選另一個人員按鈕即可。 */
 function selectTaskAssistant(ruleId, encodedName){
@@ -7852,9 +7853,9 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V67：操作人員點選後不被自動刷新/雲端舊資料取消 ===== */
+/* ===== V75：操作人員選取保留到雲端確認，不再只保護 15 秒 ===== */
 (function(){
-  const RECENT_MS = 15000;
+  const RECENT_MS = 30 * 60 * 1000;
   const recentTaskChoices = Object.create(null);
   const taskKey = (caseId, ruleId) => String(caseId || '') + '::' + String(ruleId || '');
   const stamp = () => Date.now();
@@ -7883,8 +7884,8 @@ function selectTaskAssistant(ruleId, encodedName){
         t.assistant = recent.assistant;
         t.done = !!recent.assistant;
         t.override = 'required';
-        t.updatedAt = t.updatedAt || new Date(recent.at).toISOString();
-        c.updatedAt = c.updatedAt || t.updatedAt;
+        t.updatedAt = new Date(recent.at).toISOString();
+        if(parseMs(c.updatedAt) < recent.at) c.updatedAt = t.updatedAt;
       });
     });
     return targetState;
@@ -7956,6 +7957,20 @@ function selectTaskAssistant(ruleId, encodedName){
     renderTaskTable();
     renderAll(false);
   };
+
+  window.addEventListener('dclip:cloud-synced', function(event){
+    const synced = event && event.detail && event.detail.state;
+    if(!synced || !Array.isArray(synced.cases)) return;
+    const syncedCases = new Map(synced.cases.filter(c=>c && c.id).map(c=>[c.id,c]));
+    Object.keys(recentTaskChoices).forEach(key=>{
+      const recent = recentTaskChoices[key];
+      const c = syncedCases.get(recent.caseId);
+      const t = c && c.tasks && c.tasks[recent.ruleId];
+      if(t && t.assistant === recent.assistant && parseMs(t.updatedAt) >= recent.at){
+        delete recentTaskChoices[key];
+      }
+    });
+  });
 })();
 </script>
 
