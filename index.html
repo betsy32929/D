@@ -2940,7 +2940,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V75 操作人員選取不跳掉</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V76 操作人員名單更新</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -5475,8 +5475,8 @@ function queueSupabaseAutoSync(){
 }
 
 
-// ===== V31：取消動作 V/X；項目由麗卉／紹薇／無判斷完成 =====
-const FIXED_TASK_ASSISTANTS_V31 = ['麗卉','紹薇','無'];
+// ===== V76：操作人員固定為麗卉／花花／無 =====
+const FIXED_TASK_ASSISTANTS_V31 = ['麗卉','花花','無'];
 function fixedTaskAssistants(){
   return FIXED_TASK_ASSISTANTS_V31.map((name, idx)=>({id:'fixed'+idx, name, active:true}));
 }
@@ -5714,9 +5714,9 @@ function matchDoneFilters(c){
 }
 function renderAssistantsSettings(){
   const el = document.getElementById('assistantsTable');
-  if(el) el.innerHTML = '<div class="empty">操作人員固定為：麗卉、紹薇、無</div>';
+  if(el) el.innerHTML = '<div class="empty">操作人員固定為：麗卉、花花、無</div>';
 }
-function addAssistant(){ alert('這版操作人員固定為：麗卉、紹薇、無'); }
+function addAssistant(){ alert('這版操作人員固定為：麗卉、花花、無'); }
 function toggleAssistant(){ return false; }
 function renderRulesSettings(){
   const body = (state.rules || []).map((r,idx)=>`<tr>
@@ -5828,7 +5828,7 @@ function safeBackupV37(name, data){
   }catch(e){}
 }
 function defaultStateV37(){
-  return {version:'37.0',systemName:'D夾',assistants:fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'紹薇',active:true},{id:'fixed2',name:'無',active:true}],rules:cloneRules(DEFAULT_RULES),cases:[],lastSaved:''};
+  return {version:'37.0',systemName:'D夾',assistants:fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'花花',active:true},{id:'fixed2',name:'無',active:true}],rules:cloneRules(DEFAULT_RULES),cases:[],lastSaved:''};
 }
 function mergeRulesV37(localRules, remoteRules){
   const out = [];
@@ -6144,7 +6144,7 @@ function cleanupImportedStateV47(nextState){
   if(!result.state.deletedCases || typeof result.state.deletedCases !== 'object' || Array.isArray(result.state.deletedCases)) result.state.deletedCases = {};
   result.state.version = '51.0';
   result.state.systemName = 'D夾';
-  result.state.assistants = fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'紹薇',active:true},{id:'fixed2',name:'無',active:true}];
+  result.state.assistants = fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'花花',active:true},{id:'fixed2',name:'無',active:true}];
   return result;
 }
 function pickImportedPayloadV47(imported){
@@ -6401,7 +6401,7 @@ function defaultStateV37(){
   return {
     version:'43.0',
     systemName:'D夾',
-    assistants:fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'紹薇',active:true},{id:'fixed2',name:'無',active:true}],
+    assistants:fixedTaskAssistants ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'花花',active:true},{id:'fixed2',name:'無',active:true}],
     rules:cloneRules(DEFAULT_RULES),
     cases:[],
     deletedCases:{},
@@ -6730,7 +6730,7 @@ function defaultStateV52(){
   return {
     version:DCLIP_VERSION_V52,
     systemName:'D夾',
-    assistants:(typeof fixedTaskAssistants === 'function' ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'紹薇',active:true},{id:'fixed2',name:'無',active:true}]),
+    assistants:(typeof fixedTaskAssistants === 'function' ? fixedTaskAssistants() : [{id:'fixed0',name:'麗卉',active:true},{id:'fixed1',name:'花花',active:true},{id:'fixed2',name:'無',active:true}]),
     rules:cloneRules(DEFAULT_RULES),
     cases:[],
     deletedCases:{},
@@ -7411,7 +7411,7 @@ init();
 
 
 <script>
-/* ===== V75：變更時上傳＋開啟時合併＋不定時輪詢 =====
+/* ===== V76：操作人員名單更新＋安全跨電腦同步 =====
    原則：
    1) 有輸入、修改、刪除才延遲上傳雲端。
    2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
@@ -7419,7 +7419,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V75操作人員選取不跳掉';
+  const VERSION = 'V76操作人員名單更新';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7713,9 +7713,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V75 操作人員選取不跳掉';
+      if(currentBadge) currentBadge.textContent = 'V76 操作人員名單更新';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V75操作人員選取不跳掉：選取會保留到雲端確認；有變更才上傳，開啟或切回頁面時合併一次。';
+      if(hint) hint.textContent = 'V76操作人員名單更新：麗卉、花花、無；選取會保留到雲端確認。';
     }catch(_e){}
   }
 
@@ -7750,7 +7750,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V75 connect failed', err);
+        console.warn('V76 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -7823,7 +7823,7 @@ init();
 
 
 <script>
-/* ===== V75：操作人員按鈕保持選取 =====
+/* ===== V76：操作人員按鈕保持選取 =====
    同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
    要更換人員時，直接點選另一個人員按鈕即可。 */
 function selectTaskAssistant(ruleId, encodedName){
@@ -7853,7 +7853,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V75：操作人員選取保留到雲端確認，不再只保護 15 秒 ===== */
+/* ===== V76：操作人員選取保留到雲端確認 ===== */
 (function(){
   const RECENT_MS = 30 * 60 * 1000;
   const recentTaskChoices = Object.create(null);
