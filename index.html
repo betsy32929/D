@@ -2940,7 +2940,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V77 新增物件不中斷</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V78 單機總表合併</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3197,8 +3197,7 @@ const DEFAULT_RULES = [
   {id:'r08', name:'房管上傳照片', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:false},
   {id:'r09', name:'內網上架', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
   {id:'r10', name:'官網上架', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
-  {id:'r11', name:'總表', priceChange:true, bottomPriceChange:false, extendContract:false, relist:true, contractChange:true, specialTerms:true},
-  {id:'r12', name:'統整表', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r11', name:'單機 總表', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:true},
   {id:'r13', name:'土增稅', priceChange:false, bottomPriceChange:false, extendContract:false, relist:true, contractChange:true, specialTerms:false},
   {id:'r14', name:'屋齡', priceChange:false, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
   {id:'r15', name:'物件本上架', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:true},
@@ -5494,10 +5493,10 @@ function migrateState(){
   ensureFixedAssistantsV31();
   if(!Array.isArray(state.rules) || !state.rules.length) state.rules = cloneRules(DEFAULT_RULES);
   state.rules = state.rules
-    .filter(r=>r && (r.name || r.id))
+    .filter(r=>r && (r.name || r.id) && r.id !== 'r12' && String(r.name || '').trim() !== '統整表')
     .map((r,i)=>({
       id:r.id || (DEFAULT_RULES[i] && DEFAULT_RULES[i].id) || uid('r'),
-      name:String(r.name || (DEFAULT_RULES[i] && DEFAULT_RULES[i].name) || '未命名項目').trim() || '未命名項目'
+      name:(r.id === 'r11' || String(r.name || '').trim() === '總表') ? '單機 總表' : (String(r.name || (DEFAULT_RULES[i] && DEFAULT_RULES[i].name) || '未命名項目').trim() || '未命名項目')
     }));
   if(!Array.isArray(state.cases)) state.cases = [];
   state.cases.forEach(c=>{
@@ -5836,7 +5835,9 @@ function mergeRulesV37(localRules, remoteRules){
   function add(r){
     if(!r) return;
     const id = r.id || uid('r');
-    const name = String(r.name || '').trim();
+    let name = String(r.name || '').trim();
+    if(id === 'r12' || name === '統整表') return;
+    if(id === 'r11' || name === '總表') name = '單機 總表';
     const key = id || name;
     if(seen.has(key)) return;
     seen.add(key);
@@ -7412,7 +7413,7 @@ init();
 
 
 <script>
-/* ===== V77：新增物件不中斷＋安全跨電腦同步 =====
+/* ===== V78：單機總表合併＋安全跨電腦同步 =====
    原則：
    1) 有輸入、修改、刪除才延遲上傳雲端。
    2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
@@ -7420,7 +7421,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V77新增物件不中斷';
+  const VERSION = 'V78單機總表合併';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7724,9 +7725,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V77 新增物件不中斷';
+      if(currentBadge) currentBadge.textContent = 'V78 單機總表合併';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V77新增物件不中斷：切回視窗不干擾輸入；雲端逾時仍保留本機資料。';
+      if(hint) hint.textContent = 'V78單機總表合併：只顯示「單機 總表」；舊案件紀錄保留不動。';
     }catch(_e){}
   }
 
@@ -7761,7 +7762,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V77 connect failed', err);
+        console.warn('V78 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -7851,7 +7852,7 @@ init();
 
 
 <script>
-/* ===== V77：操作人員按鈕保持選取 =====
+/* ===== V78：操作人員按鈕保持選取 =====
    同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
    要更換人員時，直接點選另一個人員按鈕即可。 */
 function selectTaskAssistant(ruleId, encodedName){
@@ -7881,7 +7882,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V77：操作人員選取保留到雲端確認 ===== */
+/* ===== V78：操作人員選取保留到雲端確認 ===== */
 (function(){
   const RECENT_MS = 30 * 60 * 1000;
   const recentTaskChoices = Object.create(null);
