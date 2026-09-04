@@ -2940,7 +2940,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V79 有修改才同步</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V80 同步時間一致</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7413,7 +7413,7 @@ init();
 
 
 <script>
-/* ===== V79：只有修改才上傳；切換視窗不觸發同步 =====
+/* ===== V80：同步時間與最後修改時間一致 =====
    原則：
    1) 有輸入、修改、刪除才延遲上傳雲端。
    2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
@@ -7421,7 +7421,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V79有修改才同步';
+  const VERSION = 'V80同步時間一致';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7685,7 +7685,8 @@ init();
       try{ if(typeof setLastRemoteTime === 'function') setLastRemoteTime(cfg(), lastRemoteAt); }catch(_e){}
       try{ updateSaveStatus(); }catch(_e){}
       try{ window.dispatchEvent(new CustomEvent('dclip:cloud-synced', {detail:{state:state}})); }catch(_e){}
-      setMsg('雲端已同步 ' + fmt(lastRemoteAt), 'ok');
+      const actualModifiedAt = (typeof getActualLastModifiedTime === 'function') ? getActualLastModifiedTime() : (state && state.lastSaved);
+      setMsg('雲端已同步 ' + fmt(actualModifiedAt), 'ok');
       return true;
     }catch(err){
       console.warn('V65 upload failed', err);
@@ -7724,9 +7725,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V79 有修改才同步';
+      if(currentBadge) currentBadge.textContent = 'V80 同步時間一致';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V79有修改才同步：新增、修改、刪除才上傳；切換視窗不觸發同步。';
+      if(hint) hint.textContent = 'V80同步時間一致：雲端已同步時間與最後修改時間相同；有修改才上傳。';
     }catch(_e){}
   }
 
@@ -7761,7 +7762,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V79 connect failed', err);
+        console.warn('V80 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -7838,7 +7839,7 @@ init();
 
 
 <script>
-/* ===== V79：操作人員按鈕保持選取 =====
+/* ===== V80：操作人員按鈕保持選取 =====
    同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
    要更換人員時，直接點選另一個人員按鈕即可。 */
 function selectTaskAssistant(ruleId, encodedName){
@@ -7868,7 +7869,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V79：操作人員選取保留到雲端確認 ===== */
+/* ===== V80：操作人員選取保留到雲端確認 ===== */
 (function(){
   const RECENT_MS = 30 * 60 * 1000;
   const recentTaskChoices = Object.create(null);
