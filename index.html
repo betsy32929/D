@@ -2940,7 +2940,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V76 操作人員名單更新</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V77 新增物件不中斷</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7381,6 +7381,7 @@ init();
       state.version = '60.0';
       state.lastSaved = iso();
       const saved = localSave();
+      try{ if(typeof window.DCLIP_MARK_LOCAL_ACTIVITY === 'function') window.DCLIP_MARK_LOCAL_ACTIVITY('new_case'); }catch(_e){}
       try{ if(typeof updateSaveStatus === 'function') updateSaveStatus(); }catch(_e){}
       // V60：這裡可以重整，因 isBlankAutoCaseV52 已保留 __justCreated，不會再刪掉剛新增案件。
       try{ if(typeof renderAll === 'function') renderAll(false); }catch(e){ console.warn('V60 render skipped', e); }
@@ -7411,7 +7412,7 @@ init();
 
 
 <script>
-/* ===== V76：操作人員名單更新＋安全跨電腦同步 =====
+/* ===== V77：新增物件不中斷＋安全跨電腦同步 =====
    原則：
    1) 有輸入、修改、刪除才延遲上傳雲端。
    2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
@@ -7419,7 +7420,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V76操作人員名單更新';
+  const VERSION = 'V77新增物件不中斷';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7427,6 +7428,7 @@ init();
   const DEVICE_KEY = 'DCLIP_V65_DEVICE_ID';
   const SAVE_DELAY_MS = 350;
   const RETRY_DELAY_MS = 8000; // 只有「有待同步」才重試，不做一般輪詢
+  const NETWORK_TIMEOUT_MS = 15000;
 
   let applyingCloud = false;
   let cloudLoading = false;
@@ -7434,6 +7436,7 @@ init();
   let dirty = false;
   let saveTimer = null;
   let retryTimer = null;
+  let backgroundLoadTimer = null;
   let lastRemoteAt = '';
 
   function iso(){ try{ return (typeof nowISO === 'function') ? nowISO() : new Date().toISOString(); }catch(_e){ return new Date().toISOString(); } }
@@ -7510,12 +7513,20 @@ init();
   function getPending(){ try{ const raw = localStorage.getItem(EMERGENCY_KEY); return raw ? JSON.parse(raw) : null; }catch(_e){ return null; } }
   function hasPending(){ const p = getPending(); return !!(p && p.state && Array.isArray(p.state.cases)); }
 
+  function withTimeout(promise, label){
+    let timer;
+    return Promise.race([
+      promise,
+      new Promise((_, reject)=>{ timer = setTimeout(()=>reject(new Error(label || '雲端連線逾時')), NETWORK_TIMEOUT_MS); })
+    ]).finally(()=>clearTimeout(timer));
+  }
+
   async function fetchCloud(){
-    if(typeof fetchSupabaseRemote === 'function') return await fetchSupabaseRemote(cfg());
+    if(typeof fetchSupabaseRemote === 'function') return await withTimeout(fetchSupabaseRemote(cfg()), '雲端讀取逾時');
     const c = cfg();
     if(!(c && c.url && c.key)) return null;
     const workspace = encodeURIComponent(c.workspace || 'dclip-main');
-    const res = await fetch(`${supabaseTableUrl(c)}?workspace_key=eq.${workspace}&select=payload,updated_at&limit=1`, {method:'GET', headers:supabaseHeaders(c)});
+    const res = await withTimeout(fetch(`${supabaseTableUrl(c)}?workspace_key=eq.${workspace}&select=payload,updated_at&limit=1`, {method:'GET', headers:supabaseHeaders(c)}), '雲端讀取逾時');
     if(!res.ok) throw new Error(await res.text() || res.statusText);
     const rows = await res.json();
     return rows && rows.length ? rows[0] : null;
@@ -7524,11 +7535,11 @@ init();
     const c = cfg();
     const t = iso();
     const body = {workspace_key:c.workspace || 'dclip-main', payload:payloadState, updated_at:t};
-    const res = await fetch(`${supabaseTableUrl(c)}?on_conflict=workspace_key`, {
+    const res = await withTimeout(fetch(`${supabaseTableUrl(c)}?on_conflict=workspace_key`, {
       method:'POST',
       headers:{...supabaseHeaders(c), Prefer:'resolution=merge-duplicates,return=representation'},
       body:JSON.stringify(body)
-    });
+    }), '雲端上傳逾時');
     if(!res.ok) throw new Error(await res.text() || res.statusText);
     const rows = await res.json().catch(()=>[]);
     return (rows && rows[0] && rows[0].updated_at) ? rows[0].updated_at : t;
@@ -7635,7 +7646,7 @@ init();
       return false;
     }catch(err){
       console.warn('V65 cloud load failed', err);
-      setMsg('雲端讀取失敗，請確認 Supabase URL/Key/網路', 'bad');
+      setMsg((err && /逾時/.test(err.message || '')) ? '雲端連線逾時；本機資料已保留，可繼續操作' : '雲端讀取失敗；本機資料已保留，請確認網路', 'bad');
       return false;
     }finally{ cloudLoading = false; }
   }
@@ -7713,9 +7724,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V76 操作人員名單更新';
+      if(currentBadge) currentBadge.textContent = 'V77 新增物件不中斷';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V76操作人員名單更新：麗卉、花花、無；選取會保留到雲端確認。';
+      if(hint) hint.textContent = 'V77新增物件不中斷：切回視窗不干擾輸入；雲端逾時仍保留本機資料。';
     }catch(_e){}
   }
 
@@ -7750,7 +7761,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V76 connect failed', err);
+        console.warn('V77 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -7798,9 +7809,26 @@ init();
     };
   }catch(_e){}
 
-  window.addEventListener('focus', ()=>{ if(AUTO_CLOUD_ENABLED && connected() && !dirty && !hasPending()) loadCloud('focus'); });
+  function editModalOpen(){
+    const mask = document.getElementById('editModalMask');
+    return !!(mask && mask.classList.contains('show'));
+  }
+  function scheduleBackgroundLoad(reason){
+    clearTimeout(backgroundLoadTimer);
+    backgroundLoadTimer = setTimeout(()=>{
+      if(AUTO_CLOUD_ENABLED && connected() && !dirty && !hasPending() && !editModalOpen()) loadCloud(reason);
+    }, 500);
+  }
+  window.DCLIP_MARK_LOCAL_ACTIVITY = function(reason){
+    clearTimeout(backgroundLoadTimer);
+    dirty = true;
+    keepPending(reason || 'local_activity');
+    setMsg('本機資料已保留，正在同步雲端…', 'warn');
+    scheduleUpload(reason || 'local_activity', 200);
+  };
+  window.addEventListener('focus', ()=>scheduleBackgroundLoad('focus'));
   document.addEventListener('visibilitychange', ()=>{
-    if(AUTO_CLOUD_ENABLED && document.visibilityState === 'visible' && connected() && !dirty && !hasPending()) loadCloud('visible');
+    if(AUTO_CLOUD_ENABLED && document.visibilityState === 'visible') scheduleBackgroundLoad('visible');
     if(AUTO_CLOUD_ENABLED && document.visibilityState === 'hidden' && connected() && (dirty || hasPending())) uploadNow('hidden');
   });
   window.addEventListener('beforeunload', function(e){
@@ -7823,7 +7851,7 @@ init();
 
 
 <script>
-/* ===== V76：操作人員按鈕保持選取 =====
+/* ===== V77：操作人員按鈕保持選取 =====
    同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
    要更換人員時，直接點選另一個人員按鈕即可。 */
 function selectTaskAssistant(ruleId, encodedName){
@@ -7853,7 +7881,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V76：操作人員選取保留到雲端確認 ===== */
+/* ===== V77：操作人員選取保留到雲端確認 ===== */
 (function(){
   const RECENT_MS = 30 * 60 * 1000;
   const recentTaskChoices = Object.create(null);
