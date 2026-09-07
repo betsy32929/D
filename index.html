@@ -2933,6 +2933,20 @@
     .hero,.toolbarMain{position:relative!important;z-index:20!important;}
     .toolbarMain .btn{position:relative!important;z-index:21!important;pointer-events:auto!important;}
 
+    .priceStatsModal{width:min(1180px,calc(100vw - 28px));}
+    .priceStatsTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .priceStatsPeriod{font-size:15px;font-weight:1000;color:#1e3a8a;}
+    .priceStatsSummary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0;}
+    .priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;background:linear-gradient(180deg,#fff,#eff6ff);text-align:center;}
+    .priceStatsCard strong{display:block;margin-top:5px;font-size:24px;color:#1d4ed8;}
+    .priceStatsTable{overflow:auto;border:1px solid #dbe4f0;border-radius:14px;}
+    .priceStatsTable table{width:100%;min-width:820px;border-collapse:collapse;}
+    .priceStatsTable th,.priceStatsTable td{padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:center;}
+    .priceStatsTable th{position:sticky;top:0;background:#eff6ff;color:#1e3a8a;font-weight:1000;}
+    .priceStatsGroup{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:1000;}
+    .priceStatsCount{font-size:18px;font-weight:1000;color:#dc2626;}
+    @media(max-width:720px){.priceStatsSummary{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
 </style>
 </head>
 <body>
@@ -2940,10 +2954,11 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V80 同步時間一致</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V81 降底價統計</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
+        <button type="button" class="btn btnBlue" onclick="openPriceDropStats()">降底價統計</button>
         <button type="button" class="btn btnBlue" onclick="safeRunTopButton(exportData, '匯出EXCEL')">匯出EXCEL</button>
         <button type="button" class="btn btnPurple" onclick="safeRunTopButton(exportJsonData, '匯出JSON')">匯出JSON</button>
         <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
@@ -3171,6 +3186,30 @@
       <div class="inline">
         <button class="btn btnRed" onclick="deleteCurrentCase()">刪除案件</button>
         <button class="btn btnGray" onclick="closeEditModal()">關閉</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modalMask" id="priceDropStatsMask" onclick="if(event.target===this) closePriceDropStats()">
+  <div class="modal priceStatsModal">
+    <div class="modalHeader">
+      <div>
+        <h2>降底價統計</h2>
+        <div id="priceDropPeriod" style="margin-top:4px;font-size:13px;font-weight:900;opacity:.95;">—</div>
+      </div>
+      <div class="inline">
+        <button type="button" class="btn btnGreen" onclick="openPublicPriceDropStats()">公開件數統計</button>
+        <button type="button" class="btn btnGray" onclick="closePriceDropStats()">關閉</button>
+      </div>
+    </div>
+    <div class="modalBody">
+      <div id="priceDropSummary" class="priceStatsSummary"></div>
+      <div class="priceStatsTable">
+        <table>
+          <thead><tr><th>日期</th><th>物件</th><th>開發</th><th>原底價</th><th>改底價</th><th>計數</th></tr></thead>
+          <tbody id="priceDropStatsBody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -7413,7 +7452,7 @@ init();
 
 
 <script>
-/* ===== V80：同步時間與最後修改時間一致 =====
+/* ===== V81：降底價統計＋有修改才同步 =====
    原則：
    1) 有輸入、修改、刪除才延遲上傳雲端。
    2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
@@ -7421,7 +7460,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V80同步時間一致';
+  const VERSION = 'V81降底價統計';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7725,9 +7764,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V80 同步時間一致';
+      if(currentBadge) currentBadge.textContent = 'V81 降底價統計';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V80同步時間一致：雲端已同步時間與最後修改時間相同；有修改才上傳。';
+      if(hint) hint.textContent = 'V81降底價統計：依本週單據日期統計，EA／LA 2分，EG／LG 1分。';
     }catch(_e){}
   }
 
@@ -7762,7 +7801,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V80 connect failed', err);
+        console.warn('V81 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -7839,7 +7878,7 @@ init();
 
 
 <script>
-/* ===== V80：操作人員按鈕保持選取 =====
+/* ===== V81：操作人員按鈕保持選取 =====
    同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
    要更換人員時，直接點選另一個人員按鈕即可。 */
 function selectTaskAssistant(ruleId, encodedName){
@@ -7869,7 +7908,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V80：操作人員選取保留到雲端確認 ===== */
+/* ===== V81：操作人員選取保留到雲端確認 ===== */
 (function(){
   const RECENT_MS = 30 * 60 * 1000;
   const recentTaskChoices = Object.create(null);
@@ -7987,6 +8026,89 @@ function selectTaskAssistant(ruleId, encodedName){
       }
     });
   });
+})();
+</script>
+
+<script>
+/* ===== V81：降底價統計（週一至週日） ===== */
+(function(){
+  const TEAM_ROSTER_V81 = {
+    A:['黃文成','買淑玲','林顯昌','楊巧甄','田庭宇','陳珮菁','柯育婷','阮氏金水'],
+    B:['宋喜輝','陳信良','陳帝元','王俞云','林俊嘉','張小曼','謝馨儀','林志銘'],
+    C:['劉勝仁','吳佩玲','李享嶧','林姿岑','郭建佑','余沛臻','葉翊緁'],
+    D:['蔡宇育']
+  };
+  const cleanName = value => String(value || '').replace(/[\s　]/g,'');
+  function teamForDeveloper(value){
+    const text = cleanName(value);
+    for(const [team,names] of Object.entries(TEAM_ROSTER_V81)){
+      if(names.some(name=>text.includes(cleanName(name)))) return team + '組';
+    }
+    return '未分組';
+  }
+  function parseDclipDate(value){
+    const parts = String(value || '').trim().match(/^(?:(\d{2,4})[\/.-])?(\d{1,2})[\/.-](\d{1,2})$/);
+    if(!parts) return null;
+    let year = parts[1] ? Number(parts[1]) : new Date().getFullYear();
+    if(year < 1911) year += 1911;
+    const date = new Date(year, Number(parts[2])-1, Number(parts[3]), 12, 0, 0, 0);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  function currentWeek(){
+    const now = new Date(); now.setHours(12,0,0,0);
+    const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+    const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+    return {start:monday,end:sunday,label:`${monday.getMonth()+1}/${monday.getDate()}–${sunday.getMonth()+1}/${sunday.getDate()}`};
+  }
+  function priceNumber(value){
+    const match = String(value || '').replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) : NaN;
+  }
+  function scoreFor(caseItem){
+    const no = String(caseItem && caseItem.mainContractNo || '').toUpperCase().replace(/\s/g,'');
+    const match = no.match(/EA|LA|EG|LG/);
+    if(!match) return 0;
+    return (match[0] === 'EA' || match[0] === 'LA') ? 2 : 1;
+  }
+  function priceDropRows(){
+    const week = currentWeek();
+    const rows = (state && Array.isArray(state.cases) ? state.cases : []).map(c=>{
+      const date = parseDclipDate(c.receiptDate);
+      const oldPrice = priceNumber(c.bottomPriceOld);
+      const newPrice = priceNumber(c.bottomPriceNew);
+      const score = scoreFor(c);
+      if(!date || date < week.start || date > week.end || !Number.isFinite(oldPrice) || !Number.isFinite(newPrice) || newPrice >= oldPrice || !score) return null;
+      return {date,c,oldPrice,newPrice,score,team:teamForDeveloper(c.business)};
+    }).filter(Boolean).sort((a,b)=>a.date-b.date || String(a.c.caseName||'').localeCompare(String(b.c.caseName||''),'zh-Hant'));
+    return {week,rows};
+  }
+  function summaryHtml(data){
+    const totals = {A組:0,B組:0,C組:0,D組:0,未分組:0};
+    data.rows.forEach(row=>{ totals[row.team] = (totals[row.team] || 0) + row.score; });
+    const grand = data.rows.reduce((sum,row)=>sum+row.score,0);
+    return ['A組','B組','C組','D組'].map(team=>`<div class="priceStatsCard"><span>${team}</span><strong>${totals[team]}分</strong></div>`).join('') + `<div class="priceStatsCard"><span>總計</span><strong>${grand}分</strong></div>`;
+  }
+  function rowsHtml(data){
+    if(!data.rows.length) return '<tr><td colspan="6" style="padding:28px;color:#64748b;font-weight:900;">本週沒有降底價資料</td></tr>';
+    return data.rows.map(row=>`<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${esc(row.c.business || '—')}<span class="priceStatsGroup">${esc(row.team)}</span></td><td>${esc(row.c.bottomPriceOld)}萬</td><td>${esc(row.c.bottomPriceNew)}萬</td><td class="priceStatsCount">${row.score}分</td></tr>`).join('');
+  }
+  window.openPriceDropStats = function(){
+    const data = priceDropRows();
+    document.getElementById('priceDropPeriod').textContent = '統計日期：' + data.week.label + '（依單據日期）';
+    document.getElementById('priceDropSummary').innerHTML = summaryHtml(data);
+    document.getElementById('priceDropStatsBody').innerHTML = rowsHtml(data);
+    document.getElementById('priceDropStatsMask').classList.add('show');
+  };
+  window.closePriceDropStats = function(){ document.getElementById('priceDropStatsMask').classList.remove('show'); };
+  window.openPublicPriceDropStats = function(){
+    const data = priceDropRows();
+    const popup = window.open('', '_blank');
+    if(!popup){ alert('瀏覽器阻擋公開統計頁面，請允許彈出視窗後再試一次。'); return; }
+    const publicRows = rowsHtml(data).replace(/class="priceStatsGroup"/g,'class="group"').replace(/class="priceStatsCount"/g,'class="count"');
+    popup.document.open();
+    popup.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公開件數統計 ${data.week.label}</title><style>*{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Microsoft JhengHei",sans-serif;background:#f0f9ff;color:#172033}.wrap{max-width:1080px;margin:auto;background:#fff;border:3px solid #60a5fa;border-radius:24px;padding:22px;box-shadow:0 16px 40px #1e3a8a22}h1{margin:0;color:#1d4ed8}.period{margin:8px 0 18px;font-weight:900;color:#475569}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;text-align:center;background:#eff6ff}.priceStatsCard strong{display:block;margin-top:5px;font-size:23px;color:#1d4ed8}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#dbeafe;color:#1e3a8a}.group{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}.count{font-size:18px;font-weight:1000;color:#dc2626}@media(max-width:720px){body{padding:8px}.wrap{padding:12px}.summary{grid-template-columns:repeat(2,1fr)}table{min-width:760px}.table{overflow:auto}}</style></head><body><main class="wrap"><h1>降底價公開件數統計</h1><div class="period">統計日期：${data.week.label}（依單據日期）</div><div class="summary">${summaryHtml(data)}</div><div class="table"><table><thead><tr><th>日期</th><th>物件</th><th>開發</th><th>原底價</th><th>改底價</th><th>計數</th></tr></thead><tbody>${publicRows}</tbody></table></div></main></body></html>`);
+    popup.document.close();
+  };
 })();
 </script>
 
