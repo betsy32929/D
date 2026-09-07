@@ -500,6 +500,7 @@
     .btnBlue{background:#dff4ff!important;color:#075985!important;}
     .btnGreen{background:#e7f8ee!important;color:#047857!important;}
     .btnPurple{background:#f1eaff!important;color:#6d28d9!important;}
+    .btnPink{background:#ffe4f1!important;color:#be185d!important;border:1px solid #f9a8d4!important;}
     .btnGray{background:#eef2f7!important;color:#334155!important;}
 
     .filterGridMaking,
@@ -2954,11 +2955,11 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V82 無修改不上傳</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V83 統計按鈕桃紅色</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
-        <button type="button" class="btn btnBlue" onclick="openPriceDropStats()">降底價統計</button>
+        <button type="button" class="btn btnPink" onclick="openPriceDropStats()">降底價統計</button>
         <button type="button" class="btn btnBlue" onclick="safeRunTopButton(exportData, '匯出EXCEL')">匯出EXCEL</button>
         <button type="button" class="btn btnPurple" onclick="safeRunTopButton(exportJsonData, '匯出JSON')">匯出JSON</button>
         <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
@@ -7452,7 +7453,7 @@ init();
 
 
 <script>
-/* ===== V82：開啟只讀取；無修改絕不上傳 =====
+/* ===== V83：降底價統計按鈕獨立顏色 =====
    原則：
    1) 有輸入、修改、刪除才延遲上傳雲端。
    2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
@@ -7460,7 +7461,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V82無修改不上傳';
+  const VERSION = 'V83統計按鈕桃紅色';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7752,9 +7753,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V82 無修改不上傳';
+      if(currentBadge) currentBadge.textContent = 'V83 統計按鈕桃紅色';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V82無修改不上傳：開啟只讀取；新增、修改、刪除或手動同步才上傳。';
+      if(hint) hint.textContent = 'V83統計按鈕桃紅色：各功能按鈕使用不同顏色；無修改不上傳。';
     }catch(_e){}
   }
 
@@ -7789,7 +7790,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V82 connect failed', err);
+        console.warn('V83 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -7866,7 +7867,7 @@ init();
 
 
 <script>
-/* ===== V82：操作人員按鈕保持選取 =====
+/* ===== V83：操作人員按鈕保持選取 =====
    同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
    要更換人員時，直接點選另一個人員按鈕即可。 */
 function selectTaskAssistant(ruleId, encodedName){
@@ -7896,7 +7897,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V82：操作人員選取保留到雲端確認 ===== */
+/* ===== V83：操作人員選取保留到雲端確認 ===== */
 (function(){
   const RECENT_MS = 30 * 60 * 1000;
   const recentTaskChoices = Object.create(null);
@@ -8018,7 +8019,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V82：降底價統計（週一至週日） ===== */
+/* ===== V83：降底價統計（週一至週日） ===== */
 (function(){
   const TEAM_ROSTER_V81 = {
     A:['黃文成','買淑玲','林顯昌','楊巧甄','田庭宇','陳珮菁','柯育婷','阮氏金水'],
