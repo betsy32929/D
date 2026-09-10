@@ -2974,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V91 D夾列表滾動</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V92 操作人員可取消</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7500,7 +7500,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V91 D夾列表滾動';
+  const VERSION = 'V92 操作人員可取消';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7792,9 +7792,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V91 D夾列表滾動';
+      if(currentBadge) currentBadge.textContent = 'V92 操作人員可取消';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V91 D夾列表滾動：下方D夾固定約20筆高度，其餘可上下滾動；公開短網址保留。';
+      if(hint) hint.textContent = 'V92 操作人員可取消：再次點選已選中的人員即可取消；公開短網址保留。';
     }catch(_e){}
   }
 
@@ -7829,7 +7829,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V91 connect failed', err);
+        console.warn('V92 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -7906,9 +7906,7 @@ init();
 
 
 <script>
-/* ===== V85：操作人員按鈕保持選取 =====
-   同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
-   要更換人員時，直接點選另一個人員按鈕即可。 */
+/* ===== V92：操作人員再次點選可取消 ===== */
 function selectTaskAssistant(ruleId, encodedName){
   const c = getCase(currentCaseId);
   if(!c) return;
@@ -7918,10 +7916,15 @@ function selectTaskAssistant(ruleId, encodedName){
   const t = c.tasks[ruleId];
   if(!t) return;
 
-  // 已經選取同一個按鈕時保持原狀，避免被取消。
+  // 再次點選同一位人員時取消選取。
   if(t.assistant === name){
-    t.done = true;
+    t.assistant = '';
+    t.done = false;
     t.override = 'required';
+    touchTask(c, t);
+    saveState();
+    renderTaskTable();
+    renderAll(false);
     return;
   }
 
@@ -7936,7 +7939,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V85：操作人員選取保留到雲端確認 ===== */
+/* ===== V92：操作人員選取或取消保留到雲端確認 ===== */
 (function(){
   const RECENT_MS = 30 * 60 * 1000;
   const recentTaskChoices = Object.create(null);
@@ -8021,11 +8024,12 @@ function selectTaskAssistant(ruleId, encodedName){
     const t = c.tasks[ruleId];
     if(!t) return;
 
-    t.assistant = name;
-    t.done = true;
+    const nextAssistant = t.assistant === name ? '' : name;
+    t.assistant = nextAssistant;
+    t.done = !!nextAssistant;
     t.override = 'required';
     touchTask(c, t);
-    rememberChoice(c.id, ruleId, name);
+    rememberChoice(c.id, ruleId, nextAssistant);
 
     try{
       const ev = window.event;
