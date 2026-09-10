@@ -2960,11 +2960,13 @@
     .priceStatsCard:nth-child(5){background:#fce7f3;border-color:#f472b6;color:#9d174d;}
     .priceStatsCard:nth-child(5) strong{color:#db2777;}
     .priceStatsTable{overflow:auto;border:1px solid #dbe4f0;border-radius:14px;}
-    .priceStatsTable table{width:100%;min-width:820px;border-collapse:collapse;}
+    .priceStatsTable table{width:100%;min-width:820px;border-collapse:collapse;table-layout:fixed;}
     .priceStatsTable th,.priceStatsTable td{padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:center;}
     .priceStatsTable th{position:sticky;top:0;background:#eff6ff;color:#1e3a8a;font-weight:1000;}
     .priceStatsGroup{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:1000;}
-    .priceStatsCount{font-size:18px;font-weight:1000;color:#dc2626;}
+    .priceStatsTable th:nth-child(2),.priceStatsTable td:nth-child(2){width:28%;}
+    .priceStatsTable th:nth-child(7),.priceStatsTable td:nth-child(7){width:20%;}
+    .priceStatsCount{font-size:inherit;font-weight:900;color:#2563eb;line-height:1.35;white-space:normal;}
     @media(max-width:720px){.priceStatsSummary{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 </style>
@@ -2974,7 +2976,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V97 降價分數規則</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V98 統計欄寬字色</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7522,7 +7524,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V97 降價分數規則';
+  const VERSION = 'V98 統計欄寬字色';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7814,9 +7816,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V97 降價分數規則';
+      if(currentBadge) currentBadge.textContent = 'V98 統計欄寬字色';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V97 降價分數規則：300萬以下分數減半；兩位業務各分一半。';
+      if(hint) hint.textContent = 'V98 統計欄寬字色：計數改藍字並加寬，物件欄縮小，字體大小一致。';
     }catch(_e){}
   }
 
@@ -7851,7 +7853,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V97 connect failed', err);
+        console.warn('V98 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
