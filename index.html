@@ -2974,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V87 統計分組色塊</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V88 公開底價遮蔽</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7500,7 +7500,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V87統計分組色塊';
+  const VERSION = 'V88公開底價遮蔽';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7792,9 +7792,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V87 統計分組色塊';
+      if(currentBadge) currentBadge.textContent = 'V88 公開底價遮蔽';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V87統計分組色塊：A、B、C、D組與總計使用不同顏色；無修改不上傳。';
+      if(hint) hint.textContent = 'V88公開底價遮蔽：公開件數統計不顯示底價數字；無修改不上傳。';
     }catch(_e){}
   }
 
@@ -7829,7 +7829,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V87 connect failed', err);
+        console.warn('V88 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8125,9 +8125,14 @@ function selectTaskAssistant(ruleId, encodedName){
     ];
     return ['A組','B組','C組','D組'].map((team,index)=>`<div class="priceStatsCard" style="background:${colors[index][0]};border-color:${colors[index][1]};"><span>${team}</span><strong style="color:${colors[index][2]};">${totals[team]}分</strong></div>`).join('') + `<div class="priceStatsCard" style="background:#fce7f3;border-color:#f472b6;color:#9d174d;"><span>總計</span><strong style="color:#db2777;">${grand}分</strong></div>`;
   }
-  function rowsHtml(data){
+  function rowsHtml(data, hideBottomPrices){
     if(!data.rows.length) return '<tr><td colspan="7" style="padding:28px;color:#64748b;font-weight:900;">本週沒有降價資料</td></tr>';
-    return data.rows.map(row=>`<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${esc(row.c.business || '—')}<span class="priceStatsGroup">${esc(row.team)}</span></td><td>${esc(row.kind)}</td><td>${esc(row.oldText)}萬</td><td>${esc(row.newText)}萬</td><td class="priceStatsCount">${row.score}分</td></tr>`).join('');
+    return data.rows.map(row=>{
+      const privateBottom = hideBottomPrices && row.kind === '底價';
+      const oldDisplay = privateBottom ? '<span class="priceMask" title="底價已隱藏">••••</span>' : esc(row.oldText) + '萬';
+      const newDisplay = privateBottom ? '<span class="priceMask" title="底價已隱藏">••••</span>' : esc(row.newText) + '萬';
+      return `<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${esc(row.c.business || '—')}<span class="priceStatsGroup">${esc(row.team)}</span></td><td>${esc(row.kind)}</td><td>${oldDisplay}</td><td>${newDisplay}</td><td class="priceStatsCount">${row.score}分</td></tr>`;
+    }).join('');
   }
   window.openPriceDropStats = function(){
     const data = priceDropRows();
@@ -8141,9 +8146,9 @@ function selectTaskAssistant(ruleId, encodedName){
     const data = priceDropRows();
     const popup = window.open('', '_blank');
     if(!popup){ alert('瀏覽器阻擋公開統計頁面，請允許彈出視窗後再試一次。'); return; }
-    const publicRows = rowsHtml(data).replace(/class="priceStatsGroup"/g,'class="group"').replace(/class="priceStatsCount"/g,'class="count"');
+    const publicRows = rowsHtml(data, true).replace(/class="priceStatsGroup"/g,'class="group"').replace(/class="priceStatsCount"/g,'class="count"');
     popup.document.open();
-    popup.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公開件數統計 ${data.week.label}</title><style>*{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Microsoft JhengHei",sans-serif;background:#f0f9ff;color:#172033}.wrap{max-width:1080px;margin:auto;background:#fff;border:3px solid #60a5fa;border-radius:24px;padding:22px;box-shadow:0 16px 40px #1e3a8a22}h1{margin:0;color:#1d4ed8}.period{margin:8px 0 18px;font-weight:900;color:#475569}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;text-align:center;background:#eff6ff}.priceStatsCard strong{display:block;margin-top:5px;font-size:23px;color:#1d4ed8}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#dbeafe;color:#1e3a8a}.group{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}.count{font-size:18px;font-weight:1000;color:#dc2626}@media(max-width:720px){body{padding:8px}.wrap{padding:12px}.summary{grid-template-columns:repeat(2,1fr)}table{min-width:820px}.table{overflow:auto}}</style></head><body><main class="wrap"><h1>降價公開件數統計</h1><div class="period">統計日期：${data.week.label}（依單據日期）</div><div class="summary">${summaryHtml(data)}</div><div class="table"><table><thead><tr><th>日期</th><th>物件</th><th>開發</th><th>類別</th><th>原價格</th><th>改價格</th><th>計數</th></tr></thead><tbody>${publicRows}</tbody></table></div></main></body></html>`);
+    popup.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公開件數統計 ${data.week.label}</title><style>*{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Microsoft JhengHei",sans-serif;background:#f0f9ff;color:#172033}.wrap{max-width:1080px;margin:auto;background:#fff;border:3px solid #60a5fa;border-radius:24px;padding:22px;box-shadow:0 16px 40px #1e3a8a22}h1{margin:0;color:#1d4ed8}.period{margin:8px 0 18px;font-weight:900;color:#475569}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;text-align:center;background:#eff6ff}.priceStatsCard strong{display:block;margin-top:5px;font-size:23px;color:#1d4ed8}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#dbeafe;color:#1e3a8a}.group{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}.count{font-size:18px;font-weight:1000;color:#dc2626}.priceMask{display:inline-block;min-width:58px;padding:3px 9px;border-radius:8px;background:#334155;color:#fff;letter-spacing:4px;font-weight:1000;user-select:none}@media(max-width:720px){body{padding:8px}.wrap{padding:12px}.summary{grid-template-columns:repeat(2,1fr)}table{min-width:820px}.table{overflow:auto}}</style></head><body><main class="wrap"><h1>降價公開件數統計</h1><div class="period">統計日期：${data.week.label}（依單據日期）</div><div class="summary">${summaryHtml(data)}</div><div class="table"><table><thead><tr><th>日期</th><th>物件</th><th>開發</th><th>類別</th><th>原價格</th><th>改價格</th><th>計數</th></tr></thead><tbody>${publicRows}</tbody></table></div></main></body></html>`);
     popup.document.close();
   };
 })();
