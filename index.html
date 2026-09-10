@@ -2947,7 +2947,9 @@
     .priceStatsTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
     .priceStatsPeriod{font-size:15px;font-weight:1000;color:#1e3a8a;}
     .priceStatsSummary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0;}
-    .priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;background:linear-gradient(180deg,#fff,#eff6ff);text-align:center;}
+    .priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;background:linear-gradient(180deg,#fff,#eff6ff);text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+    .priceStatsCard:hover{transform:translateY(-1px);box-shadow:0 5px 14px #1e3a8a22;}
+    .priceStatsCard.active{outline:3px solid #0f172a;outline-offset:2px;}
     .priceStatsCard strong{display:block;margin-top:5px;font-size:24px;color:#1d4ed8;}
     .priceStatsCard:nth-child(1){background:#dbeafe;border-color:#60a5fa;color:#1e3a8a;}
     .priceStatsCard:nth-child(1) strong{color:#1d4ed8;}
@@ -2965,7 +2967,8 @@
     .priceStatsTable th{position:sticky;top:0;background:#eff6ff;color:#1e3a8a;font-weight:1000;}
     .priceStatsGroup{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:1000;}
     .priceStatsTable th:nth-child(2),.priceStatsTable td:nth-child(2){width:28%;}
-    .priceStatsTable th:nth-child(7),.priceStatsTable td:nth-child(7){width:20%;}
+    .priceStatsTable th:nth-child(3),.priceStatsTable td:nth-child(3){width:22%;}
+    .priceStatsTable th:nth-child(7),.priceStatsTable td:nth-child(7){width:15%;}
     .priceStatsCount{font-size:inherit;font-weight:900;color:#2563eb;line-height:1.35;white-space:normal;}
     @media(max-width:720px){.priceStatsSummary{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
@@ -2976,7 +2979,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V98 統計欄寬字色</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V99 組別明細篩選</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7524,7 +7527,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V98 統計欄寬字色';
+  const VERSION = 'V99 組別明細篩選';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7816,9 +7819,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V98 統計欄寬字色';
+      if(currentBadge) currentBadge.textContent = 'V99 組別明細篩選';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V98 統計欄寬字色：計數改藍字並加寬，物件欄縮小，字體大小一致。';
+      if(hint) hint.textContent = 'V99 組別明細篩選：點選組別色塊只顯示該組，點總計恢復全部。';
     }catch(_e){}
   }
 
@@ -7853,7 +7856,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V98 connect failed', err);
+        console.warn('V99 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8154,7 +8157,7 @@ function selectTaskAssistant(ruleId, encodedName){
     }).sort((a,b)=>a.date-b.date || String(a.c.caseName||'').localeCompare(String(b.c.caseName||''),'zh-Hant') || a.kind.localeCompare(b.kind,'zh-Hant'));
     return {week,rows};
   }
-  function summaryHtml(data){
+  function summaryHtml(data, selectedTeam){
     const totals = {A組:0,B組:0,C組:0,D組:0,未分組:0};
     data.rows.forEach(row=>row.shares.forEach(share=>{ totals[share.team] = (totals[share.team] || 0) + share.score; }));
     const grand = data.rows.reduce((sum,row)=>sum+row.score,0);
@@ -8164,7 +8167,14 @@ function selectTaskAssistant(ruleId, encodedName){
       ['#fef3c7','#fbbf24','#d97706'],
       ['#ede9fe','#a78bfa','#7c3aed']
     ];
-    return ['A組','B組','C組','D組'].map((team,index)=>`<div class="priceStatsCard" style="background:${colors[index][0]};border-color:${colors[index][1]};"><span>${team}</span><strong style="color:${colors[index][2]};">${scoreText(totals[team])}分</strong></div>`).join('') + `<div class="priceStatsCard" style="background:#fce7f3;border-color:#f472b6;color:#9d174d;"><span>總計</span><strong style="color:#db2777;">${scoreText(grand)}分</strong></div>`;
+    return ['A組','B組','C組','D組'].map((team,index)=>`<div class="priceStatsCard ${selectedTeam===team?'active':''}" onclick="filterPriceStatsTeam('${team}')" style="background:${colors[index][0]};border-color:${colors[index][1]};"><span>${team}</span><strong style="color:${colors[index][2]};">${scoreText(totals[team])}分</strong></div>`).join('') + `<div class="priceStatsCard ${selectedTeam?'':'active'}" onclick="filterPriceStatsTeam('')" style="background:#fce7f3;border-color:#f472b6;color:#9d174d;"><span>總計</span><strong style="color:#db2777;">${scoreText(grand)}分</strong></div>`;
+  }
+  function dataForTeam(data, team){
+    if(!team) return data;
+    return {...data,rows:data.rows.filter(row=>row.shares.some(share=>share.team===team)).map(row=>{
+      const shares = row.shares.filter(share=>share.team===team);
+      return {...row,shares,score:shares.reduce((sum,share)=>sum+share.score,0)};
+    })};
   }
   function rowsHtml(data, hideBottomPrices){
     if(!data.rows.length) return '<tr><td colspan="7" style="padding:28px;color:#64748b;font-weight:900;">本週沒有降價資料</td></tr>';
@@ -8179,10 +8189,16 @@ function selectTaskAssistant(ruleId, encodedName){
   }
   window.openPriceDropStats = function(){
     const data = priceDropRows();
+    window.__priceDropStatsDataV99 = data;
     document.getElementById('priceDropPeriod').textContent = '統計日期：' + data.week.label + '（依單據日期）';
-    document.getElementById('priceDropSummary').innerHTML = summaryHtml(data);
-    document.getElementById('priceDropStatsBody').innerHTML = rowsHtml(data);
+    window.filterPriceStatsTeam('');
     document.getElementById('priceDropStatsMask').classList.add('show');
+  };
+  window.filterPriceStatsTeam = function(team){
+    const data = window.__priceDropStatsDataV99;
+    if(!data) return;
+    document.getElementById('priceDropSummary').innerHTML = summaryHtml(data, team || '');
+    document.getElementById('priceDropStatsBody').innerHTML = rowsHtml(dataForTeam(data, team || ''));
   };
   window.closePriceDropStats = function(){ document.getElementById('priceDropStatsMask').classList.remove('show'); };
   function publicStatsHtml(data){
