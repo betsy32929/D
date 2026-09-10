@@ -2979,7 +2979,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V102 組別計分篩選修正</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V103 開發個別組別標示</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7527,7 +7527,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V102 組別計分篩選修正';
+  const VERSION = 'V103 開發個別組別標示';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7819,9 +7819,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V102 組別計分篩選修正';
+      if(currentBadge) currentBadge.textContent = 'V103 開發個別組別標示';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V102 組別計分篩選修正：開發保留全部人員，計數只顯示所選組別。';
+      if(hint) hint.textContent = 'V103 開發個別組別標示：每位開發姓名後各自顯示所屬組別。';
     }catch(_e){}
   }
 
@@ -7856,7 +7856,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V102 connect failed', err);
+        console.warn('V103 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8182,9 +8182,10 @@ function selectTaskAssistant(ruleId, encodedName){
       const privateBottom = hideBottomPrices && row.kind === '底價';
       const oldDisplay = privateBottom ? '<span class="priceMask" title="底價已隱藏">••••</span>' : esc(row.oldText) + '萬';
       const newDisplay = privateBottom ? '<span class="priceMask" title="底價已隱藏">••••</span>' : esc(row.newText) + '萬';
-      const teams = [...new Set(row.shares.map(share=>share.team))].map(team=>`<span class="priceStatsGroup">${esc(team)}</span>`).join('');
+      const developerPeople = developersFor(row.c && row.c.business);
+      const developerDisplay = developerPeople.map(person=>`${esc(person.name)}<span class="priceStatsGroup">${esc(person.team)}</span>`).join(' ');
       const count = row.shares.length > 1 ? row.shares.map(share=>`${esc(share.name)} ${scoreText(share.score)}分`).join('<br>') : scoreText(row.score) + '分';
-      return `<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${esc(row.c.business || '—')}${teams}</td><td>${esc(row.kind)}</td><td>${oldDisplay}</td><td>${newDisplay}</td><td class="priceStatsCount">${count}</td></tr>`;
+      return `<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${developerDisplay}</td><td>${esc(row.kind)}</td><td>${oldDisplay}</td><td>${newDisplay}</td><td class="priceStatsCount">${count}</td></tr>`;
     }).join('');
   }
   window.openPriceDropStats = function(){
@@ -8211,7 +8212,7 @@ function selectTaskAssistant(ruleId, encodedName){
     document.open(); document.write(html); document.close();
   }
   function publicStatsUrl(){
-    return new URL('public.html?v=V102', location.href).toString();
+    return new URL('public.html?v=V103', location.href).toString();
   }
   window.openPublicPriceDropStats = function(){
     const url = publicStatsUrl();
