@@ -35,7 +35,7 @@
     function week(){const now=new Date();now.setHours(12,0,0,0);const start=new Date(now);start.setDate(now.getDate()-((now.getDay()+6)%7));const end=new Date(start);end.setDate(start.getDate()+6);return{start,end,label:`${start.getMonth()+1}/${start.getDate()}–${end.getMonth()+1}/${end.getDate()}`}}
     function render(cases){
       const w=week(), rows=[];
-      (Array.isArray(cases)?cases:[]).forEach(c=>{const day=date(c.receiptDate),points=score(c);if(!day||day<w.start||day>w.end||!points)return;[['開價',c.priceOld,c.priceNew],['底價',c.bottomPriceOld,c.bottomPriceNew]].forEach(([kind,oldText,newText])=>{const oldPrice=number(oldText),newPrice=number(newText);if(Number.isFinite(oldPrice)&&Number.isFinite(newPrice)&&newPrice<oldPrice)rows.push({day,c,kind,oldText,newText,points,team:team(c.business)})})});
+      (Array.isArray(cases)?cases:[]).forEach(c=>{const day=date(c.receiptDate),points=score(c);if(!day||day<w.start||day>w.end||!points)return;[['開價',c.priceOld,c.priceNew],['底價',c.bottomPriceOld,c.bottomPriceNew]].forEach(([kind,oldText,newText])=>{const oldPrice=number(oldText),newPrice=number(newText),counts=Number.isFinite(oldPrice)&&Number.isFinite(newPrice)&&(newPrice<oldPrice||(kind==='底價'&&oldPrice===0&&newPrice!==0));if(counts)rows.push({day,c,kind,oldText,newText,points,team:team(c.business)})})});
       rows.sort((x,y)=>x.day-y.day||String(x.c.caseName||'').localeCompare(String(y.c.caseName||''),'zh-Hant')||x.kind.localeCompare(y.kind,'zh-Hant'));
       const totals={'A組':0,'B組':0,'C組':0,'D組':0};rows.forEach(r=>{if(r.team in totals)totals[r.team]+=r.points});const grand=rows.reduce((sum,r)=>sum+r.points,0);
       document.getElementById('period').textContent='統計日期：'+w.label+'（依單據日期）';

@@ -2974,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V95 底價其餘預設無</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V96 底價0也計件</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7522,7 +7522,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V95 底價其餘預設無';
+  const VERSION = 'V96 底價0也計件';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7814,9 +7814,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V95 底價其餘預設無';
+      if(currentBadge) currentBadge.textContent = 'V96 底價0也計件';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V95 底價其餘預設無：11項底價動作保留，其餘空白動作設為無且仍可編輯。';
+      if(hint) hint.textContent = 'V96 底價0也計件：底價由0改成非0金額同樣列入統計；其餘預設無保留。';
     }catch(_e){}
   }
 
@@ -7851,7 +7851,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V95 connect failed', err);
+        console.warn('V96 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8134,7 +8134,7 @@ function selectTaskAssistant(ruleId, encodedName){
         {kind:'開價',oldText:c.priceOld,newText:c.priceNew},
         {kind:'底價',oldText:c.bottomPriceOld,newText:c.bottomPriceNew}
       ].map(item=>({...item,oldPrice:priceNumber(item.oldText),newPrice:priceNumber(item.newText)}))
-       .filter(item=>Number.isFinite(item.oldPrice) && Number.isFinite(item.newPrice) && item.newPrice < item.oldPrice)
+       .filter(item=>Number.isFinite(item.oldPrice) && Number.isFinite(item.newPrice) && (item.newPrice < item.oldPrice || (item.kind === '底價' && item.oldPrice === 0 && item.newPrice !== 0)))
        .map(item=>({date,c,kind:item.kind,oldText:item.oldText,newText:item.newText,score,team:teamForDeveloper(c.business)}));
     }).sort((a,b)=>a.date-b.date || String(a.c.caseName||'').localeCompare(String(b.c.caseName||''),'zh-Hant') || a.kind.localeCompare(b.kind,'zh-Hant'));
     return {week,rows};
