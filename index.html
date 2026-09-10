@@ -2947,7 +2947,7 @@
     .priceStatsTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
     .priceStatsPeriod{font-size:15px;font-weight:1000;color:#1e3a8a;}
     .priceStatsSummary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0;}
-    .priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;background:linear-gradient(180deg,#fff,#eff6ff);text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+    .priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;background:linear-gradient(180deg,#fff,#eff6ff);text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s;font:inherit;width:100%;}
     .priceStatsCard:hover{transform:translateY(-1px);box-shadow:0 5px 14px #1e3a8a22;}
     .priceStatsCard.active{outline:3px solid #0f172a;outline-offset:2px;}
     .priceStatsCard strong{display:block;margin-top:5px;font-size:24px;color:#1d4ed8;}
@@ -2979,7 +2979,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V99 組別明細篩選</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V100 組別按鈕修正</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7527,7 +7527,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V99 組別明細篩選';
+  const VERSION = 'V100 組別按鈕修正';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7819,9 +7819,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V99 組別明細篩選';
+      if(currentBadge) currentBadge.textContent = 'V100 組別按鈕修正';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V99 組別明細篩選：點選組別色塊只顯示該組，點總計恢復全部。';
+      if(hint) hint.textContent = 'V100 組別按鈕修正：點選後會標示目前組別並只顯示該組明細。';
     }catch(_e){}
   }
 
@@ -7856,7 +7856,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V99 connect failed', err);
+        console.warn('V100 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8167,7 +8167,7 @@ function selectTaskAssistant(ruleId, encodedName){
       ['#fef3c7','#fbbf24','#d97706'],
       ['#ede9fe','#a78bfa','#7c3aed']
     ];
-    return ['A組','B組','C組','D組'].map((team,index)=>`<div class="priceStatsCard ${selectedTeam===team?'active':''}" onclick="filterPriceStatsTeam('${team}')" style="background:${colors[index][0]};border-color:${colors[index][1]};"><span>${team}</span><strong style="color:${colors[index][2]};">${scoreText(totals[team])}分</strong></div>`).join('') + `<div class="priceStatsCard ${selectedTeam?'':'active'}" onclick="filterPriceStatsTeam('')" style="background:#fce7f3;border-color:#f472b6;color:#9d174d;"><span>總計</span><strong style="color:#db2777;">${scoreText(grand)}分</strong></div>`;
+    return ['A組','B組','C組','D組'].map((team,index)=>`<button type="button" class="priceStatsCard ${selectedTeam===team?'active':''}" onclick="filterPriceStatsTeam('${team}')" style="background:${colors[index][0]};border-color:${colors[index][1]};"><span>${team}</span><strong style="color:${colors[index][2]};">${scoreText(totals[team])}分</strong></button>`).join('') + `<button type="button" class="priceStatsCard ${selectedTeam?'':'active'}" onclick="filterPriceStatsTeam('')" style="background:#fce7f3;border-color:#f472b6;color:#9d174d;"><span>總計</span><strong style="color:#db2777;">${scoreText(grand)}分</strong></button>`;
   }
   function dataForTeam(data, team){
     if(!team) return data;
@@ -8197,6 +8197,7 @@ function selectTaskAssistant(ruleId, encodedName){
   window.filterPriceStatsTeam = function(team){
     const data = window.__priceDropStatsDataV99;
     if(!data) return;
+    document.getElementById('priceDropPeriod').textContent = '統計日期：' + data.week.label + '（依單據日期）｜目前顯示：' + (team || '全部');
     document.getElementById('priceDropSummary').innerHTML = summaryHtml(data, team || '');
     document.getElementById('priceDropStatsBody').innerHTML = rowsHtml(dataForTeam(data, team || ''));
   };
@@ -8210,7 +8211,7 @@ function selectTaskAssistant(ruleId, encodedName){
     document.open(); document.write(html); document.close();
   }
   function publicStatsUrl(){
-    return new URL('public.html', location.href).toString();
+    return new URL('public.html?v=V100', location.href).toString();
   }
   window.openPublicPriceDropStats = function(){
     const url = publicStatsUrl();
