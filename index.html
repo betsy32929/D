@@ -2964,11 +2964,11 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V85 D夾清單與項目排序</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V86 降價統計</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
-        <button type="button" class="btn btnPink" onclick="openPriceDropStats()">降底價統計</button>
+        <button type="button" class="btn btnPink" onclick="openPriceDropStats()">降價統計</button>
         <button type="button" class="btn btnBlue" onclick="safeRunTopButton(exportData, '匯出EXCEL')">匯出EXCEL</button>
         <button type="button" class="btn btnPurple" onclick="safeRunTopButton(exportJsonData, '匯出JSON')">匯出JSON</button>
         <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
@@ -3205,7 +3205,7 @@
   <div class="modal priceStatsModal">
     <div class="modalHeader">
       <div>
-        <h2>降底價統計</h2>
+        <h2>降價統計</h2>
         <div id="priceDropPeriod" style="margin-top:4px;font-size:13px;font-weight:900;opacity:.95;">—</div>
       </div>
       <div class="inline">
@@ -3217,7 +3217,7 @@
       <div id="priceDropSummary" class="priceStatsSummary"></div>
       <div class="priceStatsTable">
         <table>
-          <thead><tr><th>日期</th><th>物件</th><th>開發</th><th>原底價</th><th>改底價</th><th>計數</th></tr></thead>
+          <thead><tr><th>日期</th><th>物件</th><th>開發</th><th>類別</th><th>原價格</th><th>改價格</th><th>計數</th></tr></thead>
           <tbody id="priceDropStatsBody"></tbody>
         </table>
       </div>
@@ -7482,7 +7482,7 @@ init();
 
 
 <script>
-/* ===== V85：D夾清單高度與項目排序 =====
+/* ===== V86：降價統計包含開價與底價 =====
    原則：
    1) 有輸入、修改、刪除才延遲上傳雲端。
    2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
@@ -7490,7 +7490,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V85清單與項目排序';
+  const VERSION = 'V86降價統計';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7782,9 +7782,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V85 D夾清單與項目排序';
+      if(currentBadge) currentBadge.textContent = 'V86 降價統計';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V85清單與項目排序：製作中固定約20筆高度，超出可上下滾動；項目順序已更新。';
+      if(hint) hint.textContent = 'V86降價統計：開價與底價的降價都會列入統計；無修改不上傳。';
     }catch(_e){}
   }
 
@@ -7819,7 +7819,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V85 connect failed', err);
+        console.warn('V86 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8048,7 +8048,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V85：降底價統計（週一至週日） ===== */
+/* ===== V86：降價統計，包含開價與底價（週一至週日） ===== */
 (function(){
   const TEAM_ROSTER_V81 = {
     A:['黃文成','買淑玲','林顯昌','楊巧甄','田庭宇','陳珮菁','柯育婷','阮氏金水'],
@@ -8090,14 +8090,17 @@ function selectTaskAssistant(ruleId, encodedName){
   }
   function priceDropRows(){
     const week = currentWeek();
-    const rows = (state && Array.isArray(state.cases) ? state.cases : []).map(c=>{
+    const rows = (state && Array.isArray(state.cases) ? state.cases : []).flatMap(c=>{
       const date = parseDclipDate(c.receiptDate);
-      const oldPrice = priceNumber(c.bottomPriceOld);
-      const newPrice = priceNumber(c.bottomPriceNew);
       const score = scoreFor(c);
-      if(!date || date < week.start || date > week.end || !Number.isFinite(oldPrice) || !Number.isFinite(newPrice) || newPrice >= oldPrice || !score) return null;
-      return {date,c,oldPrice,newPrice,score,team:teamForDeveloper(c.business)};
-    }).filter(Boolean).sort((a,b)=>a.date-b.date || String(a.c.caseName||'').localeCompare(String(b.c.caseName||''),'zh-Hant'));
+      if(!date || date < week.start || date > week.end || !score) return [];
+      return [
+        {kind:'開價',oldText:c.priceOld,newText:c.priceNew},
+        {kind:'底價',oldText:c.bottomPriceOld,newText:c.bottomPriceNew}
+      ].map(item=>({...item,oldPrice:priceNumber(item.oldText),newPrice:priceNumber(item.newText)}))
+       .filter(item=>Number.isFinite(item.oldPrice) && Number.isFinite(item.newPrice) && item.newPrice < item.oldPrice)
+       .map(item=>({date,c,kind:item.kind,oldText:item.oldText,newText:item.newText,score,team:teamForDeveloper(c.business)}));
+    }).sort((a,b)=>a.date-b.date || String(a.c.caseName||'').localeCompare(String(b.c.caseName||''),'zh-Hant') || a.kind.localeCompare(b.kind,'zh-Hant'));
     return {week,rows};
   }
   function summaryHtml(data){
@@ -8107,8 +8110,8 @@ function selectTaskAssistant(ruleId, encodedName){
     return ['A組','B組','C組','D組'].map(team=>`<div class="priceStatsCard"><span>${team}</span><strong>${totals[team]}分</strong></div>`).join('') + `<div class="priceStatsCard"><span>總計</span><strong>${grand}分</strong></div>`;
   }
   function rowsHtml(data){
-    if(!data.rows.length) return '<tr><td colspan="6" style="padding:28px;color:#64748b;font-weight:900;">本週沒有降底價資料</td></tr>';
-    return data.rows.map(row=>`<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${esc(row.c.business || '—')}<span class="priceStatsGroup">${esc(row.team)}</span></td><td>${esc(row.c.bottomPriceOld)}萬</td><td>${esc(row.c.bottomPriceNew)}萬</td><td class="priceStatsCount">${row.score}分</td></tr>`).join('');
+    if(!data.rows.length) return '<tr><td colspan="7" style="padding:28px;color:#64748b;font-weight:900;">本週沒有降價資料</td></tr>';
+    return data.rows.map(row=>`<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${esc(row.c.business || '—')}<span class="priceStatsGroup">${esc(row.team)}</span></td><td>${esc(row.kind)}</td><td>${esc(row.oldText)}萬</td><td>${esc(row.newText)}萬</td><td class="priceStatsCount">${row.score}分</td></tr>`).join('');
   }
   window.openPriceDropStats = function(){
     const data = priceDropRows();
@@ -8124,7 +8127,7 @@ function selectTaskAssistant(ruleId, encodedName){
     if(!popup){ alert('瀏覽器阻擋公開統計頁面，請允許彈出視窗後再試一次。'); return; }
     const publicRows = rowsHtml(data).replace(/class="priceStatsGroup"/g,'class="group"').replace(/class="priceStatsCount"/g,'class="count"');
     popup.document.open();
-    popup.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公開件數統計 ${data.week.label}</title><style>*{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Microsoft JhengHei",sans-serif;background:#f0f9ff;color:#172033}.wrap{max-width:1080px;margin:auto;background:#fff;border:3px solid #60a5fa;border-radius:24px;padding:22px;box-shadow:0 16px 40px #1e3a8a22}h1{margin:0;color:#1d4ed8}.period{margin:8px 0 18px;font-weight:900;color:#475569}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;text-align:center;background:#eff6ff}.priceStatsCard strong{display:block;margin-top:5px;font-size:23px;color:#1d4ed8}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#dbeafe;color:#1e3a8a}.group{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}.count{font-size:18px;font-weight:1000;color:#dc2626}@media(max-width:720px){body{padding:8px}.wrap{padding:12px}.summary{grid-template-columns:repeat(2,1fr)}table{min-width:760px}.table{overflow:auto}}</style></head><body><main class="wrap"><h1>降底價公開件數統計</h1><div class="period">統計日期：${data.week.label}（依單據日期）</div><div class="summary">${summaryHtml(data)}</div><div class="table"><table><thead><tr><th>日期</th><th>物件</th><th>開發</th><th>原底價</th><th>改底價</th><th>計數</th></tr></thead><tbody>${publicRows}</tbody></table></div></main></body></html>`);
+    popup.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公開件數統計 ${data.week.label}</title><style>*{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Microsoft JhengHei",sans-serif;background:#f0f9ff;color:#172033}.wrap{max-width:1080px;margin:auto;background:#fff;border:3px solid #60a5fa;border-radius:24px;padding:22px;box-shadow:0 16px 40px #1e3a8a22}h1{margin:0;color:#1d4ed8}.period{margin:8px 0 18px;font-weight:900;color:#475569}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;text-align:center;background:#eff6ff}.priceStatsCard strong{display:block;margin-top:5px;font-size:23px;color:#1d4ed8}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#dbeafe;color:#1e3a8a}.group{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}.count{font-size:18px;font-weight:1000;color:#dc2626}@media(max-width:720px){body{padding:8px}.wrap{padding:12px}.summary{grid-template-columns:repeat(2,1fr)}table{min-width:820px}.table{overflow:auto}}</style></head><body><main class="wrap"><h1>降價公開件數統計</h1><div class="period">統計日期：${data.week.label}（依單據日期）</div><div class="summary">${summaryHtml(data)}</div><div class="table"><table><thead><tr><th>日期</th><th>物件</th><th>開發</th><th>類別</th><th>原價格</th><th>改價格</th><th>計數</th></tr></thead><tbody>${publicRows}</tbody></table></div></main></body></html>`);
     popup.document.close();
   };
 })();
