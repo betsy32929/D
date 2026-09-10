@@ -2974,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V94 底價11項</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V95 底價其餘預設無</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -5620,12 +5620,31 @@ function caseStats(c){
 }
 function setTaskFilter(f){
   currentTaskFilter = (f === 'done' || f === 'pending' || f === 'bottom') ? f : 'all';
+  if(currentTaskFilter === 'bottom') applyBottomDefaultsV95();
   renderTaskTable();
 }
 function taskFilterActiveClass(f){
   return currentTaskFilter === f ? 'active' : '';
 }
 const BOTTOM_PRICE_TASK_IDS_V93 = new Set(['r01','r02','r03','r07','r08','r09','r10','r32','r33','r34','r31']);
+function applyBottomDefaultsV95(){
+  const c = getCase(currentCaseId);
+  if(!c) return false;
+  ensureCaseTasks(c);
+  let changed = false;
+  state.rules.forEach(rule=>{
+    if(BOTTOM_PRICE_TASK_IDS_V93.has(rule.id)) return;
+    const t = c.tasks[rule.id];
+    if(!t || t.assistant || t.done) return;
+    t.assistant = '無';
+    t.done = true;
+    t.override = 'required';
+    touchTask(c, t);
+    changed = true;
+  });
+  if(changed){ saveState(); renderAll(false); }
+  return changed;
+}
 function shouldShowTaskByFilter(status, ruleId){
   if(currentTaskFilter === 'bottom') return BOTTOM_PRICE_TASK_IDS_V93.has(ruleId);
   if(currentTaskFilter === 'pending') return status === '未做';
@@ -7503,7 +7522,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V94 底價11項';
+  const VERSION = 'V95 底價其餘預設無';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7795,9 +7814,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V94 底價11項';
+      if(currentBadge) currentBadge.textContent = 'V95 底價其餘預設無';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V94 底價11項：已排除主約上傳；操作人員仍可再次點選取消。';
+      if(hint) hint.textContent = 'V95 底價其餘預設無：11項底價動作保留，其餘空白動作設為無且仍可編輯。';
     }catch(_e){}
   }
 
@@ -7832,7 +7851,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V94 connect failed', err);
+        console.warn('V95 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
