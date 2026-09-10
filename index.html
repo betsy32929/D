@@ -2949,6 +2949,16 @@
     .priceStatsSummary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0;}
     .priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;background:linear-gradient(180deg,#fff,#eff6ff);text-align:center;}
     .priceStatsCard strong{display:block;margin-top:5px;font-size:24px;color:#1d4ed8;}
+    .priceStatsCard:nth-child(1){background:#dbeafe;border-color:#60a5fa;color:#1e3a8a;}
+    .priceStatsCard:nth-child(1) strong{color:#1d4ed8;}
+    .priceStatsCard:nth-child(2){background:#dcfce7;border-color:#4ade80;color:#166534;}
+    .priceStatsCard:nth-child(2) strong{color:#15803d;}
+    .priceStatsCard:nth-child(3){background:#fef3c7;border-color:#fbbf24;color:#92400e;}
+    .priceStatsCard:nth-child(3) strong{color:#d97706;}
+    .priceStatsCard:nth-child(4){background:#ede9fe;border-color:#a78bfa;color:#5b21b6;}
+    .priceStatsCard:nth-child(4) strong{color:#7c3aed;}
+    .priceStatsCard:nth-child(5){background:#fce7f3;border-color:#f472b6;color:#9d174d;}
+    .priceStatsCard:nth-child(5) strong{color:#db2777;}
     .priceStatsTable{overflow:auto;border:1px solid #dbe4f0;border-radius:14px;}
     .priceStatsTable table{width:100%;min-width:820px;border-collapse:collapse;}
     .priceStatsTable th,.priceStatsTable td{padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:center;}
@@ -2964,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V86 降價統計</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V87 統計分組色塊</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7490,7 +7500,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V86降價統計';
+  const VERSION = 'V87統計分組色塊';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7782,9 +7792,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V86 降價統計';
+      if(currentBadge) currentBadge.textContent = 'V87 統計分組色塊';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V86降價統計：開價與底價的降價都會列入統計；無修改不上傳。';
+      if(hint) hint.textContent = 'V87統計分組色塊：A、B、C、D組與總計使用不同顏色；無修改不上傳。';
     }catch(_e){}
   }
 
@@ -7819,7 +7829,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V86 connect failed', err);
+        console.warn('V87 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8107,7 +8117,13 @@ function selectTaskAssistant(ruleId, encodedName){
     const totals = {A組:0,B組:0,C組:0,D組:0,未分組:0};
     data.rows.forEach(row=>{ totals[row.team] = (totals[row.team] || 0) + row.score; });
     const grand = data.rows.reduce((sum,row)=>sum+row.score,0);
-    return ['A組','B組','C組','D組'].map(team=>`<div class="priceStatsCard"><span>${team}</span><strong>${totals[team]}分</strong></div>`).join('') + `<div class="priceStatsCard"><span>總計</span><strong>${grand}分</strong></div>`;
+    const colors = [
+      ['#dbeafe','#60a5fa','#1d4ed8'],
+      ['#dcfce7','#4ade80','#15803d'],
+      ['#fef3c7','#fbbf24','#d97706'],
+      ['#ede9fe','#a78bfa','#7c3aed']
+    ];
+    return ['A組','B組','C組','D組'].map((team,index)=>`<div class="priceStatsCard" style="background:${colors[index][0]};border-color:${colors[index][1]};"><span>${team}</span><strong style="color:${colors[index][2]};">${totals[team]}分</strong></div>`).join('') + `<div class="priceStatsCard" style="background:#fce7f3;border-color:#f472b6;color:#9d174d;"><span>總計</span><strong style="color:#db2777;">${grand}分</strong></div>`;
   }
   function rowsHtml(data){
     if(!data.rows.length) return '<tr><td colspan="7" style="padding:28px;color:#64748b;font-weight:900;">本週沒有降價資料</td></tr>';
