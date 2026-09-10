@@ -2974,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V96 底價0也計件</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V97 降價分數規則</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7522,7 +7522,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V96 底價0也計件';
+  const VERSION = 'V97 降價分數規則';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7814,9 +7814,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V96 底價0也計件';
+      if(currentBadge) currentBadge.textContent = 'V97 降價分數規則';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V96 底價0也計件：底價由0改成非0金額同樣列入統計；其餘預設無保留。';
+      if(hint) hint.textContent = 'V97 降價分數規則：300萬以下分數減半；兩位業務各分一半。';
     }catch(_e){}
   }
 
@@ -7851,7 +7851,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V96 connect failed', err);
+        console.warn('V97 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8093,12 +8093,13 @@ function selectTaskAssistant(ruleId, encodedName){
     D:['蔡宇育']
   };
   const cleanName = value => String(value || '').replace(/[\s　]/g,'');
-  function teamForDeveloper(value){
+  function developersFor(value){
     const text = cleanName(value);
+    const found = [];
     for(const [team,names] of Object.entries(TEAM_ROSTER_V81)){
-      if(names.some(name=>text.includes(cleanName(name)))) return team + '組';
+      names.forEach(name=>{ if(text.includes(cleanName(name))) found.push({name,team:team+'組'}); });
     }
-    return '未分組';
+    return found.length ? found : [{name:String(value || '未填'),team:'未分組'}];
   }
   function parseDclipDate(value){
     const parts = String(value || '').trim().match(/^(?:(\d{2,4})[\/.-])?(\d{1,2})[\/.-](\d{1,2})$/);
@@ -8122,7 +8123,19 @@ function selectTaskAssistant(ruleId, encodedName){
     const no = String(caseItem && caseItem.mainContractNo || '').toUpperCase().replace(/\s/g,'');
     const match = no.match(/EA|LA|EG|LG/);
     if(!match) return 0;
-    return (match[0] === 'EA' || match[0] === 'LA') ? 2 : 1;
+    let score = (match[0] === 'EA' || match[0] === 'LA') ? 2 : 1;
+    const changedBottom = priceNumber(caseItem && caseItem.bottomPriceNew);
+    const originalBottom = priceNumber(caseItem && caseItem.bottomPriceOld);
+    const currentBottom = Number.isFinite(changedBottom) ? changedBottom : originalBottom;
+    if(Number.isFinite(currentBottom) && currentBottom <= 300) score /= 2;
+    return score;
+  }
+  function scoreShares(caseItem, score){
+    const people = developersFor(caseItem && caseItem.business);
+    return people.map(person=>({...person,score:score / people.length}));
+  }
+  function scoreText(value){
+    return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
   }
   function priceDropRows(){
     const week = currentWeek();
@@ -8135,13 +8148,13 @@ function selectTaskAssistant(ruleId, encodedName){
         {kind:'底價',oldText:c.bottomPriceOld,newText:c.bottomPriceNew}
       ].map(item=>({...item,oldPrice:priceNumber(item.oldText),newPrice:priceNumber(item.newText)}))
        .filter(item=>Number.isFinite(item.oldPrice) && Number.isFinite(item.newPrice) && (item.newPrice < item.oldPrice || (item.kind === '底價' && item.oldPrice === 0 && item.newPrice !== 0)))
-       .map(item=>({date,c,kind:item.kind,oldText:item.oldText,newText:item.newText,score,team:teamForDeveloper(c.business)}));
+       .map(item=>({date,c,kind:item.kind,oldText:item.oldText,newText:item.newText,score,shares:scoreShares(c,score)}));
     }).sort((a,b)=>a.date-b.date || String(a.c.caseName||'').localeCompare(String(b.c.caseName||''),'zh-Hant') || a.kind.localeCompare(b.kind,'zh-Hant'));
     return {week,rows};
   }
   function summaryHtml(data){
     const totals = {A組:0,B組:0,C組:0,D組:0,未分組:0};
-    data.rows.forEach(row=>{ totals[row.team] = (totals[row.team] || 0) + row.score; });
+    data.rows.forEach(row=>row.shares.forEach(share=>{ totals[share.team] = (totals[share.team] || 0) + share.score; }));
     const grand = data.rows.reduce((sum,row)=>sum+row.score,0);
     const colors = [
       ['#dbeafe','#60a5fa','#1d4ed8'],
@@ -8149,7 +8162,7 @@ function selectTaskAssistant(ruleId, encodedName){
       ['#fef3c7','#fbbf24','#d97706'],
       ['#ede9fe','#a78bfa','#7c3aed']
     ];
-    return ['A組','B組','C組','D組'].map((team,index)=>`<div class="priceStatsCard" style="background:${colors[index][0]};border-color:${colors[index][1]};"><span>${team}</span><strong style="color:${colors[index][2]};">${totals[team]}分</strong></div>`).join('') + `<div class="priceStatsCard" style="background:#fce7f3;border-color:#f472b6;color:#9d174d;"><span>總計</span><strong style="color:#db2777;">${grand}分</strong></div>`;
+    return ['A組','B組','C組','D組'].map((team,index)=>`<div class="priceStatsCard" style="background:${colors[index][0]};border-color:${colors[index][1]};"><span>${team}</span><strong style="color:${colors[index][2]};">${scoreText(totals[team])}分</strong></div>`).join('') + `<div class="priceStatsCard" style="background:#fce7f3;border-color:#f472b6;color:#9d174d;"><span>總計</span><strong style="color:#db2777;">${scoreText(grand)}分</strong></div>`;
   }
   function rowsHtml(data, hideBottomPrices){
     if(!data.rows.length) return '<tr><td colspan="7" style="padding:28px;color:#64748b;font-weight:900;">本週沒有降價資料</td></tr>';
@@ -8157,7 +8170,9 @@ function selectTaskAssistant(ruleId, encodedName){
       const privateBottom = hideBottomPrices && row.kind === '底價';
       const oldDisplay = privateBottom ? '<span class="priceMask" title="底價已隱藏">••••</span>' : esc(row.oldText) + '萬';
       const newDisplay = privateBottom ? '<span class="priceMask" title="底價已隱藏">••••</span>' : esc(row.newText) + '萬';
-      return `<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${esc(row.c.business || '—')}<span class="priceStatsGroup">${esc(row.team)}</span></td><td>${esc(row.kind)}</td><td>${oldDisplay}</td><td>${newDisplay}</td><td class="priceStatsCount">${row.score}分</td></tr>`;
+      const teams = [...new Set(row.shares.map(share=>share.team))].map(team=>`<span class="priceStatsGroup">${esc(team)}</span>`).join('');
+      const count = row.shares.length > 1 ? row.shares.map(share=>`${esc(share.name)} ${scoreText(share.score)}分`).join('<br>') : scoreText(row.score) + '分';
+      return `<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${esc(row.c.business || '—')}${teams}</td><td>${esc(row.kind)}</td><td>${oldDisplay}</td><td>${newDisplay}</td><td class="priceStatsCount">${count}</td></tr>`;
     }).join('');
   }
   window.openPriceDropStats = function(){
