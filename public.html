@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>公開件數統計</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Microsoft JhengHei",sans-serif;background:#f0f9ff;color:#172033}
+    .wrap{max-width:1080px;margin:auto;background:#fff;border:3px solid #60a5fa;border-radius:24px;padding:22px;box-shadow:0 16px 40px #1e3a8a22}
+    h1{margin:0;color:#1d4ed8}.period{margin:8px 0 18px;font-weight:900;color:#475569}.notice{padding:22px;text-align:center;font-weight:900;color:#475569}
+    .summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.card{padding:12px;border:1px solid;border-radius:15px;text-align:center}.card strong{display:block;margin-top:5px;font-size:23px}
+    .a{background:#dbeafe;border-color:#60a5fa;color:#1d4ed8}.b{background:#dcfce7;border-color:#4ade80;color:#15803d}.c{background:#fef3c7;border-color:#fbbf24;color:#d97706}.d{background:#ede9fe;border-color:#a78bfa;color:#7c3aed}.total{background:#fce7f3;border-color:#f472b6;color:#db2777}
+    .table{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#dbeafe;color:#1e3a8a}.group{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}.count{font-size:18px;font-weight:1000;color:#dc2626}.mask{display:inline-block;min-width:58px;padding:3px 9px;border-radius:8px;background:#334155;color:#fff;letter-spacing:4px;font-weight:1000;user-select:none}
+    @media(max-width:720px){body{padding:8px}.wrap{padding:12px}.summary{grid-template-columns:repeat(2,1fr)}table{min-width:820px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>降價公開件數統計</h1>
+    <div class="period" id="period">正在讀取最新統計…</div>
+    <div id="content" class="notice">請稍候</div>
+  </main>
+  <script>
+  (async function(){
+    const SUPABASE_URL='https://oiywtmjbasoonfuxemtr.supabase.co';
+    const SUPABASE_KEY='sb_publishable_dhr81918k0zRtar14yepIA_ZWmTKT10';
+    const WORKSPACE='dclip-main';
+    const ROSTER={A:['黃文成','買淑玲','林顯昌','楊巧甄','田庭宇','陳珮菁','柯育婷','阮氏金水'],B:['宋喜輝','陳信良','陳帝元','王俞云','林俊嘉','張小曼','謝馨儀','林志銘'],C:['劉勝仁','吳佩玲','李享嶧','林姿岑','郭建佑','余沛臻','葉翊緁'],D:['蔡宇育']};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const clean=v=>String(v||'').replace(/[\s　]/g,'');
+    const number=v=>{const m=String(v||'').replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);return m?Number(m[0]):NaN};
+    function team(value){const text=clean(value);for(const [key,names] of Object.entries(ROSTER)){if(names.some(name=>text.includes(clean(name))))return key+'組'}return '未分組'}
+    function date(value){const p=String(value||'').trim().match(/^(?:(\d{2,4})[\/.\-])?(\d{1,2})[\/.\-](\d{1,2})$/);if(!p)return null;let y=p[1]?Number(p[1]):new Date().getFullYear();if(y<1911)y+=1911;const d=new Date(y,Number(p[2])-1,Number(p[3]),12);return Number.isNaN(d.getTime())?null:d}
+    function score(c){const no=String(c&&c.mainContractNo||'').toUpperCase().replace(/\s/g,'');const m=no.match(/EA|LA|EG|LG/);return m?((m[0]==='EA'||m[0]==='LA')?2:1):0}
+    function week(){const now=new Date();now.setHours(12,0,0,0);const start=new Date(now);start.setDate(now.getDate()-((now.getDay()+6)%7));const end=new Date(start);end.setDate(start.getDate()+6);return{start,end,label:`${start.getMonth()+1}/${start.getDate()}–${end.getMonth()+1}/${end.getDate()}`}}
+    function render(cases){
+      const w=week(), rows=[];
+      (Array.isArray(cases)?cases:[]).forEach(c=>{const day=date(c.receiptDate),points=score(c);if(!day||day<w.start||day>w.end||!points)return;[['開價',c.priceOld,c.priceNew],['底價',c.bottomPriceOld,c.bottomPriceNew]].forEach(([kind,oldText,newText])=>{const oldPrice=number(oldText),newPrice=number(newText);if(Number.isFinite(oldPrice)&&Number.isFinite(newPrice)&&newPrice<oldPrice)rows.push({day,c,kind,oldText,newText,points,team:team(c.business)})})});
+      rows.sort((x,y)=>x.day-y.day||String(x.c.caseName||'').localeCompare(String(y.c.caseName||''),'zh-Hant')||x.kind.localeCompare(y.kind,'zh-Hant'));
+      const totals={'A組':0,'B組':0,'C組':0,'D組':0};rows.forEach(r=>{if(r.team in totals)totals[r.team]+=r.points});const grand=rows.reduce((sum,r)=>sum+r.points,0);
+      document.getElementById('period').textContent='統計日期：'+w.label+'（依單據日期）';
+      const cards=['A組','B組','C組','D組'].map((name,i)=>`<div class="card ${'abcd'[i]}"><span>${name}</span><strong>${totals[name]}分</strong></div>`).join('')+`<div class="card total"><span>總計</span><strong>${grand}分</strong></div>`;
+      const body=rows.length?rows.map(r=>{const hide=r.kind==='底價';return`<tr><td>${r.day.getMonth()+1}/${r.day.getDate()}</td><td>${esc(r.c.caseName||'—')}</td><td>${esc(r.c.business||'—')}<span class="group">${esc(r.team)}</span></td><td>${r.kind}</td><td>${hide?'<span class="mask">••••</span>':esc(r.oldText)+'萬'}</td><td>${hide?'<span class="mask">••••</span>':esc(r.newText)+'萬'}</td><td class="count">${r.points}分</td></tr>`}).join(''):'<tr><td colspan="7" class="notice">本週沒有降價資料</td></tr>';
+      document.getElementById('content').className='';document.getElementById('content').innerHTML=`<div class="summary">${cards}</div><div class="table"><table><thead><tr><th>日期</th><th>物件</th><th>開發</th><th>類別</th><th>原價格</th><th>改價格</th><th>計數</th></tr></thead><tbody>${body}</tbody></table></div>`;
+    }
+    try{const endpoint=SUPABASE_URL+'/rest/v1/dclip_state?workspace_key=eq.'+encodeURIComponent(WORKSPACE)+'&select=payload&limit=1';const response=await fetch(endpoint,{headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY}});if(!response.ok)throw new Error();const rows=await response.json();if(!rows[0]||!rows[0].payload)throw new Error();render(rows[0].payload.cases)}catch(_e){document.getElementById('period').textContent='';document.getElementById('content').textContent='目前無法讀取公開統計，請稍後再試。'}
+  })();
+  </script>
+</body>
+</html>

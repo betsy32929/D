@@ -2974,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V89 公開統計網址</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V90 公開統計短網址</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7500,7 +7500,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V89公開統計網址';
+  const VERSION = 'V90公開統計短網址';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7792,9 +7792,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V89 公開統計網址';
+      if(currentBadge) currentBadge.textContent = 'V90 公開統計短網址';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V89公開統計網址：可複製網址給人員直接查看，底價數字維持遮蔽。';
+      if(hint) hint.textContent = 'V90公開統計短網址：固定網址可直接分享，底價數字維持遮蔽。';
     }catch(_e){}
   }
 
@@ -7829,7 +7829,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V89 connect failed', err);
+        console.warn('V90 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8151,13 +8151,7 @@ function selectTaskAssistant(ruleId, encodedName){
     document.open(); document.write(html); document.close();
   }
   function publicStatsUrl(){
-    const cfg = loadSupabaseConfig();
-    if(!(cfg && cfg.url && cfg.key)){ alert('請先完成雲端連線，才能建立公開網址。'); return '';
-    }
-    const url = new URL(location.origin + location.pathname);
-    url.searchParams.set('publicPriceStats','1');
-    url.hash = 'cfg=' + btoa(JSON.stringify({url:cfg.url,key:cfg.key,workspace:cfg.workspace || 'dclip-main'}));
-    return url.toString();
+    return new URL('public.html', location.href).toString();
   }
   window.openPublicPriceDropStats = function(){
     const url = publicStatsUrl();
