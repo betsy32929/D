@@ -2974,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V92 操作人員可取消</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V93 底價動作篩選</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3247,15 +3247,15 @@ const CONDITION_LABELS = {
 };
 const DEFAULT_RULES = [
   {id:'r01', name:'專約回報', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
-  {id:'r02', name:'帆布', priceChange:true, bottomPriceChange:false, extendContract:false, relist:false, contractChange:false, specialTerms:false},
+  {id:'r02', name:'帆布', priceChange:true, bottomPriceChange:true, extendContract:false, relist:false, contractChange:false, specialTerms:false},
   {id:'r03', name:'房管', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:false},
-  {id:'r04', name:'主約上傳', priceChange:false, bottomPriceChange:false, extendContract:false, relist:true, contractChange:true, specialTerms:false},
+  {id:'r04', name:'主約上傳', priceChange:false, bottomPriceChange:true, extendContract:false, relist:true, contractChange:true, specialTerms:false},
   {id:'r05', name:'產調', priceChange:true, bottomPriceChange:false, extendContract:false, relist:false, contractChange:true, specialTerms:false},
   {id:'r06', name:'現詢調', priceChange:false, bottomPriceChange:false, extendContract:false, relist:false, contractChange:true, specialTerms:false},
   {id:'r07', name:'房管新增契變', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
   {id:'r08', name:'房管上傳ED照片', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:false},
-  {id:'r09', name:'內網上架', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
-  {id:'r10', name:'官網上架', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r09', name:'內網上架', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r10', name:'官網上架', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:false},
   {id:'r11', name:'單機 總表', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:true},
   {id:'r13', name:'土增稅', priceChange:false, bottomPriceChange:false, extendContract:false, relist:true, contractChange:true, specialTerms:false},
   {id:'r14', name:'屋齡', priceChange:false, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
@@ -5619,13 +5619,15 @@ function caseStats(c){
   return {required, done, pending, x, touched, complete, pct};
 }
 function setTaskFilter(f){
-  currentTaskFilter = (f === 'done' || f === 'pending') ? f : 'all';
+  currentTaskFilter = (f === 'done' || f === 'pending' || f === 'bottom') ? f : 'all';
   renderTaskTable();
 }
 function taskFilterActiveClass(f){
   return currentTaskFilter === f ? 'active' : '';
 }
-function shouldShowTaskByFilter(status){
+const BOTTOM_PRICE_TASK_IDS_V93 = new Set(['r01','r02','r03','r04','r07','r08','r09','r10','r32','r33','r34','r31']);
+function shouldShowTaskByFilter(status, ruleId){
+  if(currentTaskFilter === 'bottom') return BOTTOM_PRICE_TASK_IDS_V93.has(ruleId);
   if(currentTaskFilter === 'pending') return status === '未做';
   if(currentTaskFilter === 'done') return status === '完成';
   return true;
@@ -5701,7 +5703,7 @@ function renderTaskTable(){
     const t = c.tasks[rule.id];
     const done = isTaskDoneV31(t);
     const status = done ? '完成' : '未做';
-    if(!shouldShowTaskByFilter(status)) return '';
+    if(!shouldShowTaskByFilter(status, rule.id)) return '';
     const rowClass = done ? 'taskRowDone' : '';
     const assistantButtons = taskAssistantButtonsHtml(rule.id, t);
     return `<tr class="${rowClass}">
@@ -5718,6 +5720,7 @@ function renderTaskTable(){
       <button type="button" class="${taskFilterActiveClass('all')}" onclick="setTaskFilter('all')">全部</button>
       <button type="button" class="${taskFilterActiveClass('pending')}" onclick="setTaskFilter('pending')">未做</button>
       <button type="button" class="${taskFilterActiveClass('done')}" onclick="setTaskFilter('done')">完成</button>
+      <button type="button" class="${taskFilterActiveClass('bottom')}" onclick="setTaskFilter('bottom')">底價</button>
     </div>
     <table>
       <thead><tr><th>項目</th><th>操作人員</th><th>備註</th><th>狀態</th><th>最後更新時間</th></tr></thead>
@@ -7500,7 +7503,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V92 操作人員可取消';
+  const VERSION = 'V93 底價動作篩選';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7792,9 +7795,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V92 操作人員可取消';
+      if(currentBadge) currentBadge.textContent = 'V93 底價動作篩選';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V92 操作人員可取消：再次點選已選中的人員即可取消；公開短網址保留。';
+      if(hint) hint.textContent = 'V93 底價動作篩選：按底價只顯示12項相關動作；操作人員仍可再次點選取消。';
     }catch(_e){}
   }
 
@@ -7829,7 +7832,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V92 connect failed', err);
+        console.warn('V93 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
