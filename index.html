@@ -2934,14 +2934,14 @@
     .hero,.toolbarMain{position:relative!important;z-index:20!important;}
     .toolbarMain .btn{position:relative!important;z-index:21!important;pointer-events:auto!important;}
 
-    /* V85：D夾固定約 20 筆高度，超出的案件在區塊內上下滾動 */
-    #makingList{
+    /* V91：下方 D夾列表固定約 20 筆高度，超出的案件在區塊內上下滾動 */
+    #allList{
       max-height:1200px;
       overflow-y:auto!important;
       overflow-x:hidden!important;
       scrollbar-gutter:stable;
     }
-    #makingList th{position:sticky!important;top:0!important;z-index:5!important;}
+    #allList th{position:sticky!important;top:0!important;z-index:5!important;}
 
     .priceStatsModal{width:min(1180px,calc(100vw - 28px));}
     .priceStatsTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
@@ -2974,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V90 公開統計短網址</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V91 D夾列表滾動</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7500,7 +7500,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V90公開統計短網址';
+  const VERSION = 'V91 D夾列表滾動';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7792,9 +7792,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V90 公開統計短網址';
+      if(currentBadge) currentBadge.textContent = 'V91 D夾列表滾動';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V90公開統計短網址：固定網址可直接分享，底價數字維持遮蔽。';
+      if(hint) hint.textContent = 'V91 D夾列表滾動：下方D夾固定約20筆高度，其餘可上下滾動；公開短網址保留。';
     }catch(_e){}
   }
 
@@ -7829,7 +7829,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V90 connect failed', err);
+        console.warn('V91 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
