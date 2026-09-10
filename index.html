@@ -2934,6 +2934,15 @@
     .hero,.toolbarMain{position:relative!important;z-index:20!important;}
     .toolbarMain .btn{position:relative!important;z-index:21!important;pointer-events:auto!important;}
 
+    /* V85：D夾固定約 20 筆高度，超出的案件在區塊內上下滾動 */
+    #makingList{
+      max-height:1200px;
+      overflow-y:auto!important;
+      overflow-x:hidden!important;
+      scrollbar-gutter:stable;
+    }
+    #makingList th{position:sticky!important;top:0!important;z-index:5!important;}
+
     .priceStatsModal{width:min(1180px,calc(100vw - 28px));}
     .priceStatsTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
     .priceStatsPeriod{font-size:15px;font-weight:1000;color:#1e3a8a;}
@@ -2955,7 +2964,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V84 房管ED照片</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V85 D夾清單與項目排序</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3243,10 +3252,10 @@ const DEFAULT_RULES = [
   {id:'r15', name:'物件本上架', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:true},
   {id:'r16', name:'封背', priceChange:false, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
   {id:'r17', name:'物件本彩色表', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:false, specialTerms:true},
-  {id:'r18', name:'5168網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
-  {id:'r19', name:'我家網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
   {id:'r20', name:'YES319網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
   {id:'r21', name:'HouseInfor網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r19', name:'我家網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
+  {id:'r18', name:'5168網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
   {id:'r22', name:'591網', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
   {id:'r23', name:'NAS照片原檔', priceChange:false, bottomPriceChange:false, extendContract:false, relist:true, contractChange:false, specialTerms:false},
   {id:'r24', name:'LED', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
@@ -3256,10 +3265,10 @@ const DEFAULT_RULES = [
   {id:'r28', name:'格局圖檔名/更新', priceChange:false, bottomPriceChange:false, extendContract:false, relist:false, contractChange:false, specialTerms:false},
   {id:'r29', name:'鑰匙', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:false, specialTerms:false},
   {id:'r30', name:'NAS銷售本', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
-  {id:'r31', name:'契約紙本', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
   {id:'r32', name:'掃描圖片', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
   {id:'r33', name:'歸檔公司物件存檔', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
-  {id:'r34', name:'放歸檔彩雷上', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true}
+  {id:'r34', name:'放歸檔彩雷上', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
+  {id:'r31', name:'契約紙本', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true}
 ];
 let state = {
   version:'9.0',
@@ -5529,15 +5538,34 @@ function isTaskDoneV31(task){
   if(!task) return false;
   return !!(task.done || (task.assistant && String(task.assistant).trim()));
 }
+function normalizeRuleOrderV85(rules){
+  const list = Array.isArray(rules) ? rules.slice() : [];
+  function moveSequence(ids){
+    const wanted = ids.map(id=>list.find(r=>r && r.id === id)).filter(Boolean);
+    if(!wanted.length) return;
+    const positions = ids.map(id=>list.findIndex(r=>r && r.id === id)).filter(i=>i >= 0);
+    const insertAt = positions.length ? Math.min.apply(null, positions) : list.length;
+    const wantedIds = new Set(ids);
+    const remaining = list.filter(r=>!r || !wantedIds.has(r.id));
+    remaining.splice(Math.min(insertAt, remaining.length), 0, ...wanted);
+    list.splice(0, list.length, ...remaining);
+  }
+  moveSequence(['r20','r21','r19','r18','r22']);
+  const paperIndex = list.findIndex(r=>r && r.id === 'r31');
+  const paper = paperIndex >= 0 ? list.splice(paperIndex, 1)[0] : null;
+  const archiveIndex = list.findIndex(r=>r && r.id === 'r34');
+  if(paper) list.splice(archiveIndex >= 0 ? archiveIndex + 1 : list.length, 0, paper);
+  return list;
+}
 function migrateState(){
   ensureFixedAssistantsV31();
   if(!Array.isArray(state.rules) || !state.rules.length) state.rules = cloneRules(DEFAULT_RULES);
-  state.rules = state.rules
+  state.rules = normalizeRuleOrderV85(state.rules
     .filter(r=>r && (r.name || r.id) && r.id !== 'r12' && String(r.name || '').trim() !== '統整表')
     .map((r,i)=>({
       id:r.id || (DEFAULT_RULES[i] && DEFAULT_RULES[i].id) || uid('r'),
       name:(r.id === 'r08' || String(r.name || '').trim() === '房管上傳照片') ? '房管上傳ED照片' : ((r.id === 'r11' || String(r.name || '').trim() === '總表') ? '單機 總表' : (String(r.name || (DEFAULT_RULES[i] && DEFAULT_RULES[i].name) || '未命名項目').trim() || '未命名項目'))
-    }));
+    })));
   if(!Array.isArray(state.cases)) state.cases = [];
   state.cases.forEach(c=>{
     if(c.followMain && !c.mainContractNo) c.mainContractNo = '';
@@ -5887,7 +5915,7 @@ function mergeRulesV37(localRules, remoteRules){
   (Array.isArray(localRules) ? localRules : []).forEach(add);
   (Array.isArray(remoteRules) ? remoteRules : []).forEach(add);
   if(!out.length) cloneRules(DEFAULT_RULES).forEach(add);
-  return out;
+  return normalizeRuleOrderV85(out);
 }
 function mergeCaseTasksV37(localCase, remoteCase){
   const tasks = {};
@@ -7454,7 +7482,7 @@ init();
 
 
 <script>
-/* ===== V84：房管上傳ED照片名稱更新 =====
+/* ===== V85：D夾清單高度與項目排序 =====
    原則：
    1) 有輸入、修改、刪除才延遲上傳雲端。
    2) 開啟或切回分頁時只讀取一次並合併，不做週期輪詢。
@@ -7462,7 +7490,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V84房管ED照片';
+  const VERSION = 'V85清單與項目排序';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7754,9 +7782,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V84 房管ED照片';
+      if(currentBadge) currentBadge.textContent = 'V85 D夾清單與項目排序';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V84房管ED照片：項目名稱更新，原有完成資料保留；無修改不上傳。';
+      if(hint) hint.textContent = 'V85清單與項目排序：製作中固定約20筆高度，超出可上下滾動；項目順序已更新。';
     }catch(_e){}
   }
 
@@ -7791,7 +7819,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V84 connect failed', err);
+        console.warn('V85 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -7868,7 +7896,7 @@ init();
 
 
 <script>
-/* ===== V84：操作人員按鈕保持選取 =====
+/* ===== V85：操作人員按鈕保持選取 =====
    同一按鈕若因快速點擊或事件重複觸發，不再把已選狀態取消。
    要更換人員時，直接點選另一個人員按鈕即可。 */
 function selectTaskAssistant(ruleId, encodedName){
@@ -7898,7 +7926,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V84：操作人員選取保留到雲端確認 ===== */
+/* ===== V85：操作人員選取保留到雲端確認 ===== */
 (function(){
   const RECENT_MS = 30 * 60 * 1000;
   const recentTaskChoices = Object.create(null);
@@ -8020,7 +8048,7 @@ function selectTaskAssistant(ruleId, encodedName){
 </script>
 
 <script>
-/* ===== V84：降底價統計（週一至週日） ===== */
+/* ===== V85：降底價統計（週一至週日） ===== */
 (function(){
   const TEAM_ROSTER_V81 = {
     A:['黃文成','買淑玲','林顯昌','楊巧甄','田庭宇','陳珮菁','柯育婷','阮氏金水'],
