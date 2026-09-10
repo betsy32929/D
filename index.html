@@ -2974,7 +2974,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V88 公開底價遮蔽</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V89 公開統計網址</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7500,7 +7500,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V88公開底價遮蔽';
+  const VERSION = 'V89公開統計網址';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7792,9 +7792,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V88 公開底價遮蔽';
+      if(currentBadge) currentBadge.textContent = 'V89 公開統計網址';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V88公開底價遮蔽：公開件數統計不顯示底價數字；無修改不上傳。';
+      if(hint) hint.textContent = 'V89公開統計網址：可複製網址給人員直接查看，底價數字維持遮蔽。';
     }catch(_e){}
   }
 
@@ -7829,7 +7829,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V88 connect failed', err);
+        console.warn('V89 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8142,15 +8142,50 @@ function selectTaskAssistant(ruleId, encodedName){
     document.getElementById('priceDropStatsMask').classList.add('show');
   };
   window.closePriceDropStats = function(){ document.getElementById('priceDropStatsMask').classList.remove('show'); };
-  window.openPublicPriceDropStats = function(){
-    const data = priceDropRows();
-    const popup = window.open('', '_blank');
-    if(!popup){ alert('瀏覽器阻擋公開統計頁面，請允許彈出視窗後再試一次。'); return; }
+  function publicStatsHtml(data){
     const publicRows = rowsHtml(data, true).replace(/class="priceStatsGroup"/g,'class="group"').replace(/class="priceStatsCount"/g,'class="count"');
-    popup.document.open();
-    popup.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公開件數統計 ${data.week.label}</title><style>*{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Microsoft JhengHei",sans-serif;background:#f0f9ff;color:#172033}.wrap{max-width:1080px;margin:auto;background:#fff;border:3px solid #60a5fa;border-radius:24px;padding:22px;box-shadow:0 16px 40px #1e3a8a22}h1{margin:0;color:#1d4ed8}.period{margin:8px 0 18px;font-weight:900;color:#475569}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;text-align:center;background:#eff6ff}.priceStatsCard strong{display:block;margin-top:5px;font-size:23px;color:#1d4ed8}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#dbeafe;color:#1e3a8a}.group{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}.count{font-size:18px;font-weight:1000;color:#dc2626}.priceMask{display:inline-block;min-width:58px;padding:3px 9px;border-radius:8px;background:#334155;color:#fff;letter-spacing:4px;font-weight:1000;user-select:none}@media(max-width:720px){body{padding:8px}.wrap{padding:12px}.summary{grid-template-columns:repeat(2,1fr)}table{min-width:820px}.table{overflow:auto}}</style></head><body><main class="wrap"><h1>降價公開件數統計</h1><div class="period">統計日期：${data.week.label}（依單據日期）</div><div class="summary">${summaryHtml(data)}</div><div class="table"><table><thead><tr><th>日期</th><th>物件</th><th>開發</th><th>類別</th><th>原價格</th><th>改價格</th><th>計數</th></tr></thead><tbody>${publicRows}</tbody></table></div></main></body></html>`);
-    popup.document.close();
+    return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公開件數統計 ${data.week.label}</title><style>*{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Microsoft JhengHei",sans-serif;background:#f0f9ff;color:#172033}.wrap{max-width:1080px;margin:auto;background:#fff;border:3px solid #60a5fa;border-radius:24px;padding:22px;box-shadow:0 16px 40px #1e3a8a22}h1{margin:0;color:#1d4ed8}.period{margin:8px 0 18px;font-weight:900;color:#475569}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.priceStatsCard{padding:12px;border:1px solid #bfdbfe;border-radius:15px;text-align:center;background:#eff6ff}.priceStatsCard strong{display:block;margin-top:5px;font-size:23px;color:#1d4ed8}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#dbeafe;color:#1e3a8a}.group{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}.count{font-size:18px;font-weight:1000;color:#dc2626}.priceMask{display:inline-block;min-width:58px;padding:3px 9px;border-radius:8px;background:#334155;color:#fff;letter-spacing:4px;font-weight:1000;user-select:none}@media(max-width:720px){body{padding:8px}.wrap{padding:12px}.summary{grid-template-columns:repeat(2,1fr)}table{min-width:820px}.table{overflow:auto}}</style></head><body><main class="wrap"><h1>降價公開件數統計</h1><div class="period">統計日期：${data.week.label}（依單據日期）</div><div class="summary">${summaryHtml(data)}</div><div class="table"><table><thead><tr><th>日期</th><th>物件</th><th>開發</th><th>類別</th><th>原價格</th><th>改價格</th><th>計數</th></tr></thead><tbody>${publicRows}</tbody></table></div></main></body></html>`;
+  }
+  function writePublicStatsPage(){
+    const html = publicStatsHtml(priceDropRows());
+    document.open(); document.write(html); document.close();
+  }
+  function publicStatsUrl(){
+    const cfg = loadSupabaseConfig();
+    if(!(cfg && cfg.url && cfg.key)){ alert('請先完成雲端連線，才能建立公開網址。'); return '';
+    }
+    const url = new URL(location.origin + location.pathname);
+    url.searchParams.set('publicPriceStats','1');
+    url.hash = 'cfg=' + btoa(JSON.stringify({url:cfg.url,key:cfg.key,workspace:cfg.workspace || 'dclip-main'}));
+    return url.toString();
+  }
+  window.openPublicPriceDropStats = function(){
+    const url = publicStatsUrl();
+    if(!url) return;
+    try{ navigator.clipboard.writeText(url); }catch(_e){}
+    const popup = window.open(url, '_blank');
+    if(!popup) alert('公開網址已複製；瀏覽器阻擋新視窗，請直接貼上網址開啟。');
   };
+  async function openSharedPublicStats(){
+    if(new URLSearchParams(location.search).get('publicPriceStats') !== '1') return;
+    try{
+      const raw = location.hash.startsWith('#cfg=') ? location.hash.slice(5) : '';
+      const sharedCfg = raw ? JSON.parse(atob(raw)) : null;
+      if(!sharedCfg || !sharedCfg.url || !sharedCfg.key) throw new Error('公開網址資料不完整');
+      const workspace = encodeURIComponent(sharedCfg.workspace || 'dclip-main');
+      const endpoint = String(sharedCfg.url).replace(/\/+$/,'') + '/rest/v1/dclip_state?workspace_key=eq.' + workspace + '&select=payload,updated_at&limit=1';
+      const response = await fetch(endpoint,{headers:{apikey:sharedCfg.key,Authorization:'Bearer '+sharedCfg.key}});
+      if(!response.ok) throw new Error('目前無法讀取公開統計');
+      const rows = await response.json();
+      if(!rows || !rows[0] || !rows[0].payload) throw new Error('目前沒有公開統計資料');
+      state = Object.assign(defaultStateV37(), rows[0].payload);
+      migrateState();
+      writePublicStatsPage();
+    }catch(err){
+      document.body.innerHTML = `<main style="max-width:720px;margin:80px auto;padding:28px;font-family:Microsoft JhengHei,sans-serif;background:#fff;border:2px solid #fecaca;border-radius:18px;color:#991b1b"><h1>公開統計無法開啟</h1><p>${esc(err && err.message ? err.message : '請重新取得公開網址')}</p></main>`;
+    }
+  }
+  openSharedPublicStats();
 })();
 </script>
 
