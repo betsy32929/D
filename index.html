@@ -2979,7 +2979,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V103 開發個別組別標示</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V104 降價統計期別切換</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3224,6 +3224,8 @@
         <div id="priceDropPeriod" style="margin-top:4px;font-size:13px;font-weight:900;opacity:.95;">—</div>
       </div>
       <div class="inline">
+        <button type="button" class="btn btnBlue" onclick="changePriceDropWeek(1)">← 上一期</button>
+        <button type="button" class="btn btnBlue" id="priceDropNextWeek" onclick="changePriceDropWeek(-1)">下一期 →</button>
         <button type="button" class="btn btnGreen" onclick="openPublicPriceDropStats()">公開件數統計</button>
         <button type="button" class="btn btnGray" onclick="closePriceDropStats()">關閉</button>
       </div>
@@ -7527,7 +7529,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V103 開發個別組別標示';
+  const VERSION = 'V104 降價統計期別切換';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7819,9 +7821,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V103 開發個別組別標示';
+      if(currentBadge) currentBadge.textContent = 'V104 降價統計期別切換';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V103 開發個別組別標示：每位開發姓名後各自顯示所屬組別。';
+      if(hint) hint.textContent = 'V104 降價統計期別切換：可查看上一期，並在公開統計頁切換期別。';
     }catch(_e){}
   }
 
@@ -7856,7 +7858,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V103 connect failed', err);
+        console.warn('V104 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8114,9 +8116,9 @@ function selectTaskAssistant(ruleId, encodedName){
     const date = new Date(year, Number(parts[2])-1, Number(parts[3]), 12, 0, 0, 0);
     return Number.isNaN(date.getTime()) ? null : date;
   }
-  function currentWeek(){
+  function currentWeek(weeksAgo=0){
     const now = new Date(); now.setHours(12,0,0,0);
-    const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+    const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay()+6)%7) - weeksAgo*7);
     const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
     return {start:monday,end:sunday,label:`${monday.getMonth()+1}/${monday.getDate()}–${sunday.getMonth()+1}/${sunday.getDate()}`};
   }
@@ -8142,8 +8144,8 @@ function selectTaskAssistant(ruleId, encodedName){
   function scoreText(value){
     return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
   }
-  function priceDropRows(){
-    const week = currentWeek();
+  function priceDropRows(weeksAgo=0){
+    const week = currentWeek(weeksAgo);
     const rows = (state && Array.isArray(state.cases) ? state.cases : []).flatMap(c=>{
       const date = parseDclipDate(c.receiptDate);
       const score = scoreFor(c);
@@ -8177,7 +8179,7 @@ function selectTaskAssistant(ruleId, encodedName){
     })};
   }
   function rowsHtml(data, hideBottomPrices){
-    if(!data.rows.length) return '<tr><td colspan="7" style="padding:28px;color:#64748b;font-weight:900;">本週沒有降價資料</td></tr>';
+    if(!data.rows.length) return '<tr><td colspan="7" style="padding:28px;color:#64748b;font-weight:900;">此期沒有降價資料</td></tr>';
     return data.rows.map(row=>{
       const privateBottom = hideBottomPrices && row.kind === '底價';
       const oldDisplay = privateBottom ? '<span class="priceMask" title="底價已隱藏">••••</span>' : esc(row.oldText) + '萬';
@@ -8189,11 +8191,15 @@ function selectTaskAssistant(ruleId, encodedName){
     }).join('');
   }
   window.openPriceDropStats = function(){
-    const data = priceDropRows();
-    window.__priceDropStatsDataV99 = data;
-    document.getElementById('priceDropPeriod').textContent = '統計日期：' + data.week.label + '（依單據日期）';
-    window.filterPriceStatsTeam('');
+    window.__priceDropWeeksAgo = 0;
+    window.changePriceDropWeek(0);
     document.getElementById('priceDropStatsMask').classList.add('show');
+  };
+  window.changePriceDropWeek = function(delta){
+    window.__priceDropWeeksAgo = Math.max(0, (window.__priceDropWeeksAgo || 0) + delta);
+    window.__priceDropStatsDataV99 = priceDropRows(window.__priceDropWeeksAgo);
+    document.getElementById('priceDropNextWeek').disabled = window.__priceDropWeeksAgo === 0;
+    window.filterPriceStatsTeam('');
   };
   window.filterPriceStatsTeam = function(team){
     const data = window.__priceDropStatsDataV99;
@@ -8212,7 +8218,9 @@ function selectTaskAssistant(ruleId, encodedName){
     document.open(); document.write(html); document.close();
   }
   function publicStatsUrl(){
-    return new URL('public.html?v=V103', location.href).toString();
+    const url = new URL('public.html?v=V104', location.href);
+    url.searchParams.set('week', String(window.__priceDropWeeksAgo || 0));
+    return url.toString();
   }
   window.openPublicPriceDropStats = function(){
     const url = publicStatsUrl();
