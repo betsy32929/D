@@ -7,7 +7,7 @@
   <style>
     *{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Microsoft JhengHei",sans-serif;background:#f0f9ff;color:#172033}
     .wrap{max-width:1080px;margin:auto;background:#fff;border:3px solid #60a5fa;border-radius:24px;padding:22px;box-shadow:0 16px 40px #1e3a8a22}
-    h1{margin:0;color:#1d4ed8}.periodBar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:8px 0 4px}.period{font-weight:900;color:#475569}.selectedTeam{margin:0 0 18px;font-weight:900;color:#475569}.notice{padding:22px;text-align:center;font-weight:900;color:#475569}
+    h1{margin:0;color:#1d4ed8}.periodBar{display:flex;align-items:center;flex-wrap:nowrap;gap:14px;margin:8px 0 18px;overflow-x:auto;white-space:nowrap}.period{font-weight:900;color:#475569}.selectedTeam{font-weight:900;color:#475569}.notice{padding:22px;text-align:center;font-weight:900;color:#475569}
     .summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}.card{padding:12px;border:1px solid;border-radius:15px;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s;font:inherit;width:100%}.card:hover{transform:translateY(-1px);box-shadow:0 5px 14px #1e3a8a22}.card.active{outline:3px solid #0f172a;outline-offset:2px}.card strong{display:block;margin-top:5px;font-size:23px}
     .a{background:#dbeafe;border-color:#60a5fa;color:#1d4ed8}.b{background:#dcfce7;border-color:#4ade80;color:#15803d}.c{background:#fef3c7;border-color:#fbbf24;color:#d97706}.d{background:#ede9fe;border-color:#a78bfa;color:#7c3aed}.total{background:#fce7f3;border-color:#f472b6;color:#db2777}
     .weekNav{display:flex;gap:8px}.weekNav button{padding:7px 14px;border:1px solid #60a5fa;border-radius:12px;background:#dbeafe;color:#1d4ed8;font:inherit;font-weight:900;cursor:pointer}.weekNav button:disabled{opacity:.45;cursor:default}
@@ -18,8 +18,7 @@
 <body>
   <main class="wrap">
     <h1>降價件數統計</h1>
-    <div class="periodBar"><div class="period" id="period">正在讀取最新統計…</div><div class="weekNav"><button type="button" onclick="changePublicWeek(1)">← 上一期</button><button type="button" id="nextWeek" onclick="changePublicWeek(-1)">下一期 →</button></div></div>
-    <div class="selectedTeam" id="selectedTeam">目前顯示：全部</div>
+    <div class="periodBar"><div class="period" id="period">正在讀取最新統計…</div><div class="weekNav"><button type="button" onclick="changePublicWeek(1)">← 上一期</button><button type="button" id="nextWeek" onclick="changePublicWeek(-1)">下一期 →</button></div><div class="selectedTeam" id="selectedTeam">目前顯示：全部</div></div>
     <div id="content" class="notice">請稍候</div>
   </main>
   <script>
