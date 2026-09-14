@@ -2979,7 +2979,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V104 降價統計期別切換</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V105 公開統計標題排版</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7529,7 +7529,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V104 降價統計期別切換';
+  const VERSION = 'V105 公開統計標題排版';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7821,9 +7821,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V104 降價統計期別切換';
+      if(currentBadge) currentBadge.textContent = 'V105 公開統計標題排版';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V104 降價統計期別切換：可查看上一期，並在公開統計頁切換期別。';
+      if(hint) hint.textContent = 'V105 公開統計標題排版：公開頁標題與期別按鈕位置已更新。';
     }catch(_e){}
   }
 
@@ -7858,7 +7858,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V104 connect failed', err);
+        console.warn('V105 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8218,7 +8218,7 @@ function selectTaskAssistant(ruleId, encodedName){
     document.open(); document.write(html); document.close();
   }
   function publicStatsUrl(){
-    const url = new URL('public.html?v=V104', location.href);
+    const url = new URL('public.html?v=V105', location.href);
     url.searchParams.set('week', String(window.__priceDropWeeksAgo || 0));
     return url.toString();
   }
