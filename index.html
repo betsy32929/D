@@ -2979,7 +2979,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V107 開發人員篩選</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V108 D組新增王妤宸</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7529,7 +7529,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V107 開發人員篩選';
+  const VERSION = 'V108 D組新增王妤宸';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7821,9 +7821,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V107 開發人員篩選';
+      if(currentBadge) currentBadge.textContent = 'V108 D組新增王妤宸';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V107 開發人員篩選：公開統計可依開發人員查看物件。';
+      if(hint) hint.textContent = 'V108 D組新增王妤宸：D組人員為蔡宇育、王妤宸。';
     }catch(_e){}
   }
 
@@ -7858,7 +7858,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V107 connect failed', err);
+        console.warn('V108 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
@@ -8097,7 +8097,7 @@ function selectTaskAssistant(ruleId, encodedName){
     A:['黃文成','買淑玲','林顯昌','楊巧甄','田庭宇','陳珮菁','柯育婷','阮氏金水'],
     B:['宋喜輝','陳信良','陳帝元','王俞云','林俊嘉','張小曼','謝馨儀','林志銘'],
     C:['劉勝仁','吳佩玲','李享嶧','林姿岑','郭建佑','余沛臻','葉翊緁'],
-    D:['蔡宇育']
+    D:['蔡宇育','王妤宸']
   };
   const cleanName = value => String(value || '').replace(/[\s　]/g,'');
   function developersFor(value){
@@ -8218,7 +8218,7 @@ function selectTaskAssistant(ruleId, encodedName){
     document.open(); document.write(html); document.close();
   }
   function publicStatsUrl(){
-    const url = new URL('public.html?v=V107', location.href);
+    const url = new URL('public.html?v=V108', location.href);
     url.searchParams.set('week', String(window.__priceDropWeeksAgo || 0));
     return url.toString();
   }
