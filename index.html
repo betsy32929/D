@@ -47,6 +47,8 @@
     .btn:hover{filter:brightness(.98);transform:translateY(-1px)}
     .btnPrimary{background:#0f5bd7;color:#fff;}
     .btnBlue{background:#dbeafe;color:#1d4ed8;}
+    .btnPrintBack{background:#0f766e;color:#fff;border-color:#0f766e;}
+    .btnPrintBack:hover{background:#115e59;}
     .btnGreen{background:#dcfce7;color:#15803d;}
     .btnOrange{background:#ffedd5;color:#c2410c;}
     .btnRed{background:#fee2e2;color:#b91c1c;}
@@ -2970,6 +2972,11 @@
     .priceStatsTable th:nth-child(3),.priceStatsTable td:nth-child(3){width:22%;}
     .priceStatsTable th:nth-child(7),.priceStatsTable td:nth-child(7){width:15%;}
     .priceStatsCount{font-size:inherit;font-weight:900;color:#2563eb;line-height:1.35;white-space:normal;}
+    .printBackModal{width:min(880px,calc(100vw - 28px));}
+    .printBackCount{display:inline-flex;align-items:center;padding:7px 14px;border-radius:999px;background:#ccfbf1;color:#115e59;font-weight:1000;}
+    .printBackList{display:grid;gap:8px;margin-top:14px;}
+    .printBackItem{padding:11px 14px;border:1px solid #99f6e4;border-radius:12px;background:#f0fdfa;color:#134e4a;font-weight:900;word-break:break-word;}
+    .printBackEmpty{padding:28px;text-align:center;color:#64748b;font-weight:900;}
     @media(max-width:720px){.priceStatsSummary{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 </style>
@@ -2979,11 +2986,12 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V108 D組新增王妤宸</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V109 印封背清單</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
         <button type="button" class="btn btnPink" onclick="openPriceDropStats()">降價統計</button>
+        <button type="button" class="btn btnPrintBack" onclick="openPrintBackList()">印封背</button>
         <button type="button" class="btn btnBlue" onclick="safeRunTopButton(exportData, '匯出EXCEL')">匯出EXCEL</button>
         <button type="button" class="btn btnPurple" onclick="safeRunTopButton(exportJsonData, '匯出JSON')">匯出JSON</button>
         <button type="button" class="btn btnGreen" onclick="document.getElementById('importFile').click()">匯入JSON</button>
@@ -3212,6 +3220,25 @@
         <button class="btn btnRed" onclick="deleteCurrentCase()">刪除案件</button>
         <button class="btn btnGray" onclick="closeEditModal()">關閉</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modalMask" id="printBackMask" onclick="if(event.target===this) closePrintBackList()">
+  <div class="modal printBackModal">
+    <div class="modalHeader">
+      <div>
+        <h2>印封背</h2>
+        <div style="margin-top:6px;"><span class="printBackCount" id="printBackCount">未完成 0 件</span></div>
+      </div>
+      <div class="inline">
+        <button type="button" class="btn btnPrintBack" onclick="copyPrintBackNames()">複製案名</button>
+        <button type="button" class="btn btnGray" onclick="closePrintBackList()">關閉</button>
+      </div>
+    </div>
+    <div class="modalBody">
+      <div id="printBackCopyStatus" class="small muted">案名將直接串接，不換行、不加空格。</div>
+      <div id="printBackList" class="printBackList"></div>
     </div>
   </div>
 </div>
@@ -7519,6 +7546,53 @@ init();
 })();
 </script>
 
+<script>
+/* ===== V109：製作中且封背未完成案件清單（唯讀） ===== */
+(function(){
+  'use strict';
+  function isArchivedCase(c){
+    const status = String(c && c.status || '').trim().toLowerCase();
+    return !!(c && (c.archived === true || c.isArchived === true || status === 'archived' || status === '已封存'));
+  }
+  function printBackCases(){
+    const cases = (typeof state !== 'undefined' && state && Array.isArray(state.cases)) ? state.cases : [];
+    return cases.filter(c=>{
+      if(!c || isArchivedCase(c)) return false;
+      if(typeof isBlankAutoCaseV52 === 'function' && isBlankAutoCaseV52(c)) return false;
+      if(typeof caseStats === 'function' && caseStats(c).complete) return false;
+      const task = c.tasks && (c.tasks.r16 || c.tasks['封背']);
+      const done = (typeof isTaskDoneV31 === 'function') ? isTaskDoneV31(task) : !!(task && (task.done || String(task.assistant || '').trim()));
+      return !done;
+    });
+  }
+  window.openPrintBackList = function(){
+    const list = printBackCases();
+    window.__printBackCasesV109 = list;
+    window.__printBackCopyTextV109 = list.map(c=>String(c.caseName || '')).join('');
+    document.getElementById('printBackCount').textContent = '未完成 ' + list.length + ' 件';
+    document.getElementById('printBackCopyStatus').textContent = '案名將直接串接，不換行、不加空格。';
+    document.getElementById('printBackList').innerHTML = list.length
+      ? list.map(c=>`<div class="printBackItem">${esc(c.caseName || '未命名案件')}</div>`).join('')
+      : '<div class="printBackEmpty">目前沒有需要印封背的案件</div>';
+    document.getElementById('printBackMask').classList.add('show');
+  };
+  window.closePrintBackList = function(){ document.getElementById('printBackMask').classList.remove('show'); };
+  window.copyPrintBackNames = async function(){
+    const text = String(window.__printBackCopyTextV109 || '');
+    const status = document.getElementById('printBackCopyStatus');
+    if(!text){ status.textContent = '目前沒有可複製的案名。'; return; }
+    try{
+      await navigator.clipboard.writeText(text);
+    }catch(_e){
+      const area = document.createElement('textarea');
+      area.value = text; area.style.position = 'fixed'; area.style.opacity = '0';
+      document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove();
+    }
+    status.textContent = '已複製 ' + (window.__printBackCasesV109 || []).length + ' 件案名（無換行、無空格）。';
+  };
+})();
+</script>
+
 
 <script>
 /* ===== V86：降價統計包含開價與底價 =====
@@ -7529,7 +7603,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V108 D組新增王妤宸';
+  const VERSION = 'V109 印封背清單';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7821,9 +7895,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V108 D組新增王妤宸';
+      if(currentBadge) currentBadge.textContent = 'V109 印封背清單';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V108 D組新增王妤宸：D組人員為蔡宇育、王妤宸。';
+      if(hint) hint.textContent = 'V109 印封背清單：只列製作中且封背未完成案件，可直接複製完整案名。';
     }catch(_e){}
   }
 
@@ -7858,7 +7932,7 @@ init();
         setSupabaseStatus('已連線','ok');
         return await loadCloud('connect');
       }catch(err){
-        console.warn('V108 connect failed', err);
+        console.warn('V109 connect failed', err);
         saveSupabaseConfig({connected:false});
         setSupabaseStatus('未連線','bad');
         setSupabaseMessage('連線失敗，請確認 Supabase URL、Key 或網路','bad');
