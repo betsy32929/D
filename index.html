@@ -2981,6 +2981,9 @@
     .printBackActions{display:flex;align-items:center;gap:12px;margin-top:13px;}
     .printBackCopyBtn{background:#1d4ed8;color:#fff;border-color:#1d4ed8;}
     .printBackCopyBtn:hover{background:#1e40af;}
+    .printBackCompleteBtn{background:#ea580c;color:#fff;border-color:#ea580c;}
+    .printBackCompleteBtn:hover:not(:disabled){background:#c2410c;}
+    .printBackCompleteBtn:disabled{background:#cbd5e1;color:#64748b;border-color:#cbd5e1;cursor:not-allowed;opacity:.75;}
     .printBackStatus{font-weight:900;color:#64748b;}
     @media(max-width:720px){.priceStatsSummary{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
@@ -2991,7 +2994,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V114 掃描契約圖片</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V115 印封背列印完成</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3240,6 +3243,7 @@
       <textarea id="printBackList" class="printBackList" readonly aria-label="尚未完成封背案名"></textarea>
       <div class="printBackActions">
         <button type="button" class="btn printBackCopyBtn" onclick="copyPrintBackNames()">複製案名</button>
+        <button type="button" class="btn printBackCompleteBtn" id="printBackCompleteBtn" onclick="completePrintedBacks()" disabled>列印完成</button>
         <span id="printBackCopyStatus" class="small printBackStatus"></span>
       </div>
     </div>
@@ -7551,7 +7555,7 @@ init();
 </script>
 
 <script>
-/* ===== V109：製作中且封背未完成案件清單（唯讀） ===== */
+/* ===== V115：製作中且封背未完成案件清單與批次列印完成 ===== */
 (function(){
   'use strict';
   function isArchivedCase(c){
@@ -7576,6 +7580,8 @@ init();
     document.getElementById('printBackCount').textContent = '尚未完成封背：共 ' + list.length + ' 件';
     document.getElementById('printBackCopyStatus').textContent = '';
     document.getElementById('printBackList').value = window.__printBackCopyTextV109;
+    const completeBtn = document.getElementById('printBackCompleteBtn');
+    if(completeBtn){ completeBtn.disabled = list.length === 0; completeBtn.textContent = '列印完成'; }
     document.getElementById('printBackMask').classList.add('show');
   };
   window.closePrintBackList = function(){ document.getElementById('printBackMask').classList.remove('show'); };
@@ -7592,6 +7598,42 @@ init();
     }
     status.textContent = '已複製 ' + (window.__printBackCasesV109 || []).length + ' 件案名（無換行、無空格）。';
   };
+  window.completePrintedBacks = async function(){
+    const snapshot = Array.isArray(window.__printBackCasesV109) ? window.__printBackCasesV109.slice() : [];
+    const count = snapshot.length;
+    const button = document.getElementById('printBackCompleteBtn');
+    const status = document.getElementById('printBackCopyStatus');
+    if(!count){ if(button) button.disabled = true; return; }
+    if(!confirm('目前印封背清單共 ' + count + ' 件，確定全部標示為封背完成並同步雲端嗎？')) return;
+
+    if(button){ button.disabled = true; button.textContent = '處理中…'; }
+    try{
+      const changedAt = (typeof nowISO === 'function') ? nowISO() : new Date().toISOString();
+      snapshot.forEach(c=>{
+        if(!c) return;
+        if(typeof ensureCaseTasks === 'function') ensureCaseTasks(c);
+        if(!c.tasks || typeof c.tasks !== 'object') c.tasks = {};
+        if(!c.tasks.r16 || typeof c.tasks.r16 !== 'object') c.tasks.r16 = {};
+        c.tasks.r16.done = true;
+        c.tasks.r16.updatedAt = changedAt;
+        c.updatedAt = changedAt;
+      });
+      if(typeof saveState === 'function') saveState();
+      if(typeof renderAll === 'function') renderAll(false);
+      window.openPrintBackList();
+      if(status) status.textContent = '已完成 ' + count + ' 件，正在同步雲端…';
+      const synced = (typeof window.syncPrintBackCompletionV115 === 'function')
+        ? await window.syncPrintBackCompletionV115()
+        : false;
+      if(status) status.textContent = synced
+        ? '已完成 ' + count + ' 件，並同步雲端。'
+        : '已完成 ' + count + ' 件；雲端尚未同步，系統會自動重試。';
+    }catch(err){
+      console.warn('V115 print-back completion failed', err);
+      window.openPrintBackList();
+      if(status) status.textContent = '列印完成處理失敗，請再試一次。';
+    }
+  };
 })();
 </script>
 
@@ -7605,7 +7647,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V114 掃描契約圖片';
+  const VERSION = 'V115 印封背列印完成';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7869,6 +7911,7 @@ init();
       return false;
     }finally{ cloudWriting = false; }
   }
+  window.syncPrintBackCompletionV115 = async function(){ return uploadNow('print_back_complete'); };
   function scheduleUpload(reason, delay){
     if(applyingCloud) return;
     dirty = true;
@@ -7897,9 +7940,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V114 掃描契約圖片';
+      if(currentBadge) currentBadge.textContent = 'V115 印封背列印完成';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V114 掃描契約圖片：將「掃描圖片」改為「掃描契約圖片」，既有完成狀態保留。';
+      if(hint) hint.textContent = 'V115 印封背列印完成：可將當下清單的封背一次完成並立即同步雲端。';
     }catch(_e){}
   }
 
