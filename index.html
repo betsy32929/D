@@ -2994,7 +2994,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V115 印封背列印完成</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V116 降價同日同件計數一次</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -7647,7 +7647,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V115 印封背列印完成';
+  const VERSION = 'V116 降價同日同件計數一次';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7940,9 +7940,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V115 印封背列印完成';
+      if(currentBadge) currentBadge.textContent = 'V116 降價同日同件計數一次';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V115 印封背列印完成：可將當下清單的封背一次完成並立即同步雲端。';
+      if(hint) hint.textContent = 'V116 降價統計：同一單據日期、同一案件只計數一次。';
     }catch(_e){}
   }
 
@@ -8263,6 +8263,28 @@ function selectTaskAssistant(ruleId, encodedName){
   function scoreText(value){
     return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
   }
+  function sameDayCaseKey(row){
+    const c = row && row.c || {};
+    const dateKey = row && row.date instanceof Date
+      ? [row.date.getFullYear(),row.date.getMonth()+1,row.date.getDate()].join('-')
+      : '';
+    const identity = cleanName(c.caseName) || cleanName(c.contractNo) || cleanName(c.receiptNo) || String(c.id || '');
+    return dateKey + '|' + identity.toLowerCase();
+  }
+  function countSameDayCaseOnce(rows){
+    const seen = new Set();
+    return rows.map(row=>{
+      const key = sameDayCaseKey(row);
+      const counted = !seen.has(key);
+      seen.add(key);
+      return counted ? {...row,counted:true} : {
+        ...row,
+        counted:false,
+        score:0,
+        shares:row.shares.map(share=>({...share,score:0}))
+      };
+    });
+  }
   function priceDropRows(weeksAgo=0){
     const week = currentWeek(weeksAgo);
     const rows = (state && Array.isArray(state.cases) ? state.cases : []).flatMap(c=>{
@@ -8276,7 +8298,8 @@ function selectTaskAssistant(ruleId, encodedName){
        .filter(item=>Number.isFinite(item.oldPrice) && Number.isFinite(item.newPrice) && (item.newPrice < item.oldPrice || (item.kind === '底價' && item.oldPrice === 0 && item.newPrice !== 0)))
        .map(item=>({date,c,kind:item.kind,oldText:item.oldText,newText:item.newText,score,shares:scoreShares(c,score)}));
     }).sort((a,b)=>a.date-b.date || String(a.c.caseName||'').localeCompare(String(b.c.caseName||''),'zh-Hant') || a.kind.localeCompare(b.kind,'zh-Hant'));
-    return {week,rows};
+    const countedRows = countSameDayCaseOnce(rows);
+    return {week,rows:countedRows};
   }
   function summaryHtml(data, selectedTeam){
     const totals = {A組:0,B組:0,C組:0,D組:0,未分組:0};
@@ -8305,7 +8328,9 @@ function selectTaskAssistant(ruleId, encodedName){
       const newDisplay = privateBottom ? '<span class="priceMask" title="底價已隱藏">••••</span>' : esc(row.newText) + '萬';
       const developerPeople = developersFor(row.c && row.c.business);
       const developerDisplay = developerPeople.map(person=>`${esc(person.name)}<span class="priceStatsGroup">${esc(person.team)}</span>`).join(' ');
-      const count = row.shares.length > 1 ? row.shares.map(share=>`${esc(share.name)} ${scoreText(share.score)}分`).join('<br>') : scoreText(row.score) + '分';
+      const count = row.counted === false
+        ? '<span class="muted">同件同日不重複</span>'
+        : (row.shares.length > 1 ? row.shares.map(share=>`${esc(share.name)} ${scoreText(share.score)}分`).join('<br>') : scoreText(row.score) + '分');
       return `<tr><td>${row.date.getMonth()+1}/${row.date.getDate()}</td><td>${esc(row.c.caseName || '—')}</td><td>${developerDisplay}</td><td>${esc(row.kind)}</td><td>${oldDisplay}</td><td>${newDisplay}</td><td class="priceStatsCount">${count}</td></tr>`;
     }).join('');
   }
@@ -8337,7 +8362,7 @@ function selectTaskAssistant(ruleId, encodedName){
     document.open(); document.write(html); document.close();
   }
   function publicStatsUrl(){
-    const url = new URL('public.html?v=V108', location.href);
+    const url = new URL('public.html?v=V116', location.href);
     url.searchParams.set('week', String(window.__priceDropWeeksAgo || 0));
     return url.toString();
   }
