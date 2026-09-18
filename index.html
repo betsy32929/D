@@ -2974,7 +2974,7 @@
     .priceStatsCount{font-size:inherit;font-weight:900;color:#2563eb;line-height:1.35;white-space:normal;}
     .printBackModal{width:min(980px,calc(100vw - 28px));background:#fffaf4;border-top:3px solid #f59e0b;}
     .printBackModal .modalHeader{align-items:center;}
-    .printBackTitle{margin:0;color:#9a3412;}
+    .printBackModal .printBackTitle{margin:0;color:#9a3412;}
     .printBackBody{padding-top:0;}
     .printBackCount{display:block;padding:12px 14px;border:1px solid #fdba74;border-radius:14px;background:#fff;color:#9a3412;font-weight:1000;font-size:18px;}
     .printBackList{display:block;width:100%;height:360px;margin-top:14px;padding:14px 18px;resize:vertical;border:2px solid #60a5fa;border-radius:15px;background:#fff;color:#1e293b;font-family:inherit;font-size:18px;font-weight:900;line-height:1.75;word-break:break-word;box-sizing:border-box;}
@@ -2991,7 +2991,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V110 印封背版面</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V111 印封背版面</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3240,7 +3240,7 @@
       <textarea id="printBackList" class="printBackList" readonly aria-label="尚未完成封背案名"></textarea>
       <div class="printBackActions">
         <button type="button" class="btn printBackCopyBtn" onclick="copyPrintBackNames()">複製案名</button>
-        <span id="printBackCopyStatus" class="small printBackStatus">案名直接串接，不換行、不加空格。</span>
+        <span id="printBackCopyStatus" class="small printBackStatus"></span>
       </div>
     </div>
   </div>
@@ -7573,7 +7573,7 @@ init();
     window.__printBackCasesV109 = list;
     window.__printBackCopyTextV109 = list.map(c=>String(c.caseName || '')).join('');
     document.getElementById('printBackCount').textContent = '尚未完成封背：共 ' + list.length + ' 件';
-    document.getElementById('printBackCopyStatus').textContent = '案名直接串接，不換行、不加空格。';
+    document.getElementById('printBackCopyStatus').textContent = '';
     document.getElementById('printBackList').value = window.__printBackCopyTextV109;
     document.getElementById('printBackMask').classList.add('show');
   };
@@ -7604,7 +7604,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V110 印封背版面';
+  const VERSION = 'V111 印封背版面';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7896,9 +7896,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V110 印封背版面';
+      if(currentBadge) currentBadge.textContent = 'V111 印封背版面';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V110 印封背版面：只列製作中且封背未完成案件，可直接複製完整案名。';
+      if(hint) hint.textContent = 'V111 印封背版面：只列製作中且封背未完成案件，可直接複製完整案名。';
     }catch(_e){}
   }
 
