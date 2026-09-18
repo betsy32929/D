@@ -2972,11 +2972,16 @@
     .priceStatsTable th:nth-child(3),.priceStatsTable td:nth-child(3){width:22%;}
     .priceStatsTable th:nth-child(7),.priceStatsTable td:nth-child(7){width:15%;}
     .priceStatsCount{font-size:inherit;font-weight:900;color:#2563eb;line-height:1.35;white-space:normal;}
-    .printBackModal{width:min(880px,calc(100vw - 28px));}
-    .printBackCount{display:inline-flex;align-items:center;padding:7px 14px;border-radius:999px;background:#ccfbf1;color:#115e59;font-weight:1000;}
-    .printBackList{display:grid;gap:8px;margin-top:14px;}
-    .printBackItem{padding:11px 14px;border:1px solid #99f6e4;border-radius:12px;background:#f0fdfa;color:#134e4a;font-weight:900;word-break:break-word;}
-    .printBackEmpty{padding:28px;text-align:center;color:#64748b;font-weight:900;}
+    .printBackModal{width:min(980px,calc(100vw - 28px));background:#fffaf4;border-top:3px solid #f59e0b;}
+    .printBackModal .modalHeader{align-items:center;}
+    .printBackTitle{margin:0;color:#9a3412;}
+    .printBackBody{padding-top:0;}
+    .printBackCount{display:block;padding:12px 14px;border:1px solid #fdba74;border-radius:14px;background:#fff;color:#9a3412;font-weight:1000;font-size:18px;}
+    .printBackList{display:block;width:100%;height:360px;margin-top:14px;padding:14px 18px;resize:vertical;border:2px solid #60a5fa;border-radius:15px;background:#fff;color:#1e293b;font-family:inherit;font-size:18px;font-weight:900;line-height:1.75;word-break:break-word;box-sizing:border-box;}
+    .printBackActions{display:flex;align-items:center;gap:12px;margin-top:13px;}
+    .printBackCopyBtn{background:#1d4ed8;color:#fff;border-color:#1d4ed8;}
+    .printBackCopyBtn:hover{background:#1e40af;}
+    .printBackStatus{font-weight:900;color:#64748b;}
     @media(max-width:720px){.priceStatsSummary{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 </style>
@@ -2986,7 +2991,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V109 印封背清單</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V110 印封背版面</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3227,18 +3232,16 @@
 <div class="modalMask" id="printBackMask" onclick="if(event.target===this) closePrintBackList()">
   <div class="modal printBackModal">
     <div class="modalHeader">
-      <div>
-        <h2>印封背</h2>
-        <div style="margin-top:6px;"><span class="printBackCount" id="printBackCount">未完成 0 件</span></div>
-      </div>
-      <div class="inline">
-        <button type="button" class="btn btnPrintBack" onclick="copyPrintBackNames()">複製案名</button>
-        <button type="button" class="btn btnGray" onclick="closePrintBackList()">關閉</button>
-      </div>
+      <h2 class="printBackTitle">印封背</h2>
+      <button type="button" class="btn btnGray" onclick="closePrintBackList()">關閉</button>
     </div>
-    <div class="modalBody">
-      <div id="printBackCopyStatus" class="small muted">案名將直接串接，不換行、不加空格。</div>
-      <div id="printBackList" class="printBackList"></div>
+    <div class="modalBody printBackBody">
+      <div class="printBackCount" id="printBackCount">尚未完成封背：共 0 件</div>
+      <textarea id="printBackList" class="printBackList" readonly aria-label="尚未完成封背案名"></textarea>
+      <div class="printBackActions">
+        <button type="button" class="btn printBackCopyBtn" onclick="copyPrintBackNames()">複製案名</button>
+        <span id="printBackCopyStatus" class="small printBackStatus">案名直接串接，不換行、不加空格。</span>
+      </div>
     </div>
   </div>
 </div>
@@ -7569,11 +7572,9 @@ init();
     const list = printBackCases();
     window.__printBackCasesV109 = list;
     window.__printBackCopyTextV109 = list.map(c=>String(c.caseName || '')).join('');
-    document.getElementById('printBackCount').textContent = '未完成 ' + list.length + ' 件';
-    document.getElementById('printBackCopyStatus').textContent = '案名將直接串接，不換行、不加空格。';
-    document.getElementById('printBackList').innerHTML = list.length
-      ? list.map(c=>`<div class="printBackItem">${esc(c.caseName || '未命名案件')}</div>`).join('')
-      : '<div class="printBackEmpty">目前沒有需要印封背的案件</div>';
+    document.getElementById('printBackCount').textContent = '尚未完成封背：共 ' + list.length + ' 件';
+    document.getElementById('printBackCopyStatus').textContent = '案名直接串接，不換行、不加空格。';
+    document.getElementById('printBackList').value = window.__printBackCopyTextV109;
     document.getElementById('printBackMask').classList.add('show');
   };
   window.closePrintBackList = function(){ document.getElementById('printBackMask').classList.remove('show'); };
@@ -7603,7 +7604,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V109 印封背清單';
+  const VERSION = 'V110 印封背版面';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7895,9 +7896,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V109 印封背清單';
+      if(currentBadge) currentBadge.textContent = 'V110 印封背版面';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V109 印封背清單：只列製作中且封背未完成案件，可直接複製完整案名。';
+      if(hint) hint.textContent = 'V110 印封背版面：只列製作中且封背未完成案件，可直接複製完整案名。';
     }catch(_e){}
   }
 
