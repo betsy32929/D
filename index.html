@@ -2991,7 +2991,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V112 印封背版面</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V113 掃描契約圖片</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3312,7 +3312,7 @@ const DEFAULT_RULES = [
   {id:'r28', name:'格局圖檔名/更新', priceChange:false, bottomPriceChange:false, extendContract:false, relist:false, contractChange:false, specialTerms:false},
   {id:'r29', name:'鑰匙', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:false, specialTerms:false},
   {id:'r30', name:'NAS銷售本', priceChange:true, bottomPriceChange:false, extendContract:true, relist:true, contractChange:true, specialTerms:false},
-  {id:'r32', name:'掃描圖片', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
+  {id:'r32', name:'掃描契約圖片', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
   {id:'r33', name:'歸檔公司物件存檔', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
   {id:'r34', name:'放歸檔彩雷上', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true},
   {id:'r31', name:'契約紙本', priceChange:true, bottomPriceChange:true, extendContract:true, relist:true, contractChange:true, specialTerms:true}
@@ -3448,6 +3448,7 @@ function migrateState(){
     const def = DEFAULT_RULES.find(d=>d.name === r.name) || DEFAULT_RULES[i];
     return Object.assign({}, def || {}, r, {id:r.id || (def && def.id) || uid('r'), name:r.name || (def && def.name) || '未命名項目'});
   });
+  state.rules.forEach(r=>{ if(r.id === 'r32' && r.name === '掃描圖片') r.name = '掃描契約圖片'; });
   if(!Array.isArray(state.cases)) state.cases = [];
   state.cases.forEach(c=>{
     if(c.followMain && !c.mainContractNo) c.mainContractNo = '';
@@ -7604,7 +7605,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V112 印封背版面';
+  const VERSION = 'V113 掃描契約圖片';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7896,9 +7897,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V112 印封背版面';
+      if(currentBadge) currentBadge.textContent = 'V113 掃描契約圖片';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V112 印封背版面：只列製作中且封背未完成案件，可直接複製完整案名。';
+      if(hint) hint.textContent = 'V113 掃描契約圖片：將「掃描圖片」改為「掃描契約圖片」，既有完成狀態保留。';
     }catch(_e){}
   }
 
