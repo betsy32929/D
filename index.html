@@ -2985,6 +2985,9 @@
     .printBackCompleteBtn:hover:not(:disabled){background:#c2410c;}
     .printBackCompleteBtn:disabled{background:#cbd5e1;color:#64748b;border-color:#cbd5e1;cursor:not-allowed;opacity:.75;}
     .printBackStatus{font-weight:900;color:#64748b;}
+    .conditionRequiredLabel{margin-left:auto;margin-right:8px;padding:3px 9px;border-radius:999px;background:#fff7ed;color:#c2410c;border:1px solid #fdba74;font-size:12px;font-weight:1000;}
+    .compactConditions.conditionRequiredError{outline:3px solid #ef4444;outline-offset:2px;border-radius:12px;}
+    .compactConditions.conditionRequiredError .conditionRequiredLabel{background:#fee2e2;color:#b91c1c;border-color:#ef4444;}
     @media(max-width:720px){.priceStatsSummary{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 </style>
@@ -2994,7 +2997,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V119 公開統計D組收合</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V120 變更條件至少必填1項</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3132,7 +3135,7 @@
       </div>
 
       <div class="sectionBlock compactConditions">
-        <div class="sectionHead"><span>變更條件</span><button type="button" class="btn btnGray btnTiny" onclick="clearConditionFields(event)">清空</button></div>
+        <div class="sectionHead"><span>變更條件</span><span class="conditionRequiredLabel" id="conditionRequiredLabel">至少必填1項</span><button type="button" class="btn btnGray btnTiny" onclick="clearConditionFields(event)">清空</button></div>
         <div class="sectionContent">
           <div class="conditionStack condition3">
             <div class="condCard condPrice">
@@ -3810,6 +3813,7 @@ function openEditModal(id){
   currentTaskFilter = 'all';
   const c = getCase(id);
   if(!c) return;
+  if(typeof setConditionRequiredStateV120 === 'function') setConditionRequiredStateV120(false);
   updateEditModalTitle(c);
   document.querySelectorAll('#editModalMask .editField').forEach(el=>{ el.value = c[el.dataset.key] || ''; });
   updateRelistButtons(c.relistType || '');
@@ -3833,6 +3837,7 @@ function setRelistType(value){
   const input = document.querySelector('#editModalMask .editField[data-key="relistType"]');
   if(input) input.value = value || '';
   updateRelistButtons(value || '');
+  if(value && typeof setConditionRequiredStateV120 === 'function') setConditionRequiredStateV120(false);
   saveCurrentCase(false);
   renderTaskTable();
 }
@@ -5055,12 +5060,36 @@ function saveCurrentCase(render=true){
   if(render) renderAll();
 }
 
+function hasAnyConditionV120(){
+  return [...document.querySelectorAll('#editModalMask .condField')].some(el=>String(el.value || '').trim());
+}
+
+function setConditionRequiredStateV120(invalid){
+  const block = document.querySelector('#editModalMask .compactConditions');
+  const label = document.getElementById('conditionRequiredLabel');
+  if(block) block.classList.toggle('conditionRequiredError', !!invalid);
+  if(label) label.textContent = invalid ? '請至少填寫或選擇1項' : '至少必填1項';
+}
+
 function closeEditModal(){
-  if(currentCaseId) saveCurrentCase(false);
+  if(currentCaseId){
+    if(!hasAnyConditionV120()){
+      setConditionRequiredStateV120(true);
+      const block = document.querySelector('#editModalMask .compactConditions');
+      if(block && typeof block.scrollIntoView === 'function') block.scrollIntoView({behavior:'smooth',block:'start'});
+      const first = document.querySelector('#editModalMask .condField:not([type="hidden"])');
+      if(first) setTimeout(()=>first.focus(), 180);
+      alert('變更條件至少必填1項，請填寫或選擇後再關閉。');
+      return false;
+    }
+    setConditionRequiredStateV120(false);
+    saveCurrentCase(false);
+  }
   const mask = document.getElementById('editModalMask');
   if(mask) mask.classList.remove('show');
   currentCaseId = null;
   renderAll();
+  return true;
 }
 
 function renderTaskTable(){
@@ -7467,7 +7496,14 @@ function init(){
   initSupabasePanel();
   setupDateBlur();
   const mask = document.getElementById('editModalMask');
-  if(mask){ mask.addEventListener('mousedown', function(e){ if(e.target === mask) closeEditModal(); }); }
+  if(mask){
+    mask.addEventListener('mousedown', function(e){ if(e.target === mask) closeEditModal(); });
+    const clearRequiredWarning = function(e){
+      if(e.target && e.target.classList && e.target.classList.contains('condField') && hasAnyConditionV120()) setConditionRequiredStateV120(false);
+    };
+    mask.addEventListener('input', clearRequiredWarning);
+    mask.addEventListener('change', clearRequiredWarning);
+  }
   tickClock();
   renderAll();
   setTimeout(()=>runStorageSelfTestV45(false), 180);
@@ -7647,7 +7683,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V119 公開統計D組收合';
+  const VERSION = 'V120 變更條件至少必填1項';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7940,9 +7976,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V119 公開統計D組收合';
+      if(currentBadge) currentBadge.textContent = 'V120 變更條件至少必填1項';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V119：公開統計預設收起D組，總計仍包含D組，可按鈕展開。';
+      if(hint) hint.textContent = 'V120：案件的變更條件至少填寫或選擇1項後才能關閉。';
     }catch(_e){}
   }
 
