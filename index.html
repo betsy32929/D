@@ -2997,7 +2997,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V120 變更條件至少必填1項</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V121 單據日期可填無</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3123,7 +3123,7 @@
         <div class="sectionHead">基本資料</div>
         <div class="sectionContent">
           <div class="basicInfoGrid">
-            <div class="field basicReceiptDate"><label>單據日期</label><input class="roc-date editField" data-key="receiptDate" placeholder="例：4/30"></div>
+            <div class="field basicReceiptDate"><label>單據日期</label><input class="roc-date editField" data-key="receiptDate" placeholder="例：4/30 或 無"></div>
             <div class="field basicReceiptNo"><label>單據號碼</label><input class="editField" data-key="receiptNo"></div>
             <div class="field basicProcessDate"><label>處理日期</label><input class="roc-date editField" data-key="processDate" placeholder="例：4/30"></div>
             <div class="field basicCaseName"><label>案名</label><input class="editField" data-key="caseName" placeholder="請輸入案名"></div>
@@ -4655,6 +4655,12 @@ function normalizeDateField(el, showWarning=true){
   if(!el) return true;
   const raw = el.value.trim();
   if(!raw){
+    setDateWarning(el,'');
+    return true;
+  }
+
+  // 只有單據日期可填「無」：表示這次只修改內容，沒有單據。
+  if(el.dataset.key === 'receiptDate' && raw === '無'){
     setDateWarning(el,'');
     return true;
   }
@@ -7683,7 +7689,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V120 變更條件至少必填1項';
+  const VERSION = 'V121 單據日期可填無';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7976,9 +7982,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V120 變更條件至少必填1項';
+      if(currentBadge) currentBadge.textContent = 'V121 單據日期可填無';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V120：案件的變更條件至少填寫或選擇1項後才能關閉。';
+      if(hint) hint.textContent = 'V121：只修改內容、沒有單據時，單據日期可填「無」。';
     }catch(_e){}
   }
 
