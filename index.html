@@ -457,6 +457,9 @@
     .editTitleCase{display:block;font-size:20px;font-weight:1000;letter-spacing:1px;}
     .editTitleContract{display:block;font-size:13px;font-weight:800;opacity:.92;margin-top:3px;letter-spacing:0;}
     .editTitleMeta{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;font-weight:800;opacity:.92;margin-top:3px;letter-spacing:0;}
+    .editTitleCopyBtn{appearance:none;border:0;border-bottom:1px dashed currentColor;background:transparent;color:#174ea6;cursor:pointer;font:inherit;font-weight:1000;line-height:1.15;margin:0;padding:0 1px;}
+    .editTitleCopyBtn:hover,.editTitleCopyBtn:focus-visible{color:#0b63ce;background:#dbeafe;border-radius:4px;outline:2px solid #60a5fa;outline-offset:2px;}
+    .editTitleCopyBtn.copied{color:#15803d;background:#dcfce7;border-bottom-color:transparent;border-radius:4px;}
     .filterGridMaking{
       grid-template-columns:1.15fr .95fr .95fr .95fr 1.05fr 1.35fr auto;
       align-items:end;
@@ -2997,7 +3000,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V121 單據日期可填無</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V122 契約編號點選複製</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3799,6 +3802,36 @@ function createBlankCaseAndOpen(){
 }
 function getCase(id){ return state.cases.find(c=>c.id===id); }
 function activeAssistants(){ return (state.assistants || []).filter(a=>a.active !== false); }
+async function copyEditHeaderCode(kind, button){
+  const c = getCase(currentCaseId);
+  const code = String(c ? (kind === 'main' ? c.mainContractNo : c.contractNo) : '').trim();
+  if(!code) return false;
+  try{
+    await navigator.clipboard.writeText(code);
+  }catch(_e){
+    const area = document.createElement('textarea');
+    area.value = code;
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    const copied = document.execCommand('copy');
+    area.remove();
+    if(!copied){ alert('無法自動複製，請長按或選取編號複製。'); return false; }
+  }
+  if(button){
+    const original = code;
+    button.classList.add('copied');
+    button.textContent = original + ' ✓ 已複製';
+    setTimeout(()=>{
+      if(button && button.isConnected){
+        button.classList.remove('copied');
+        button.textContent = original;
+      }
+    }, 1200);
+  }
+  return true;
+}
 function updateEditModalTitle(c){
   const title = document.getElementById('editModalTitle');
   if(!title || !c) return;
@@ -3806,7 +3839,9 @@ function updateEditModalTitle(c){
   const contract = c.contractNo || '—';
   const mainContract = c.mainContractNo || '—';
   const developer = c.business || '—';
-  title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleMeta"><span>契約編號：${esc(contract)}</span><span>跟隨主約：${esc(mainContract)}</span><span>開發：${esc(developer)}</span></span>`;
+  const contractHtml = c.contractNo ? `<button type="button" class="editTitleCopyBtn" title="點一下複製契約編號" onclick="copyEditHeaderCode('contract',this)">${esc(contract)}</button>` : esc(contract);
+  const mainHtml = c.mainContractNo ? `<button type="button" class="editTitleCopyBtn" title="點一下複製跟隨主約" onclick="copyEditHeaderCode('main',this)">${esc(mainContract)}</button>` : esc(mainContract);
+  title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleMeta"><span>契約編號：${contractHtml}</span><span>跟隨主約：${mainHtml}</span><span>開發：${esc(developer)}</span></span>`;
 }
 function openEditModal(id){
   currentCaseId = id;
@@ -7689,7 +7724,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V121 單據日期可填無';
+  const VERSION = 'V122 契約編號點選複製';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -7982,9 +8017,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V121 單據日期可填無';
+      if(currentBadge) currentBadge.textContent = 'V122 契約編號點選複製';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V121：只修改內容、沒有單據時，單據日期可填「無」。';
+      if(hint) hint.textContent = 'V122：點選輸入視窗標題的契約編號或跟隨主約，即可單獨複製該編號。';
     }catch(_e){}
   }
 
