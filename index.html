@@ -3000,7 +3000,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V123 新案件增加總表物件本位置</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V124 標題同步與新項目點選修正</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3806,7 +3806,9 @@ function getCase(id){ return state.cases.find(c=>c.id===id); }
 function activeAssistants(){ return (state.assistants || []).filter(a=>a.active !== false); }
 async function copyEditHeaderCode(kind, button){
   const c = getCase(currentCaseId);
-  const code = String(c ? (kind === 'main' ? c.mainContractNo : c.contractNo) : '').trim();
+  const fieldKey = kind === 'main' ? 'mainContractNo' : 'contractNo';
+  const liveInput = document.querySelector(`#editModalMask .editField[data-key="${fieldKey}"]`);
+  const code = String((liveInput && liveInput.value) || (c && c[fieldKey]) || '').trim();
   if(!code) return false;
   try{
     await navigator.clipboard.writeText(code);
@@ -3845,6 +3847,20 @@ function updateEditModalTitle(c){
   const mainHtml = c.mainContractNo ? `<button type="button" class="editTitleCopyBtn" title="點一下複製跟隨主約" onclick="copyEditHeaderCode('main',this)">${esc(mainContract)}</button>` : esc(mainContract);
   title.innerHTML = `<span class="editTitleCase">${esc(caseName)}</span><span class="editTitleMeta"><span>契約編號：${contractHtml}</span><span>跟隨主約：${mainHtml}</span><span>開發：${esc(developer)}</span></span>`;
 }
+function updateEditModalTitleFromFieldsV124(c){
+  if(!c) c = getCase(currentCaseId);
+  if(!c) return;
+  const value = key=>{
+    const el = document.querySelector(`#editModalMask .editField[data-key="${key}"]`);
+    return el ? String(el.value || '').trim() : String(c[key] || '').trim();
+  };
+  updateEditModalTitle(Object.assign({}, c, {
+    caseName:value('caseName'),
+    contractNo:value('contractNo'),
+    mainContractNo:value('mainContractNo'),
+    business:value('business')
+  }));
+}
 function openEditModal(id){
   currentCaseId = id;
   currentTaskFilter = 'all';
@@ -3853,11 +3869,13 @@ function openEditModal(id){
   if(typeof setConditionRequiredStateV120 === 'function') setConditionRequiredStateV120(false);
   updateEditModalTitle(c);
   document.querySelectorAll('#editModalMask .editField').forEach(el=>{ el.value = c[el.dataset.key] || ''; });
+  updateEditModalTitleFromFieldsV124(c);
   updateRelistButtons(c.relistType || '');
   bindEditFields();
   validateVisibleDateFields(false);
   renderTaskTable();
   document.getElementById('editModalMask').classList.add('show');
+  requestAnimationFrame(()=>updateEditModalTitleFromFieldsV124(c));
   setTimeout(()=>{
     const first = document.querySelector('#editModalMask .editField[data-key="receiptDate"]');
     if(first) first.focus();
@@ -3889,6 +3907,7 @@ function bindEditFields(){
     const updateField = function(){
       if(el.classList.contains('roc-date') && !el.value.trim()) setDateWarning(el,'');
       saveCurrentCase(false);
+      if(['caseName','contractNo','mainContractNo','business'].includes(el.dataset.key)) updateEditModalTitleFromFieldsV124();
       if(el.classList.contains('condField')) renderTaskTable();
     };
     el.oninput = updateField;
@@ -4752,6 +4771,7 @@ function bindEditFields(){
     const updateField = function(){
       if(el.classList.contains('roc-date') && !el.value.trim()) setDateWarning(el,'');
       saveCurrentCase(false);
+      if(['caseName','contractNo','mainContractNo','business'].includes(el.dataset.key)) updateEditModalTitleFromFieldsV124();
       if(el.classList.contains('condField')) renderTaskTable();
     };
 
@@ -5709,7 +5729,8 @@ function migrateState(){
 }
 function caseUsesRuleV123(c, rule){
   if(!rule || rule.id !== 'r35') return true;
-  return Number(c && c.taskSchemaVersion || 0) >= 123 || !!(c && c.tasks && (c.tasks.r35 || c.tasks[rule.name]));
+  const createdAfterRelease = Date.parse(c && c.createdAt || '') >= Date.parse('2026-11-26T02:20:47Z');
+  return Number(c && c.taskSchemaVersion || 0) >= 123 || createdAfterRelease || !!(c && c.tasks && (c.tasks.r35 || c.tasks[rule.name]));
 }
 function ensureCaseTasks(c){
   if(!c.tasks || typeof c.tasks !== 'object') c.tasks = {};
@@ -7742,7 +7763,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V123 新案件增加總表物件本位置';
+  const VERSION = 'V124 標題同步與新項目點選修正';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -8035,9 +8056,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V123 新案件增加總表物件本位置';
+      if(currentBadge) currentBadge.textContent = 'V124 標題同步與新項目點選修正';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V123：新增案件會在單機 總表下方增加「總表物件本位置」，預設未做；既有案件不補新增。';
+      if(hint) hint.textContent = 'V124：輸入視窗標題會即時同步案名、契約編號、跟隨主約與開發；新項目預設未做並可正常點選。';
     }catch(_e){}
   }
 
