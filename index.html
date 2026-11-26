@@ -3000,7 +3000,7 @@
   <header class="hero">
     <div class="heroTop heroOneLine">
       <div class="titleWrap">
-        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V124 標題同步與新項目點選修正</span></h1>
+        <h1>D夾 <span id="dclipCurrentVersionBadge" style="font-size:13px;letter-spacing:0;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:999px;padding:3px 8px;vertical-align:middle;">V125 更新清單預設顯示未做</span></h1>
       </div>
       <div class="toolbar toolbarMain">
         <button type="button" class="btn btnPrimary addObjectBtn" onclick="safeRunTopButton(createBlankCaseAndOpen, '新增案件')">＋ 新增物件</button>
@@ -3337,7 +3337,7 @@ let state = {
   lastSaved:''
 };
 let currentCaseId = null;
-let currentTaskFilter = 'all';
+let currentTaskFilter = 'pending';
 let saveTimer = null;
 let localSaveWarningShownV44 = false;
 window.__DCLIP_LOCAL_SAVE_ERROR = false;
@@ -3863,7 +3863,7 @@ function updateEditModalTitleFromFieldsV124(c){
 }
 function openEditModal(id){
   currentCaseId = id;
-  currentTaskFilter = 'all';
+  currentTaskFilter = 'pending';
   const c = getCase(id);
   if(!c) return;
   if(typeof setConditionRequiredStateV120 === 'function') setConditionRequiredStateV120(false);
@@ -7763,7 +7763,7 @@ init();
 */
 (function(){
   'use strict';
-  const VERSION = 'V124 標題同步與新項目點選修正';
+  const VERSION = 'V125 更新清單預設顯示未做';
   const AUTO_CLOUD_ENABLED = true;
   window.DCLIP_AUTO_CLOUD_ENABLED = AUTO_CLOUD_ENABLED;
   const MAIN_KEY = (typeof STORAGE_KEY !== 'undefined') ? STORAGE_KEY : 'DCLIP_APP_STATE_V1';
@@ -8056,9 +8056,9 @@ init();
     try{
       document.title = 'D夾｜' + VERSION;
       const currentBadge = document.getElementById('dclipCurrentVersionBadge');
-      if(currentBadge) currentBadge.textContent = 'V124 標題同步與新項目點選修正';
+      if(currentBadge) currentBadge.textContent = 'V125 更新清單預設顯示未做';
       const hint = document.querySelector('.syncHintLine');
-      if(hint) hint.textContent = 'V124：輸入視窗標題會即時同步案名、契約編號、跟隨主約與開發；新項目預設未做並可正常點選。';
+      if(hint) hint.textContent = 'V125：每次打開案件時，更新清單預設選中「未做」，只顯示尚未完成的項目。';
     }catch(_e){}
   }
 
